@@ -13,7 +13,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let client = Client::new();
     eprintln!("Made client!");
     let nation = "Aramos";
-    let request = NationRequest::new_default(nation.to_string()).to_string();
+    let request = NationRequest::new_standard(nation.to_string()).to_string();
     let response = client_request(&client, &request).await?;
     let text = response.text().await?;
     let target: Nation = quick_xml::de::from_str(&text)?;
