@@ -1,4 +1,4 @@
-//! Contains all public nation shards.
+//! Contains everything needed to make public nation shard requests.
 
 use crate::safe_name;
 use std::fmt;
@@ -15,10 +15,10 @@ pub struct NationRequest {
 impl NationRequest {
     /// Create a nation request with any number of [`PublicNationShard`]s.
     ///
-    /// # Examples
+    /// # Example
     ///
     /// ```
-    /// use iron_oxide::shards::public_nation_shards::{NationRequest, PublicNationShard};
+    /// use crustacean_states::shards::public_nation_shards::{NationRequest, PublicNationShard};
     ///
     /// let request = NationRequest::new("Testlandia",
     ///         &[PublicNationShard::Region, PublicNationShard::Demonym]).to_string();
@@ -76,7 +76,7 @@ impl Display for NationRequest {
                 .as_ref()
                 .map(|shards| shards
                     .iter()
-                    .fold(String::new(), |acc, shard| format!("{acc}&{shard}")))
+                    .fold("&q=".to_string(), |acc, shard| format!("{acc}+{shard}")))
                 .unwrap_or_default()
         )
     }
@@ -226,7 +226,7 @@ pub enum PublicNationShard {
     ///
     /// To see government spending in all financial areas, see [`PublicNationShard::Govt`].
     GovtPriority,
-    /// The 10 most recent things that the nation did.
+    /// The 10 most recent events in the nation.
     Happenings,
     /// The average income in the nation.
     Income,
@@ -316,7 +316,7 @@ pub enum PublicNationShard {
     Type,
     /// Whether the nation is a World Assembly Delegate, a World Assembly member, or a non-member.
     WA,
-    /// The list of World Assembly badges that the nation has earned.
+    /// The list of World Assembly resolutions targeting the nation.
     WABadges,
     /// The world rank on today's featured World Census scale.
     WCensus,
@@ -436,9 +436,19 @@ impl Display for PublicNationShard {
 pub(crate) fn format_census(scale: &Option<CensusScales>, mode: &Option<CensusModes>) -> String {
     format!(
         "census{}{}",
-        scale
-            .as_ref()
-            .map(|s| format!(
+        format_census_scale(scale),
+        mode.as_ref()
+            .map(|m| format!("&mode={m}"))
+            .unwrap_or_default()
+    )
+}
+
+#[doc(hidden)]
+pub(crate) fn format_census_scale(scale: &Option<CensusScales>) -> String {
+    scale
+        .as_ref()
+        .map(|s| {
+            format!(
                 "&scale={}",
                 match s {
                     CensusScales::One(scale) => scale.to_string(),
@@ -447,10 +457,7 @@ pub(crate) fn format_census(scale: &Option<CensusScales>, mode: &Option<CensusMo
                         .fold(String::new(), |acc, &x| format!("{acc}+{x}")),
                     CensusScales::All => "all".to_string(),
                 }
-            ))
-            .unwrap_or_default(),
-        mode.as_ref()
-            .map(|m| format!("&mode={m}"))
-            .unwrap_or_default()
-    )
+            )
+        })
+        .unwrap_or_default()
 }

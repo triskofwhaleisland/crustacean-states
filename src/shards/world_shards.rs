@@ -1,10 +1,24 @@
 use crate::impl_display_as_debug;
-use crate::shards::public_nation_shards::{format_census, CensusModes, CensusScales};
+use crate::shards::public_nation_shards::{
+    format_census, format_census_scale, CensusModes, CensusScales,
+};
 use crate::shards::world_shards::HappeningsViewType::{Nation, Region};
 use std::fmt::{Display, Formatter};
 
 pub struct WorldRequest {
     shards: Vec<WorldShard>,
+}
+
+impl Display for WorldRequest {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "q={}",
+            self.shards
+                .iter()
+                .fold(String::new(), |acc, shard| format!("{acc}+{shard}"))
+        )
+    }
 }
 
 #[derive(Debug)]
@@ -93,7 +107,7 @@ impl Display for WorldShard {
                     )
                 }
                 WorldShard::CensusRanks { scale, start } => {
-                    format_census_ranks(scale, start)
+                    format_census_ranks(&scale.map(CensusScales::One), start)
                 }
                 WorldShard::DispatchList {
                     author,
@@ -559,13 +573,10 @@ pub enum Tag {
 }
 
 #[doc(hidden)]
-pub(crate) fn format_census_ranks(scale: &Option<u8>, start: &Option<u32>) -> String {
+pub(crate) fn format_census_ranks(scale: &Option<CensusScales>, start: &Option<u32>) -> String {
     format!(
         "censusranks{}{}",
-        scale
-            .as_ref()
-            .map(|x| format!("&scale={x}"))
-            .unwrap_or_default(),
+        format_census_scale(scale),
         start
             .as_ref()
             .map(|x| format!("&start={x}"))
