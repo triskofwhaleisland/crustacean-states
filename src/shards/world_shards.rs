@@ -5,16 +5,15 @@ use crate::shards::public_nation_shards::{
 use crate::shards::world_shards::HappeningsViewType::{Nation, Region};
 use std::fmt::{Display, Formatter};
 
-pub struct WorldRequest {
-    shards: Vec<WorldShard>,
-}
+/// A request to the world API.
+pub struct WorldRequest(Vec<WorldShard>);
 
 impl Display for WorldRequest {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
             "q={}",
-            self.shards
+            self.0
                 .iter()
                 .fold(String::new(), |acc, shard| format!("{acc}+{shard}"))
         )
