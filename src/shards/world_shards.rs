@@ -3,22 +3,10 @@ use crate::shards::public_nation_shards::{
     format_census, format_census_scale, CensusModes, CensusScales,
 };
 use crate::shards::world_shards::HappeningsViewType::{Nation, Region};
+use crate::shards::{Params, Shard};
+use itertools::Itertools;
+use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
-
-/// A request to the world API.
-pub struct WorldRequest(Vec<WorldShard>);
-
-impl Display for WorldRequest {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "q={}",
-            self.0
-                .iter()
-                .fold(String::new(), |acc, shard| format!("{acc}+{shard}"))
-        )
-    }
-}
 
 #[derive(Debug)]
 pub enum WorldShard {
@@ -63,186 +51,128 @@ pub enum WorldShard {
     TGQueue,
 }
 
-impl Display for WorldShard {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                WorldShard::Banner(banners) => {
-                    (!banners.is_empty())
-                        .then(|| {
-                            format!(
-                                "banner&banner={}",
-                                banners
-                                    .iter()
-                                    .map(|banner| banner.to_string())
-                                    .collect::<Vec<_>>()
-                                    .join(",")
-                            )
-                        })
-                        .unwrap_or_default()
-                }
-                WorldShard::Census { scale, modes } => {
-                    format_census(scale, modes)
-                }
-                WorldShard::CensusName(scale)
-                | WorldShard::CensusDesc(scale)
-                | WorldShard::CensusScale(scale)
-                | WorldShard::CensusTitle(scale) => {
-                    format!(
-                        "{}{}",
-                        match self {
-                            WorldShard::CensusName(..) => "censusname",
-                            WorldShard::CensusDesc(..) => "censusdesc",
-                            WorldShard::CensusScale(..) => "censusscale",
-                            WorldShard::CensusTitle(..) => "censustitle",
-                            _ => "", // not really necessary but oh well
-                        },
-                        scale
-                            .as_ref()
-                            .map(|x| format!("&scale={x}"))
-                            .unwrap_or_default()
-                    )
-                }
-                WorldShard::CensusRanks { scale, start } => {
-                    format_census_ranks(&scale.map(CensusScales::One), start)
-                }
-                WorldShard::DispatchList {
-                    author,
-                    category,
-                    sort,
-                } => {
-                    format!(
-                        "dispatchlist{}{}{}",
-                        author
-                            .as_ref()
-                            .map(|a| format!("&dispatchauthor={a}"))
-                            .unwrap_or_default(),
-                        category
-                            .as_ref()
-                            .map(|c| format!(
-                                "&dispatchcategory={}",
-                                match c {
-                                    DispatchCategory::Factbook(subcategory) => {
-                                        format!(
-                                            "Factbook:{}",
-                                            subcategory
-                                                .as_ref()
-                                                .map(|s| s.to_string())
-                                                .unwrap_or_default()
-                                        )
+impl From<WorldShard> for Shard {
+    fn from(value: WorldShard) -> Self {
+        Self {
+            query: Self::name(&value),
+            params: {
+                let mut param_map = Params::new();
+                match &value {
+                    WorldShard::Banner(banners) => {
+                        param_map.insert("banner".to_string(), banners.iter().join(","));
+                    }
+                    WorldShard::Census { scale, modes } => {
+                        format_census(&mut param_map, scale, modes);
+                    }
+                    WorldShard::CensusDesc(scale)
+                    | WorldShard::CensusScale(scale)
+                    | WorldShard::CensusName(scale)
+                    | WorldShard::CensusTitle(scale) => {
+                        if let Some(s) = scale.as_ref() {
+                            param_map.insert("scale".to_string(), s.to_string());
+                        }
+                    }
+                    WorldShard::CensusRanks { scale, start } => {
+                        format_census_ranks(&mut param_map, &scale.map(CensusScales::One), start);
+                    }
+                    WorldShard::Dispatch(id) => {
+                        param_map.insert("dispatchid".to_string(), id.to_string());
+                    }
+                    WorldShard::DispatchList {
+                        author,
+                        category,
+                        sort,
+                    } => {
+                        if let Some(a) = author.as_ref() {
+                            param_map.insert("dispatchauthor".to_string(), a.to_string());
+                        }
+                        if let Some(c) = category.as_ref() {
+                            param_map.insert(
+                                "dispatchcategory".to_string(),
+                                format!(
+                                    "{}{}",
+                                    match c {
+                                        DispatchCategory::Factbook(_) => "Factbook",
+                                        DispatchCategory::Bulletin(_) => "Bulletin",
+                                        DispatchCategory::Account(_) => "Account",
+                                        DispatchCategory::Meta(_) => "Meta",
+                                    },
+                                    match c {
+                                        DispatchCategory::Factbook(subcategory) => {
+                                            subcategory.as_ref().map(|s| s.to_string())
+                                        }
+                                        DispatchCategory::Bulletin(subcategory) => {
+                                            subcategory.as_ref().map(|s| s.to_string())
+                                        }
+                                        DispatchCategory::Account(subcategory) => {
+                                            subcategory.as_ref().map(|s| s.to_string())
+                                        }
+                                        DispatchCategory::Meta(subcategory) => {
+                                            subcategory.as_ref().map(|s| s.to_string())
+                                        }
                                     }
-                                    DispatchCategory::Account(subcategory) => {
-                                        format!(
-                                            "Account:{}",
-                                            subcategory
-                                                .as_ref()
-                                                .map(|s| s.to_string())
-                                                .unwrap_or_default()
-                                        )
+                                    .map(|s| format!(":{s}"))
+                                    .unwrap_or_default()
+                                ),
+                            );
+                        }
+                        if let Some(s) = sort.as_ref() {
+                            param_map.insert("dispatchsort".to_string(), s.to_string());
+                        }
+                    }
+                    WorldShard::Happenings {
+                        view,
+                        filter,
+                        limit,
+                        since_id,
+                        before_id,
+                        since_time,
+                        before_time,
+                    } => {
+                        if let Some(v) = view.as_ref() {
+                            param_map.insert(
+                                "view".to_string(),
+                                format!(
+                                    "{}.{}",
+                                    match v {
+                                        Nation(..) => "nation",
+                                        Region(..) => "region",
+                                    },
+                                    match v {
+                                        Nation(entities) | Region(entities) => {
+                                            entities.iter().join(",")
+                                        }
                                     }
-                                    DispatchCategory::Bulletin(subcategory) => {
-                                        format!(
-                                            "Bulletin:{}",
-                                            subcategory
-                                                .as_ref()
-                                                .map(|s| s.to_string())
-                                                .unwrap_or_default()
-                                        )
-                                    }
-                                    DispatchCategory::Meta(subcategory) => {
-                                        format!(
-                                            "Meta:{}",
-                                            subcategory
-                                                .as_ref()
-                                                .map(|s| s.to_string())
-                                                .unwrap_or_default()
-                                        )
-                                    }
-                                }
-                            ))
-                            .unwrap_or_default(),
-                        sort.as_ref()
-                            .map(|s| format!("&dispatchsort={s}"))
-                            .unwrap_or_default(),
-                    )
+                                ),
+                            );
+                        }
+                        if let Some(filters) = filter.as_ref() {
+                            param_map.insert("filter".to_string(), filters.iter().join("+"));
+                        }
+                        if let Some(x) = limit.as_ref() {
+                            param_map.insert("limit".to_string(), x.to_string());
+                        }
+                        if let Some(x) = since_id.as_ref() {
+                            param_map.insert("sinceid".to_string(), x.to_string());
+                        }
+                        if let Some(x) = before_id.as_ref() {
+                            param_map.insert("beforeid".to_string(), x.to_string());
+                        }
+                        if let Some(x) = since_time.as_ref() {
+                            param_map.insert("sincetime".to_string(), x.to_string());
+                        }
+                        if let Some(x) = before_time.as_ref() {
+                            param_map.insert("beforetime".to_string(), x.to_string());
+                        }
+                    }
+                    WorldShard::RegionsByTag(complex_tags) => {
+                        param_map.insert("tags".to_string(), complex_tags.iter().join(","));
+                    }
+                    _ => {}
                 }
-
-                WorldShard::Dispatch(id) => {
-                    format!("dispatch&dispatchid={id}")
-                }
-                WorldShard::Happenings {
-                    view,
-                    filter,
-                    limit,
-                    since_id,
-                    before_id,
-                    since_time,
-                    before_time,
-                } => {
-                    format!(
-                        "happenings{}{}{}{}{}{}{}",
-                        view.as_ref()
-                            .map(|kind| match kind {
-                                Nation(entities) | Region(entities) => {
-                                    (!entities.is_empty())
-                                        .then(|| {
-                                            entities.iter().fold(
-                                                format!(
-                                                    "&view={}",
-                                                    match kind {
-                                                        Nation(..) => "nation.",
-                                                        Region(..) => "region.",
-                                                    }
-                                                ),
-                                                |acc, nation| format!("{acc},{nation}"),
-                                            )
-                                        })
-                                        .unwrap_or_default()
-                                }
-                            })
-                            .unwrap_or_default(),
-                        filter
-                            .as_ref()
-                            .map(|filters| filters
-                                .iter()
-                                .fold("&filter=".to_string(), |acc, kind| format!("{acc}+{kind}")))
-                            .unwrap_or_default(),
-                        limit
-                            .as_ref()
-                            .map(|x| format!("&limit={x}"))
-                            .unwrap_or_default(),
-                        before_id
-                            .as_ref()
-                            .map(|x| format!("&beforeid={x}"))
-                            .unwrap_or_default(),
-                        since_id
-                            .as_ref()
-                            .map(|x| format!("&sinceid={x}"))
-                            .unwrap_or_default(),
-                        before_time
-                            .as_ref()
-                            .map(|x| format!("&beforetime={x}"))
-                            .unwrap_or_default(),
-                        since_time
-                            .as_ref()
-                            .map(|x| format!("&sincetime={x}"))
-                            .unwrap_or_default(),
-                    )
-                }
-                WorldShard::RegionsByTag(complex_tags) => {
-                    complex_tags
-                        .iter()
-                        .fold("regionsbytag&tags=".to_string(), |acc, tag| {
-                            format!("{acc},{tag}")
-                        })
-                }
-                other_shard => {
-                    format!("{:?}", other_shard).to_lowercase()
-                }
-            }
-        )
+                param_map
+            },
+        }
     }
 }
 
@@ -344,6 +274,7 @@ impl HappeningsShardBuilder {
     }
 }
 
+// TODO make banner ids
 #[derive(Debug)]
 pub struct BannerId {}
 
@@ -572,13 +503,11 @@ pub enum Tag {
 }
 
 #[doc(hidden)]
-pub(crate) fn format_census_ranks(scale: &Option<CensusScales>, start: &Option<u32>) -> String {
-    format!(
-        "censusranks{}{}",
-        format_census_scale(scale),
-        start
-            .as_ref()
-            .map(|x| format!("&start={x}"))
-            .unwrap_or_default()
-    )
+pub(crate) fn format_census_ranks(
+    param_map: &mut HashMap<String, String>,
+    scale: &Option<CensusScales>,
+    start: &Option<u32>,
+) {
+    format_census_scale(param_map, scale);
+    start.map(|s| param_map.insert("start".to_string(), s.to_string()));
 }

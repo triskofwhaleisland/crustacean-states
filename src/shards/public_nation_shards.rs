@@ -1,86 +1,10 @@
 //! Contains everything needed to make public nation shard requests.
 
-use crate::safe_name;
+use crate::shards::{Params, Shard};
+use itertools::Itertools;
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::num::NonZeroU64;
-
-/// The intended way to create a nation API request.
-#[derive(Debug)]
-pub struct NationRequest {
-    nation: String,
-    shards: Option<Vec<PublicNationShard>>,
-}
-
-impl NationRequest {
-    /// Create a nation request with any number of [`PublicNationShard`]s.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use crustacean_states::shards::public_nation_shards::{NationRequest, PublicNationShard};
-    ///
-    /// let request = NationRequest::new("Testlandia",
-    ///         &[PublicNationShard::Region, PublicNationShard::Demonym]).to_string();
-    /// ```
-    /// When sent,
-    /// it will request information about [Testlandia](https://www.nationstates.net/nation=testlandia)'s region and demonym.
-    pub fn new(nation: impl ToString, shards: &[PublicNationShard]) -> Self {
-        NationRequest {
-            nation: nation.to_string(),
-            shards: if shards.is_empty() {
-                None
-            } else {
-                Some(shards.to_vec())
-            },
-        }
-    }
-    /// Create a "standard" nation request.
-    ///
-    /// The following fields of [`Nation`] will not be `None`:
-    ///
-    /// `name`, `kind`, `full_name`, `motto`, `category`, `wa_status`, `endorsements`,
-    /// `issues_answered`, `freedom`, `region`, `population`, `tax`, `animal`, `currency`,
-    /// `demonym`, `demonym2`, `demonym2_plural`, `flag`, `major_industry`, `government_priority`,
-    /// `government`, `founded`, `first_login`, `last_login`, `influence`, `freedom_scores`,
-    /// `public_sector`, `deaths`, `factbooks`, `dispatches`, `dbid`
-    ///
-    ///
-    /// The following fields will be filled
-    /// only if the nation has reached a certain population and answered the relevant issue:
-    /// - `capital`: 250 million
-    ///
-    /// - `kind` will deviate from the original pre-titles after 500 million.
-    /// (No issue must be completed to unlock this ability.)
-    ///
-    /// - `leader`: 750 million
-    ///
-    /// - `religion`: 1 billion
-    ///
-    /// [`Nation`]: crate::parsers::nation::Nation
-    pub fn new_standard(nation: impl ToString) -> Self {
-        NationRequest {
-            nation: nation.to_string(),
-            shards: None,
-        }
-    }
-}
-
-impl Display for NationRequest {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "nation={}{}",
-            safe_name(&self.nation),
-            self.shards
-                .as_ref()
-                .map(|shards| shards
-                    .iter()
-                    .fold("&q=".to_string(), |acc, shard| format!("{acc}+{shard}")))
-                .unwrap_or_default()
-        )
-    }
-}
 
 /// A nation request available to anyone.
 #[derive(Clone, Debug)]
@@ -385,79 +309,63 @@ impl Display for CensusCurrentModes {
     }
 }
 
-impl Display for CensusModes {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                CensusModes::History { from, to } => {
-                    format!(
-                        "mode=history{}{}",
-                        from.map(|x| format!("&from={x}")).unwrap_or_default(),
-                        to.map(|x| format!("&to={x}")).unwrap_or_default(),
-                    )
-                }
-                CensusModes::Current(modes) => {
-                    format!(
-                        "mode={}",
-                        modes
-                            .iter()
-                            .fold(String::new(), |acc, x| format!("{acc}+{x}"))
-                    )
-                }
-            }
-        )
-    }
-}
-
-impl Display for PublicNationShard {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                PublicNationShard::Census { scale, modes } => {
-                    format_census(scale, modes)
-                }
-                PublicNationShard::TGCanCampaign { from } => {
-                    format!("tgcancampaign&from={}", from.as_deref().unwrap_or_default())
-                }
-                PublicNationShard::TGCanRecruit { from } => {
-                    format!("tgcanrecruit&from={}", from.as_deref().unwrap_or_default())
-                }
-                other_shard => format!("{:?}", other_shard).to_lowercase(),
-            }
-        )
+impl From<PublicNationShard> for Shard {
+    fn from(value: PublicNationShard) -> Self {
+        Self {
+            query: Self::name(&value),
+            params: {
+                let mut param_map = Params::new();
+                match &value {
+                    PublicNationShard::Census { scale, modes } => {
+                        format_census(&mut param_map, scale, modes);
+                    }
+                    PublicNationShard::TGCanCampaign { from }
+                    | PublicNationShard::TGCanRecruit { from } => {
+                        from.as_ref()
+                            .map(|f| param_map.insert("from".to_string(), f.clone()));
+                    }
+                    _ => {} // no other public nation shards require parameters
+                };
+                param_map
+            },
+        }
     }
 }
 
 #[doc(hidden)]
-pub(crate) fn format_census(scale: &Option<CensusScales>, mode: &Option<CensusModes>) -> String {
-    format!(
-        "census{}{}",
-        format_census_scale(scale),
-        mode.as_ref()
-            .map(|m| format!("&mode={m}"))
-            .unwrap_or_default()
-    )
+pub(crate) fn format_census(
+    param_map: &mut Params,
+    scale: &Option<CensusScales>,
+    modes: &Option<CensusModes>,
+) {
+    format_census_scale(param_map, scale);
+    format_census_modes(param_map, modes);
 }
 
 #[doc(hidden)]
-pub(crate) fn format_census_scale(scale: &Option<CensusScales>) -> String {
+pub(crate) fn format_census_scale(param_map: &mut Params, scale: &Option<CensusScales>) {
     scale
         .as_ref()
-        .map(|s| {
-            format!(
-                "&scale={}",
-                match s {
-                    CensusScales::One(scale) => scale.to_string(),
-                    CensusScales::Many(scales) => scales
-                        .iter()
-                        .fold(String::new(), |acc, &x| format!("{acc}+{x}")),
-                    CensusScales::All => "all".to_string(),
-                }
-            )
+        .map(|s| match s {
+            CensusScales::One(scale) => scale.to_string(),
+            CensusScales::Many(scales) => scales.iter().join("+"),
+            CensusScales::All => "all".to_string(),
         })
-        .unwrap_or_default()
+        .map(|s| param_map.insert("scale".to_string(), s));
+}
+
+#[doc(hidden)]
+pub(crate) fn format_census_modes(param_map: &mut Params, modes: &Option<CensusModes>) {
+    if let Some(m) = modes.as_ref() {
+        match m {
+            CensusModes::History { from, to } => {
+                param_map.insert("mode".to_string(), "history".to_string());
+                from.map(|x| param_map.insert("from".to_string(), x.to_string()));
+                to.map(|x| param_map.insert("to".to_string(), x.to_string()));
+            }
+            CensusModes::Current(current_modes) => {
+                param_map.insert("mode".to_string(), current_modes.iter().join("+"));
+            }
+        }
+    }
 }

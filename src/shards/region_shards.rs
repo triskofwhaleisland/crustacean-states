@@ -1,64 +1,7 @@
 //! Contains everything needed to make region shard requests.
-
-use crate::safe_name;
 use crate::shards::public_nation_shards::{format_census, CensusModes, CensusScales};
 use crate::shards::world_shards::format_census_ranks;
-use std::fmt::{Display, Formatter};
-
-/// The intended way to make a region API request.
-pub struct RegionRequest {
-    region: String,
-    shards: Option<Vec<RegionShard>>,
-}
-
-impl RegionRequest {
-    /// Create a region request with any number of [`RegionShard`]s.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use crustacean_states::shards::region_shards::{RegionRequest, RegionShard};
-    ///
-    /// let request = RegionRequest::new("Testregionia",
-    ///         &[RegionShard::Delegate, RegionShard::Flag]).to_string();
-    /// ```
-    ///
-    /// When sent,
-    /// it will request information about [Testregionia](https://www.nationstates.net/region=testregionia)'s delegate and flag.
-    pub fn new(region: impl ToString, shards: &[RegionShard]) -> Self {
-        RegionRequest {
-            region: region.to_string(),
-            shards: if shards.is_empty() {
-                None
-            } else {
-                Some(shards.to_vec())
-            },
-        }
-    }
-    /// Create a "standard" region request.
-    pub fn new_standard(region: impl ToString) -> Self {
-        RegionRequest {
-            region: region.to_string(),
-            shards: None,
-        }
-    }
-}
-
-impl Display for RegionRequest {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "region={}{}",
-            safe_name(&self.region),
-            self.shards
-                .as_ref()
-                .map(|shards| shards
-                    .iter()
-                    .fold("&q=".to_string(), |acc, shard| format!("{acc}+{shard}")))
-                .unwrap_or_default()
-        )
-    }
-}
+use crate::shards::{Params, Shard};
 
 /// A request of a region.
 #[derive(Clone, Debug)]
@@ -176,41 +119,32 @@ pub enum RegionShard {
     WANations,
 }
 
-impl Display for RegionShard {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                RegionShard::Census { scale, modes } => {
-                    format_census(scale, modes)
-                }
-                RegionShard::CensusRanks { scale, start } => {
-                    format_census_ranks(&scale.map(CensusScales::One), start)
-                }
-                RegionShard::Messages {
-                    limit,
-                    offset,
-                    from_id,
-                } => {
-                    format!(
-                        "messages{}{}{}",
-                        limit
-                            .as_ref()
-                            .map(|x| format!("&limit={x}"))
-                            .unwrap_or_default(),
-                        offset
-                            .as_ref()
-                            .map(|x| format!("&offset={x}"))
-                            .unwrap_or_default(),
-                        from_id
-                            .as_ref()
-                            .map(|x| format!("&fromid={x}"))
-                            .unwrap_or_default(),
-                    )
-                }
-                other_shard => format!("{:?}", other_shard).to_lowercase(),
-            }
-        )
+impl From<RegionShard> for Shard {
+    fn from(value: RegionShard) -> Self {
+        Self {
+            query: Self::name(&value),
+            params: {
+                let mut param_map = Params::new();
+                match &value {
+                    RegionShard::Census { scale, modes } => {
+                        format_census(&mut param_map, scale, modes);
+                    }
+                    RegionShard::CensusRanks { scale, start } => {
+                        format_census_ranks(&mut param_map, &scale.map(CensusScales::One), start);
+                    }
+                    RegionShard::Messages {
+                        limit,
+                        offset,
+                        from_id,
+                    } => {
+                        limit.map(|l| param_map.insert("limit".to_string(), l.to_string()));
+                        offset.map(|o| param_map.insert("offset".to_string(), o.to_string()));
+                        from_id.map(|f| param_map.insert("fromid".to_string(), f.to_string()));
+                    }
+                    _ => {}
+                };
+                param_map
+            },
+        }
     }
 }

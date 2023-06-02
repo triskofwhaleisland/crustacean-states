@@ -4,6 +4,13 @@ pub struct WARequest {
     pub shards: Vec<WAGeneralShard>,
 }
 
+#[repr(u8)]
+#[derive(Clone, Debug)]
+pub enum WACouncil {
+    GeneralAssembly = 1,
+    SecurityCouncil = 2,
+}
+
 pub enum WAGeneralShard {
     NumNations,
     NumDelegates,
