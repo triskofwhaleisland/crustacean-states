@@ -509,5 +509,7 @@ pub(crate) fn format_census_ranks(
     start: &Option<u32>,
 ) {
     format_census_scale(param_map, scale);
-    start.map(|s| param_map.insert("start".to_string(), s.to_string()));
+    if let Some(s) = start.as_ref() {
+        param_map.insert("start".to_string(), s.to_string());
+    }
 }

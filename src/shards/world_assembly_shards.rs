@@ -1,8 +1,4 @@
-pub struct WARequest {
-    pub council_id: u8,
-    pub resolution_id: u32,
-    pub shards: Vec<WAGeneralShard>,
-}
+use crate::shards::Shard;
 
 #[repr(u8)]
 #[derive(Clone, Debug)]
@@ -11,6 +7,7 @@ pub enum WACouncil {
     SecurityCouncil = 2,
 }
 
+#[derive(Debug)]
 pub enum WAGeneralShard {
     NumNations,
     NumDelegates,
@@ -18,11 +15,29 @@ pub enum WAGeneralShard {
     Members,
     Happenings,
     Proposals,
-    Resolution {
-        voters: bool,
-        vote_track: bool,
-        delegate_log: bool,
-        delegate_votes: bool,
-        last_resolution: bool,
-    },
+    Resolution(Vec<WAAdditionalShards>),
+    LastResolution,
+}
+
+impl From<WAGeneralShard> for Shard {
+    fn from(value: WAGeneralShard) -> Self {
+        Self {
+            query: match value {
+                WAGeneralShard::Resolution(additional_shards) => additional_shards
+                    .iter()
+                    .fold(String::from("resolution"), |acc, s| format!("{acc}+{s:?}"))
+                    .to_lowercase(),
+                other => Self::name(&other),
+            },
+            params: Default::default(),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum WAAdditionalShards {
+    Voters,
+    VoteTrack,
+    DelLog,
+    DelVotes,
 }

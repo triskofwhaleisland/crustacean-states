@@ -344,14 +344,16 @@ pub(crate) fn format_census(
 
 #[doc(hidden)]
 pub(crate) fn format_census_scale(param_map: &mut Params, scale: &Option<CensusScales>) {
-    scale
-        .as_ref()
-        .map(|s| match s {
-            CensusScales::One(scale) => scale.to_string(),
-            CensusScales::Many(scales) => scales.iter().join("+"),
-            CensusScales::All => "all".to_string(),
-        })
-        .map(|s| param_map.insert("scale".to_string(), s));
+    if let Some(s) = scale.as_ref() {
+        param_map.insert(
+            "scale".to_string(),
+            match s {
+                CensusScales::One(scale) => scale.to_string(),
+                CensusScales::Many(scales) => scales.iter().join("+"),
+                CensusScales::All => "all".to_string(),
+            },
+        );
+    }
 }
 
 #[doc(hidden)]

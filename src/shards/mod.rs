@@ -19,7 +19,7 @@ pub struct Shard {
 }
 
 impl Shard {
-    pub fn query_and_params<T: Into<Self> + Clone>(shards: &[T]) -> (String, Params) {
+    fn query_and_params<T: Into<Self> + Clone>(shards: &[T]) -> (String, Params) {
         let mut params = Params::new();
         let mut query = String::from("&q=");
         shards.iter().for_each(|s| {
@@ -33,7 +33,7 @@ impl Shard {
         (query, params)
     }
 
-    pub fn name<T: Into<Self> + Debug>(shard: &T) -> String {
+    fn name<T: Debug>(shard: &T) -> String {
         let true_debug = format!("{shard:?}");
         if let Some((tuple, _)) = true_debug.split_once('(') {
             tuple.to_string()
@@ -55,7 +55,7 @@ pub enum NSRequestKind {
     PublicNation(String),
     Region(String),
     World,
-    WA(WACouncil),
+    WA { council: WACouncil, id: Option<u16> },
 }
 
 impl NSRequest {
@@ -123,7 +123,7 @@ impl NSRequest {
     ///
     /// When sent,
     /// it will request information about [Testregionia](https://www.nationstates.net/region=testregionia)'s delegate and flag.
-    pub fn new(region: impl ToString, shards: &[RegionShard]) -> Self {
+    pub fn new_region(region: impl ToString, shards: &[RegionShard]) -> Self {
         let (query, params) = Shard::query_and_params(shards);
         Self {
             kind: NSRequestKind::Region(region.to_string()),
@@ -132,7 +132,7 @@ impl NSRequest {
         }
     }
     /// Create a "standard" region request.
-    pub fn new_standard(region: impl ToString) -> Self {
+    pub fn new_region_standard(region: impl ToString) -> Self {
         Self {
             kind: NSRequestKind::Region(region.to_string()),
             query: Default::default(),
@@ -150,7 +150,10 @@ impl Display for NSRequest {
                 NSRequestKind::PublicNation(n) => format!("nation={}", safe_name(n)),
                 NSRequestKind::Region(r) => format!("region={}", safe_name(r)),
                 NSRequestKind::World => String::new(),
-                NSRequestKind::WA(w) => format!("wa={}", w.clone() as u8),
+                NSRequestKind::WA { council, id } => match id {
+                    Some(i) => format!("wa={}&id={i}", council.clone() as u8),
+                    None => format!("wa={}", council.clone() as u8),
+                },
             },
             (!self.query.is_empty())
                 .then(|| format!("&q={}", self.query))
