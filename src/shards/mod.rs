@@ -64,9 +64,10 @@ impl NSRequest {
     /// # Example
     ///
     /// ```
-    /// use crustacean_states::shards::public_nation_shards::{NationRequest, PublicNationShard};
+    /// use crustacean_states::shards::NSRequest;
+    /// use crustacean_states::shards::public_nation_shards::PublicNationShard;
     ///
-    /// let request = NationRequest::new("Testlandia",
+    /// let request = NSRequest::new_nation("Testlandia",
     ///         &[PublicNationShard::Region, PublicNationShard::Demonym]).to_string();
     /// ```
     /// When sent,
@@ -115,9 +116,10 @@ impl NSRequest {
     /// # Example
     ///
     /// ```
-    /// use crustacean_states::shards::region_shards::{RegionRequest, RegionShard};
+    /// use crustacean_states::shards::NSRequest;
+    /// use crustacean_states::shards::region_shards::RegionShard;
     ///
-    /// let request = RegionRequest::new("Testregionia",
+    /// let request = NSRequest::new_region("Testregionia",
     ///         &[RegionShard::Delegate, RegionShard::Flag]).to_string();
     /// ```
     ///
