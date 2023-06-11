@@ -21,13 +21,13 @@ pub struct Shard {
 impl Shard {
     fn query_and_params<T: Into<Self> + Clone>(shards: &[T]) -> (String, Params) {
         let mut params = Params::new();
-        let mut query = String::from("&q=");
+        let mut query = String::new();
         shards.iter().for_each(|s| {
             let shard: Shard = s.clone().into();
             if !query.is_empty() {
                 query.push('+');
             }
-            query.push_str(shard.query.as_str());
+            query.push_str(shard.query.to_lowercase().as_str());
             params.extend(shard.params);
         });
         (query, params)

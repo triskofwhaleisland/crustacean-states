@@ -321,8 +321,9 @@ impl From<PublicNationShard> for Shard {
                     }
                     PublicNationShard::TGCanCampaign { from }
                     | PublicNationShard::TGCanRecruit { from } => {
-                        from.as_ref()
-                            .map(|f| param_map.insert("from".to_string(), f.clone()));
+                        if let Some(f) = from.as_ref() {
+                            param_map.insert("from".to_string(), f.clone());
+                        }
                     }
                     _ => {} // no other public nation shards require parameters
                 };
