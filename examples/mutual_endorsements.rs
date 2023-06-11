@@ -7,10 +7,12 @@ use crustacean_states::{
 use reqwest::Client;
 use std::error::Error;
 use std::time::Duration;
+use dotenv::dotenv;
 use tokio::time::sleep;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
+    dotenv().ok();
     let client = Client::new();
     eprintln!("Made client!");
     let nation = "Aramos";

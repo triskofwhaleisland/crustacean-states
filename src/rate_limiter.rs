@@ -1,3 +1,4 @@
+use std::env;
 use reqwest::header::HeaderMap;
 use reqwest::Response;
 use std::error::Error;
@@ -12,7 +13,7 @@ pub async fn client_request(
         .get(format!("{BASE_URL}{request}"))
         .header(
             reqwest::header::USER_AGENT,
-            "Project Iron Oxide; NS nation: Aramos",
+            env::var("USER_AGENT").unwrap(),
         )
         .send()
         .await

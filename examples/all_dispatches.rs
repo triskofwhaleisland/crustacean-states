@@ -4,9 +4,11 @@ use crustacean_states::shards::public_nation_shards::PublicNationShard::Dispatch
 use crustacean_states::shards::NSRequest;
 use reqwest::Client;
 use std::error::Error;
+use dotenv::dotenv;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
+    dotenv().ok();
     let client = Client::new();
     eprintln!("Made client!");
     let target_nation = "Testlandia";

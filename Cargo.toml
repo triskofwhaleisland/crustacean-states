@@ -8,6 +8,7 @@ description = "A NationStates API wrapper designed for ease of use"
 publish = false
 
 [dependencies]
+dotenv = "0.15.0"
 itertools = "0.10"
 quick-xml = { version = "0.28", features = ["serialize"] }
 reqwest = "0.11"
