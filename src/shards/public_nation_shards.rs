@@ -363,8 +363,12 @@ pub(crate) fn format_census_modes(param_map: &mut Params, modes: &Option<CensusM
         match m {
             CensusModes::History { from, to } => {
                 param_map.insert("mode".to_string(), "history".to_string());
-                from.map(|x| param_map.insert("from".to_string(), x.to_string()));
-                to.map(|x| param_map.insert("to".to_string(), x.to_string()));
+                if let Some(x) = from {
+                    param_map.insert("from".to_string(), x.to_string());
+                }
+                if let Some(x) = to {
+                    param_map.insert("to".to_string(), x.to_string());
+                }
             }
             CensusModes::Current(current_modes) => {
                 param_map.insert("mode".to_string(), current_modes.iter().join("+"));

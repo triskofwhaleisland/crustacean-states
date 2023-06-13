@@ -1,6 +1,7 @@
-use std::env;
+use dotenv::dotenv;
 use reqwest::header::HeaderMap;
 use reqwest::Response;
+use std::env;
 use std::error::Error;
 
 const BASE_URL: &str = "https://www.nationstates.net/cgi-bin/api.cgi?";
@@ -9,16 +10,15 @@ pub async fn client_request(
     client: &reqwest::Client,
     request: &str,
 ) -> Result<Response, reqwest::Error> {
+    dotenv().ok();
     client
         .get(format!("{BASE_URL}{request}"))
-        .header(
-            reqwest::header::USER_AGENT,
-            env::var("USER_AGENT").unwrap(),
-        )
+        .header(reqwest::header::USER_AGENT, env::var("USER_AGENT").unwrap())
         .send()
         .await
 }
 
+#[derive(Debug)]
 pub struct RateLimits {
     pub policy: (u8, u8),
     // requests / second

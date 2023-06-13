@@ -137,9 +137,15 @@ impl From<RegionShard> for Shard {
                         offset,
                         from_id,
                     } => {
-                        limit.map(|l| param_map.insert("limit".to_string(), l.to_string()));
-                        offset.map(|o| param_map.insert("offset".to_string(), o.to_string()));
-                        from_id.map(|f| param_map.insert("fromid".to_string(), f.to_string()));
+                        if let Some(l) = limit {
+                            param_map.insert("limit".to_string(), l.to_string());
+                        }
+                        if let Some(o) = offset {
+                            param_map.insert("offset".to_string(), o.to_string());
+                        }
+                        if let Some(f) = from_id {
+                            param_map.insert("fromid".to_string(), f.to_string());
+                        }
                     }
                     _ => {}
                 };

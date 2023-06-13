@@ -2,9 +2,9 @@ use crustacean_states::parsers::nation::Nation;
 use crustacean_states::rate_limiter::client_request;
 use crustacean_states::shards::public_nation_shards::PublicNationShard::DispatchList;
 use crustacean_states::shards::NSRequest;
+use dotenv::dotenv;
 use reqwest::Client;
 use std::error::Error;
-use dotenv::dotenv;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -16,8 +16,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     eprintln!("{request}");
     let raw_response = client_request(&client, &request).await?;
     let text = raw_response.text().await?;
-    let response: Nation = quick_xml::de::from_str(&text)?;
-    eprintln!("{:#?}", response);
+    let response = Nation::from_xml(&*text)?;
+    eprintln!("{:#?}", response.dispatch_list.unwrap());
 
     Ok(())
 }

@@ -288,7 +288,7 @@ pub enum SortType {
 
 impl_display_as_debug!(SortType);
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum DispatchCategory {
     Factbook(Option<FactbookCategory>),
     Bulletin(Option<BulletinCategory>),
@@ -296,7 +296,7 @@ pub enum DispatchCategory {
     Meta(Option<MetaCategory>),
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum FactbookCategory {
     Overview,
     History,
@@ -312,7 +312,7 @@ pub enum FactbookCategory {
     Miscellaneous,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum BulletinCategory {
     Policy,
     News,
@@ -320,7 +320,7 @@ pub enum BulletinCategory {
     Campaign,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum AccountCategory {
     Military,
     Trade,
@@ -332,7 +332,7 @@ pub enum AccountCategory {
     Other,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum MetaCategory {
     Gameplay,
     Reference,
