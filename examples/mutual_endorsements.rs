@@ -15,14 +15,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
     dotenv().ok();
     let client = Client::new();
     eprintln!("Made client!");
-    let nation = "Aramos";
-    let request = NSRequest::new_nation_standard(nation.to_string()).to_string();
+    let target = "Aramos";
+    let request = NSRequest::new_nation_standard(target.to_string()).to_string();
     let response = client_request(&client, &request).await?;
     let text = response.text().await?;
-    let target = Nation::from_xml(&*text)?;
-    let l = target.endorsements.clone().unwrap().len();
+    let target_nation = Nation::from_xml(&*text)?;
+    let l = target_nation.endorsements.clone().unwrap().len();
     let mut n = 0;
-    for endorsed_nation in target.endorsements.unwrap() {
+    for endorsed_nation in target_nation.endorsements.unwrap() {
         let request = NSRequest::new_nation(endorsed_nation, &[Endorsements]).to_string();
         let mut response = client_request(&client, &request).await?;
         if response.status().is_client_error() {
@@ -34,14 +34,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
         let text = response.text().await?;
         let nation = Nation::from_xml(&*text)?;
-        if nation.endorsements.unwrap().contains(&"Aramos".to_string()) {
+        if nation.endorsements.unwrap().contains(&target.to_string()) {
             n += 1;
             continue;
         }
     }
     eprintln!(
-        "You are endorsing {} of the {} nations that endorse you.",
-        n, l
+        "{} is endorsing {} of the {} nations that endorse you.",
+        target, n, l
     );
 
     Ok(())

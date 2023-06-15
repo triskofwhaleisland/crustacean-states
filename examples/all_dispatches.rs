@@ -16,8 +16,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     eprintln!("{request}");
     let raw_response = client_request(&client, &request).await?;
     let text = raw_response.text().await?;
+    eprintln!("{text}");
     let response = Nation::from_xml(&*text)?;
-    eprintln!("{:#?}", response.dispatch_list.unwrap());
+    eprintln!("{:#?}", response.dispatch_list);
 
     Ok(())
 }

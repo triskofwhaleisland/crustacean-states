@@ -1,14 +1,17 @@
+use crate::parsers::happenings::Event;
 use crate::pretty_name;
+use crate::shards::world_assembly_shards::WACouncil;
 use crate::shards::world_shards::{
     AccountCategory, BulletinCategory, DispatchCategory, FactbookCategory, MetaCategory,
 };
 use quick_xml::DeError;
-use serde::{Deserialize, Deserializer};
+use serde::Deserialize;
 use std::fmt::Debug;
 use std::num::{NonZeroU16, NonZeroU32, NonZeroU64};
 use thiserror::Error;
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "UPPERCASE")]
 /// The Rust representation of a nation, as interpreted from a response to a request.
 struct RawNation {
     // default shards from ?nation=
@@ -23,119 +26,74 @@ struct RawNation {
     // crate::shards::public_nation_shards::PublicNationShard::Name
     #[serde(rename = "@id")]
     id: Option<String>,
-    #[serde(rename = "NAME")]
     name: Option<String>,
     #[serde(rename = "TYPE")]
     kind: Option<String>,
-    #[serde(rename = "FULLNAME")]
-    full_name: Option<String>,
-    #[serde(rename = "MOTTO")]
+    fullname: Option<String>,
     motto: Option<String>,
-    #[serde(rename = "CATEGORY")]
     category: Option<String>,
-    #[serde(rename = "UNSTATUS")] // deserialize_with = "handle_wa_status"
-    wa_status: Option<String>,
-    #[serde(rename = "ENDORSEMENTS")] // deserialize_with = "unwrap_endorsement_list"
+    unstatus: Option<String>,
     endorsements: Option<String>,
-    #[serde(rename = "ISSUES_ANSWERED")]
     issues_answered: Option<u32>,
-    #[serde(rename = "FREEDOM")]
     freedom: Option<Freedoms>,
-    #[serde(rename = "REGION")]
     region: Option<String>,
-    #[serde(rename = "POPULATION")]
     population: Option<u32>,
-    #[serde(rename = "TAX")]
     tax: Option<f32>,
-    #[serde(rename = "ANIMAL")]
     animal: Option<String>,
-    #[serde(rename = "CURRENCY")]
     currency: Option<String>,
-    #[serde(rename = "DEMONYM")]
     demonym: Option<String>,
-    #[serde(rename = "DEMONYM2")]
     demonym2: Option<String>,
-    #[serde(rename = "DEMONYM2PLURAL")]
-    demonym2_plural: Option<String>,
-    #[serde(rename = "FLAG")]
+    demonym2plural: Option<String>,
     flag: Option<String>,
-    #[serde(rename = "MAJORINDUSTRY")]
-    major_industry: Option<String>,
-    #[serde(rename = "GOVTPRIORITY")]
-    government_priority: Option<String>,
-    #[serde(rename = "GOVT")]
-    government: Option<Government>,
-    #[serde(rename = "FOUNDED")]
+    majorindustry: Option<String>,
+    govtpriority: Option<String>,
+    govt: Option<Government>,
     founded: Option<String>,
-    #[serde(rename = "FIRSTLOGIN")]
-    first_login: Option<u64>,
-    #[serde(rename = "LASTLOGIN")]
-    last_login: Option<u64>,
-    #[serde(rename = "LASTACTIVITY")]
-    last_activity: Option<String>,
-    #[serde(rename = "INFLUENCE")]
+    firstlogin: Option<u64>,
+    lastlogin: Option<u64>,
+    lastactivity: Option<String>,
     influence: Option<String>,
-    #[serde(rename = "FREEDOMSCORES")]
-    freedom_scores: Option<FreedomScores>,
-    #[serde(rename = "PUBLICSECTOR")]
-    public_sector: Option<f32>,
-    #[serde(rename = "DEATHS")]
+    freedomscores: Option<FreedomScores>,
+    publicsector: Option<f32>,
     deaths: Option<Deaths>,
-    #[serde(rename = "LEADER")]
     leader: Option<String>,
-    #[serde(rename = "CAPITAL")]
     capital: Option<String>,
-    #[serde(rename = "RELIGION")]
     religion: Option<String>,
-    #[serde(rename = "FACTBOOKS")]
     factbooks: Option<u16>,
-    #[serde(rename = "DISPATCHES")]
     dispatches: Option<u16>,
-    #[serde(rename = "DBID")]
     dbid: Option<u32>,
     // END default
-    #[serde(rename = "ADMIRABLE")]
     admirable: Option<String>,
-    #[serde(rename = "ADMIRABLES")]
-    admirables: Option<Vec<String>>,
-    #[serde(rename = "ANIMALTRAIT")]
-    animal_trait: Option<String>,
-    #[serde(rename = "BANNER")]
-    banner: Option<String>, // TODO: Option<BannerID>
-    #[serde(rename = "BANNERS")]
-    banners: Option<Vec<String>>, // TODO: Option<Vec<BannerID>>
-    #[serde(rename = "CENSUS")]
-    census: Option<Vec<CensusData>>,
-    #[serde(rename = "CRIME")]
+    admirables: Option<Admirables>,
+    animaltrait: Option<String>,
+    // TODO: Option<BannerID>
+    banner: Option<String>,
+    // TODO: Option<Vec<BannerID>>
+    banners: Option<String>,
+    census: Option<Census>,
     crime: Option<String>,
-    #[serde(rename = "DISPATCHLIST")]
-    dispatch_list: Option<RawDispatchList>,
-    // #[serde(rename = "FACTBOOKLIST")]
-    // factbook_list: Option<Vec<Factbook>>,
-    #[serde(rename = "FOUNDEDTIME")]
-    founded_time: Option<u64>,
-    // #[serde(rename = "GAVOTE")]
-    // ga_vote: Option<WAVote>,
-    #[serde(rename = "GDP")]
+    dispatchlist: Option<RawDispatchList>,
+    factbooklist: Option<RawFactbookList>,
+    foundedtime: Option<u64>,
+    gavote: Option<String>,
     gdp: Option<u64>,
-    #[serde(rename = "GOVTDESC")]
-    govt_desc: Option<String>,
-    // happenings: Option<Vec<Event>>,
-    // income: Option<u32>,
+    govtdesc: Option<String>,
+    happenings: Option<Happenings>,
+    income: Option<u32>,
     industry_desc: Option<String>,
     legislation: Option<String>,
     notable: Option<String>,
     notables: Option<Vec<String>>,
-    // policies: Option<Vec<Policy>>,
+    policies: Option<Policies>,
     poorest: Option<u32>,
-    regional_census: Option<NonZeroU16>,
+    rcensus: Option<NonZeroU16>,
     richest: Option<u32>,
-    // sc_vote: Option<WAVote>,
-    // sectors: Option<GovernmentSectors>,
+    scvote: Option<String>,
+    sectors: Option<Sectors>,
     sensibilities: Option<String>,
-    tg_can_recruit: Option<bool>,
-    tg_can_campaign: Option<bool>,
-    world_census: Option<NonZeroU32>,
+    tgcanrecruit: Option<bool>,
+    tgcancampaign: Option<bool>,
+    wcensus: Option<NonZeroU32>,
 }
 
 #[derive(Debug)]
@@ -194,12 +152,12 @@ pub struct FreedomScores {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct Deaths {
+struct Deaths {
     #[serde(rename = "CAUSE")]
-    pub causes: Vec<Cause>,
+    causes: Vec<Cause>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct Cause {
     #[serde(rename = "@type")]
     pub kind: String,
@@ -208,18 +166,18 @@ pub struct Cause {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct Admirables {
-    #[serde(rename = "ADMIRABLES", deserialize_with = "unwrap_list")]
-    pub traits: Option<Vec<String>>,
+struct Admirables {
+    #[serde(rename = "ADMIRABLE")]
+    traits: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct Census {
+struct Census {
     #[serde(rename = "SCALE")]
-    pub data: Vec<CensusData>,
+    data: Vec<CensusData>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct CensusData {
     #[serde(rename = "@id")]
     pub id: u8,
@@ -238,35 +196,71 @@ pub struct CensusData {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct RawDispatchList {
+struct RawDispatchList {
     #[serde(rename = "DISPATCH")]
-    pub dispatches: Vec<RawDispatch>,
+    dispatches: Vec<RawDispatch>,
+}
+
+#[derive(Debug, Deserialize)]
+struct RawFactbookList {
+    #[serde(rename = "FACTBOOK")]
+    factbooks: Vec<RawDispatch>, // only containing factbooks!!
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "UPPERCASE")]
+struct RawDispatch {
+    #[serde(rename = "@id")]
+    id: u32,
+    title: String,
+    author: String,
+    category: String,
+    subcategory: String,
+    created: u64,
+    edited: u64,
+    views: u32,
+    score: u32,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
-pub struct RawDispatch {
-    #[serde(rename = "@id")]
-    pub id: u32,
-    pub title: String,
-    pub author: String,
-    pub category: String,
-    pub subcategory: String,
-    pub created: u64,
-    pub edited: u64,
-    pub views: u32,
-    pub score: u32,
+struct Happenings {
+    events: Vec<RawEvent>,
 }
 
-fn unwrap_list<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    #[derive(Deserialize)]
-    struct List {
-        inner: Option<Vec<String>>,
-    }
-    Ok(List::deserialize(deserializer)?.inner)
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "UPPERCASE")]
+pub(super) struct RawEvent {
+    pub(crate) timestamp: u64,
+    pub(crate) text: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct Policies {
+    #[serde(rename = "POLICY")]
+    policies: Vec<Policy>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct Policy {
+    #[serde(rename = "NAME")]
+    pub name: String,
+    #[serde(rename = "PIC")]
+    pub picture: String,
+    #[serde(rename = "CAT")]
+    pub category: String,
+    #[serde(rename = "DESC")]
+    pub description: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "UPPERCASE")]
+pub struct Sectors {
+    #[serde(rename = "BLACKMARKET")]
+    pub black_market: f32,
+    pub government: f32,
+    pub industry: f32,
+    pub public: f32,
 }
 
 #[derive(Debug)]
@@ -276,9 +270,7 @@ pub struct Nation {
     pub full_name: Option<String>,
     pub motto: Option<String>,
     pub category: Option<String>,
-    // deserialize_with = "handle_wa_status"
     pub wa_status: Option<WAStatus>,
-    // deserialize_with = "unwrap_endorsement_list"
     pub endorsements: Option<Vec<String>>,
     pub issues_answered: Option<u32>,
     pub freedom: Option<Freedoms>,
@@ -301,7 +293,7 @@ pub struct Nation {
     pub influence: Option<String>,
     pub freedom_scores: Option<FreedomScores>,
     pub public_sector: Option<f32>,
-    pub deaths: Option<Deaths>,
+    pub deaths: Option<Vec<Cause>>,
     pub leader: Option<String>,
     pub capital: Option<String>,
     pub religion: Option<String>,
@@ -312,30 +304,28 @@ pub struct Nation {
     pub admirable: Option<String>,
     pub admirables: Option<Vec<String>>,
     pub animal_trait: Option<String>,
-    pub banner: Option<String>,       // TODO: Option<BannerID>
-    pub banners: Option<Vec<String>>, // TODO: Option<Vec<BannerID>>
+    pub banner: Option<String>,  // TODO: Option<BannerID>
+    pub banners: Option<String>, // TODO: Option<Vec<BannerID>>
     pub census: Option<Vec<CensusData>>,
     pub crime: Option<String>,
     pub dispatch_list: Option<Vec<Dispatch>>,
-    // #[serde(rename = "FACTBOOKLIST")]
-    // factbook_list: Option<Vec<Factbook>>,
+    pub factbook_list: Option<Vec<Dispatch>>,
     pub founded_time: Option<u64>,
-    // #[serde(rename = "GAVOTE")]
-    // ga_vote: Option<WAVote>,
+    pub ga_vote: Option<WAVote>,
     pub gdp: Option<u64>,
     pub govt_desc: Option<String>,
-    // happenings: Option<Vec<Event>>,
-    // income: Option<u32>,
+    pub happenings: Option<Vec<Event>>,
+    pub income: Option<u32>,
     pub industry_desc: Option<String>,
     pub legislation: Option<String>,
     pub notable: Option<String>,
     pub notables: Option<Vec<String>>,
-    // policies: Option<Vec<Policy>>,
+    pub policies: Option<Vec<Policy>>,
     pub poorest: Option<u32>,
     pub regional_census: Option<NonZeroU16>,
     pub richest: Option<u32>,
-    // sc_vote: Option<WAVote>,
-    // sectors: Option<GovernmentSectors>,
+    pub sc_vote: Option<WAVote>,
+    pub sectors: Option<Sectors>,
     pub sensibilities: Option<String>,
     pub tg_can_recruit: Option<bool>,
     pub tg_can_campaign: Option<bool>,
@@ -354,6 +344,23 @@ pub struct Dispatch {
     pub score: u32,
 }
 
+impl TryFrom<RawDispatch> for Dispatch {
+    type Error = IntoNationError;
+
+    fn try_from(value: RawDispatch) -> Result<Self, Self::Error> {
+        Ok(Dispatch {
+            id: value.id,
+            title: value.title.clone(),
+            author: value.author.clone(),
+            category: try_into_dispatch_category(&value.category, &value.subcategory)?,
+            created: value.created,
+            edited: value.edited,
+            views: value.views,
+            score: value.score,
+        })
+    }
+}
+
 #[derive(Clone, Debug, Error)]
 pub enum IntoNationError {
     #[error("deserialization failed")]
@@ -368,6 +375,18 @@ pub enum IntoNationError {
     MalformedWAStatusError(String),
     #[error("malformed dispatch category: {0}")]
     MalformedDispatchCategory(String),
+    #[error("malformed wa vote: {bad_vote} in {council:?}")]
+    MalformedWAVote {
+        bad_vote: String,
+        council: WACouncil,
+    },
+}
+
+#[derive(Clone, Debug)]
+pub enum WAVote {
+    For,
+    Against,
+    Undecided,
 }
 
 impl TryFrom<RawNation> for Nation {
@@ -382,7 +401,7 @@ impl TryFrom<RawNation> for Nation {
             },
         }?;
 
-        let wa_status = if let Some(s) = value.wa_status {
+        let wa_status = if let Some(s) = value.unstatus {
             match s.as_str() {
                 "WA Delegate" => Ok(Some(WAStatus::Delegate)),
                 "WA Member" => Ok(Some(WAStatus::Member)),
@@ -397,35 +416,53 @@ impl TryFrom<RawNation> for Nation {
             .endorsements
             .map(|e| e.split(|c| c == ',').map(pretty_name).collect());
 
-        let dispatch_list: Option<Vec<Dispatch>> = if let Some(l) = value.dispatch_list {
+        let deaths = value.deaths.as_ref().map(|d| d.causes.clone());
+        let admirables = value.admirables.as_ref().map(|a| a.traits.clone());
+        let census = value.census.as_ref().map(|c| c.data.clone());
+        let policies = value.policies.as_ref().map(|p| p.policies.clone());
+
+        let dispatch_list: Option<Vec<Dispatch>> = if let Some(v) = value.dispatchlist {
             Some(
-                l.dispatches
+                v.dispatches
                     .iter()
-                    .map(|d| {
-                        Ok(Dispatch {
-                            id: d.id,
-                            title: d.title.clone(),
-                            author: d.author.clone(),
-                            category: main_and_sub_to_rust(&d.category, &d.subcategory)?,
-                            created: d.created,
-                            edited: d.edited,
-                            views: d.views,
-                            score: d.score,
-                        })
-                    })
-                    // collect can take an Iterator<Item=Result<T, E>>
-                    // and transform it into a Result<Iterator<Item=T>, E>,
-                    // and we can propagate that afterward
+                    .map(|x| Dispatch::try_from(x.clone()))
+                    .collect::<Result<Vec<Dispatch>, IntoNationError>>()?,
+            )
+        } else {
+            None
+        };
+        let factbook_list: Option<Vec<Dispatch>> = if let Some(v) = value.factbooklist {
+            Some(
+                v.factbooks
+                    .iter()
+                    .map(|x| Dispatch::try_from(x.clone()))
                     .collect::<Result<Vec<Dispatch>, IntoNationError>>()?,
             )
         } else {
             None
         };
 
+        let ga_vote = if let Some(v) = value.gavote {
+            Some(try_into_wa_vote(&v)?)
+        } else {
+            None
+        };
+
+        let sc_vote = if let Some(v) = value.scvote {
+            Some(try_into_wa_vote(&v)?)
+        } else {
+            None
+        };
+
+        let happenings = value
+            .happenings
+            .as_ref()
+            .map(|h| h.events.iter().map(|e| Event::from(e.clone())).collect());
+
         Ok(Self {
             name,
             kind: value.kind,
-            full_name: value.full_name,
+            full_name: value.fullname,
             motto: value.motto,
             category: value.category,
             wa_status,
@@ -439,19 +476,19 @@ impl TryFrom<RawNation> for Nation {
             currency: value.currency,
             demonym: value.demonym,
             demonym2: value.demonym2,
-            demonym2_plural: value.demonym2_plural,
+            demonym2_plural: value.demonym2plural,
             flag: value.flag,
-            major_industry: value.major_industry,
-            government_priority: value.government_priority,
-            government: value.government,
+            major_industry: value.majorindustry,
+            government_priority: value.govtpriority,
+            government: value.govt,
             founded: value.founded,
-            first_login: value.first_login,
-            last_login: value.last_login,
-            last_activity: value.last_activity,
+            first_login: value.firstlogin,
+            last_login: value.lastlogin,
+            last_activity: value.lastactivity,
             influence: value.influence,
-            freedom_scores: value.freedom_scores,
-            public_sector: value.public_sector,
-            deaths: value.deaths,
+            freedom_scores: value.freedomscores,
+            public_sector: value.publicsector,
+            deaths,
             leader: value.leader,
             capital: value.capital,
             religion: value.religion,
@@ -459,27 +496,34 @@ impl TryFrom<RawNation> for Nation {
             dispatches: value.dispatches,
             dbid: value.dbid,
             admirable: value.admirable,
-            admirables: value.admirables,
-            animal_trait: value.animal_trait,
+            admirables,
+            animal_trait: value.animaltrait,
             banner: value.banner,
             banners: value.banners,
-            census: value.census,
+            census,
             crime: value.crime,
             dispatch_list,
-            founded_time: value.founded_time,
+            factbook_list,
+            founded_time: value.foundedtime,
+            ga_vote,
             gdp: value.gdp,
-            govt_desc: value.govt_desc,
+            govt_desc: value.govtdesc,
+            happenings,
+            income: value.income,
             industry_desc: value.industry_desc,
             legislation: value.legislation,
             notable: value.notable,
             notables: value.notables,
+            policies,
             poorest: value.poorest,
-            regional_census: value.regional_census,
+            regional_census: value.rcensus,
             richest: value.richest,
+            sc_vote,
+            sectors: value.sectors,
             sensibilities: value.sensibilities,
-            tg_can_recruit: value.tg_can_recruit,
-            tg_can_campaign: value.tg_can_campaign,
-            world_census: value.world_census,
+            tg_can_recruit: value.tgcanrecruit,
+            tg_can_campaign: value.tgcancampaign,
+            world_census: value.wcensus,
         })
     }
 }
@@ -490,7 +534,7 @@ impl Nation {
     }
 }
 
-fn main_and_sub_to_rust(
+fn try_into_dispatch_category(
     main_category: &str,
     sub_category: &str,
 ) -> Result<DispatchCategory, IntoNationError> {
@@ -544,5 +588,17 @@ fn main_and_sub_to_rust(
         other => Err(IntoNationError::MalformedDispatchCategory(
             other.to_string(),
         )),
+    }
+}
+
+fn try_into_wa_vote(vote: &str) -> Result<WAVote, IntoNationError> {
+    match vote {
+        "FOR" => Ok(WAVote::For),
+        "AGAINST" => Ok(WAVote::Against),
+        "UNDECIDED" => Ok(WAVote::Undecided),
+        other => Err(IntoNationError::MalformedWAVote {
+            bad_vote: other.to_string(),
+            council: WACouncil::SecurityCouncil,
+        }),
     }
 }
