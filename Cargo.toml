@@ -1,11 +1,10 @@
 [package]
 name = "crustacean-states"
-version = "0.1.0"
+version = "0.1.0-alpha.1"
 edition = "2021"
 authors = ["Trisk (Aramos)"]
+license = "MIT OR Apache-2.0"
 description = "A NationStates API wrapper designed for ease of use"
-
-publish = false
 
 [dependencies]
 dotenv = "0.15.0"
