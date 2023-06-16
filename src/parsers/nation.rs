@@ -10,6 +10,7 @@ use std::fmt::Debug;
 use std::num::{NonZeroU16, NonZeroU32, NonZeroU64};
 use thiserror::Error;
 
+//noinspection ALL
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 /// The Rust representation of a nation, as interpreted from a response to a request.
@@ -69,7 +70,7 @@ struct RawNation {
     // TODO: Option<BannerID>
     banner: Option<String>,
     // TODO: Option<Vec<BannerID>>
-    banners: Option<String>,
+    banners: Option<Banners>,
     census: Option<Census>,
     crime: Option<String>,
     dispatchlist: Option<RawDispatchList>,
@@ -80,10 +81,10 @@ struct RawNation {
     govtdesc: Option<String>,
     happenings: Option<Happenings>,
     income: Option<u32>,
-    industry_desc: Option<String>,
-    legislation: Option<String>,
+    industrydesc: Option<String>,
+    legislation: Option<Legislation>,
     notable: Option<String>,
-    notables: Option<Vec<String>>,
+    notables: Option<Notables>,
     policies: Option<Policies>,
     poorest: Option<u32>,
     rcensus: Option<NonZeroU16>,
@@ -172,6 +173,12 @@ struct Admirables {
 }
 
 #[derive(Debug, Deserialize)]
+struct Banners {
+    #[serde(rename = "BANNER")]
+    banners: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
 struct Census {
     #[serde(rename = "SCALE")]
     data: Vec<CensusData>,
@@ -197,13 +204,13 @@ pub struct CensusData {
 
 #[derive(Debug, Deserialize)]
 struct RawDispatchList {
-    #[serde(rename = "DISPATCH")]
+    #[serde(rename = "DISPATCH", default)]
     dispatches: Vec<RawDispatch>,
 }
 
 #[derive(Debug, Deserialize)]
 struct RawFactbookList {
-    #[serde(rename = "FACTBOOK")]
+    #[serde(rename = "FACTBOOK", default)]
     factbooks: Vec<RawDispatch>, // only containing factbooks!!
 }
 
@@ -225,6 +232,7 @@ struct RawDispatch {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 struct Happenings {
+    #[serde(rename = "EVENT")]
     events: Vec<RawEvent>,
 }
 
@@ -233,6 +241,18 @@ struct Happenings {
 pub(super) struct RawEvent {
     pub(crate) timestamp: u64,
     pub(crate) text: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct Legislation {
+    #[serde(rename = "LAW")]
+    laws: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct Notables {
+    #[serde(rename = "NOTABLE")]
+    notables: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -304,8 +324,8 @@ pub struct Nation {
     pub admirable: Option<String>,
     pub admirables: Option<Vec<String>>,
     pub animal_trait: Option<String>,
-    pub banner: Option<String>,  // TODO: Option<BannerID>
-    pub banners: Option<String>, // TODO: Option<Vec<BannerID>>
+    pub banner: Option<String>,       // TODO: Option<BannerID>
+    pub banners: Option<Vec<String>>, // TODO: Option<Vec<BannerID>>
     pub census: Option<Vec<CensusData>>,
     pub crime: Option<String>,
     pub dispatch_list: Option<Vec<Dispatch>>,
@@ -317,7 +337,7 @@ pub struct Nation {
     pub happenings: Option<Vec<Event>>,
     pub income: Option<u32>,
     pub industry_desc: Option<String>,
-    pub legislation: Option<String>,
+    pub legislation: Option<Vec<String>>,
     pub notable: Option<String>,
     pub notables: Option<Vec<String>>,
     pub policies: Option<Vec<Policy>>,
@@ -351,7 +371,7 @@ impl TryFrom<RawDispatch> for Dispatch {
         Ok(Dispatch {
             id: value.id,
             title: value.title.clone(),
-            author: value.author.clone(),
+            author: pretty_name(value.author),
             category: try_into_dispatch_category(&value.category, &value.subcategory)?,
             created: value.created,
             edited: value.edited,
@@ -418,7 +438,10 @@ impl TryFrom<RawNation> for Nation {
 
         let deaths = value.deaths.as_ref().map(|d| d.causes.clone());
         let admirables = value.admirables.as_ref().map(|a| a.traits.clone());
+        let banners = value.banners.as_ref().map(|a| a.banners.clone());
         let census = value.census.as_ref().map(|c| c.data.clone());
+        let legislation = value.legislation.as_ref().map(|l| l.laws.clone());
+        let notables = value.notables.as_ref().map(|n| n.notables.clone());
         let policies = value.policies.as_ref().map(|p| p.policies.clone());
 
         let dispatch_list: Option<Vec<Dispatch>> = if let Some(v) = value.dispatchlist {
@@ -499,7 +522,7 @@ impl TryFrom<RawNation> for Nation {
             admirables,
             animal_trait: value.animaltrait,
             banner: value.banner,
-            banners: value.banners,
+            banners,
             census,
             crime: value.crime,
             dispatch_list,
@@ -510,10 +533,10 @@ impl TryFrom<RawNation> for Nation {
             govt_desc: value.govtdesc,
             happenings,
             income: value.income,
-            industry_desc: value.industry_desc,
-            legislation: value.legislation,
+            industry_desc: value.industrydesc,
+            legislation,
             notable: value.notable,
-            notables: value.notables,
+            notables,
             policies,
             poorest: value.poorest,
             regional_census: value.rcensus,
