@@ -2,19 +2,19 @@
 
 use crate::impl_display_as_debug;
 use crate::shards::public_nation_shards::{
-    format_census, format_census_scale, CensusModes, CensusScales,
+    CensusModes, CensusScales,
 };
 use crate::shards::world_shards::HappeningsViewType::{Nation, Region};
 use crate::shards::{Params, Shard};
 use itertools::Itertools;
-use std::collections::HashMap;
+
 use std::fmt::{Display, Formatter};
 
 /// A request for the wide world of NationStates.
 #[derive(Clone, Debug)]
-pub enum WorldShard {
+pub enum WorldShard<'a> {
     /// Provides the name of a banner given its ID, as well as the necessary conditions to unlock it.
-    Banner(Vec<String>), // TODO convert to BannerId
+    Banner(Vec<&'a str>), // TODO convert to BannerId
     /// By default, returns the score, rank, and region rank on today's featured World Census scale.
     /// Can be optionally configured with additional parameters.
     /// [source](https://www.nationstates.net/pages/api.html#nationapi-publicshards)
@@ -57,7 +57,7 @@ pub enum WorldShard {
     /// Lists 20 dispatches. The fields can provide more control.
     DispatchList {
         /// If `Some(nation)`, search only for dispatches written by `nation`.
-        author: Option<String>,
+        author: Option<&'a str>,
         /// If `Some(category)`, search only for dispatches that have a certain category.
         category: Option<DispatchCategory>,
         /// If `Some(sort)`, sort according to the dispatch sorting rules.
@@ -118,32 +118,32 @@ pub enum WorldShard {
     TGQueue,
 }
 
-impl From<WorldShard> for Shard {
+impl<'a> From<WorldShard<'a>> for Shard<'a> {
     fn from(value: WorldShard) -> Self {
         Self {
             query: Self::name(&value),
             params: {
-                let mut param_map = Params::new();
+                let mut param_map = Params::default();
                 match value {
                     WorldShard::Banner(banners) => {
-                        param_map.insert("banner".to_string(), banners.iter().join(","));
+                        param_map.0.insert("banner", banners.iter().join(","));
                     }
                     WorldShard::Census { scale, modes } => {
-                        format_census(&mut param_map, &scale, &modes);
+                        param_map.insert_scale(&scale).insert_modes(&modes);
                     }
                     WorldShard::CensusDesc(scale)
                     | WorldShard::CensusScale(scale)
                     | WorldShard::CensusName(scale)
                     | WorldShard::CensusTitle(scale) => {
                         if let Some(s) = scale {
-                            param_map.insert("scale".to_string(), s.to_string());
+                            param_map.0.insert("scale", s.to_string());
                         }
                     }
                     WorldShard::CensusRanks { scale, start } => {
-                        format_census_ranks(&mut param_map, &scale.map(CensusScales::One), &start);
+                        param_map.insert_scale(&scale.map(CensusScales::One)).insert_start(&start);
                     }
                     WorldShard::Dispatch(id) => {
-                        param_map.insert("dispatchid".to_string(), id.to_string());
+                        param_map.0.insert("dispatchid", id.to_string());
                     }
                     WorldShard::DispatchList {
                         author,
@@ -151,13 +151,13 @@ impl From<WorldShard> for Shard {
                         sort,
                     } => {
                         if let Some(a) = author {
-                            param_map.insert("dispatchauthor".to_string(), a);
+                            param_map.0.insert("dispatchauthor", a.to_string());
                         }
                         if let Some(c) = category {
-                            param_map.insert("dispatchcategory".to_string(), c.to_string());
+                            param_map.0.insert("dispatchcategory", c.to_string());
                         }
                         if let Some(s) = sort {
-                            param_map.insert("dispatchsort".to_string(), s.to_string());
+                            param_map.0.insert("dispatchsort", s.to_string());
                         }
                     }
                     WorldShard::Happenings {
@@ -170,8 +170,8 @@ impl From<WorldShard> for Shard {
                         before_time,
                     } => {
                         if let Some(v) = view {
-                            param_map.insert(
-                                "view".to_string(),
+                            param_map.0.insert(
+                                "view",
                                 format!(
                                     "{}.{}",
                                     match v {
@@ -187,26 +187,26 @@ impl From<WorldShard> for Shard {
                             );
                         }
                         if let Some(filters) = filter {
-                            param_map.insert("filter".to_string(), filters.iter().join("+"));
+                            param_map.0.insert("filter", filters.iter().join("+"));
                         }
                         if let Some(x) = limit {
-                            param_map.insert("limit".to_string(), x.to_string());
+                            param_map.0.insert("limit", x.to_string());
                         }
                         if let Some(x) = since_id {
-                            param_map.insert("sinceid".to_string(), x.to_string());
+                            param_map.0.insert("sinceid", x.to_string());
                         }
                         if let Some(x) = before_id {
-                            param_map.insert("beforeid".to_string(), x.to_string());
+                            param_map.0.insert("beforeid", x.to_string());
                         }
                         if let Some(x) = since_time {
-                            param_map.insert("sincetime".to_string(), x.to_string());
+                            param_map.0.insert("sincetime", x.to_string());
                         }
                         if let Some(x) = before_time {
-                            param_map.insert("beforetime".to_string(), x.to_string());
+                            param_map.0.insert("beforetime", x.to_string());
                         }
                     }
                     WorldShard::RegionsByTag(complex_tags) => {
-                        param_map.insert("tags".to_string(), complex_tags.iter().join(","));
+                        param_map.0.insert("tags", complex_tags.iter().join(","));
                     }
                     _ => {}
                 }
@@ -313,7 +313,7 @@ impl HappeningsShardBuilder {
     }
 
     /// Creates a [`WorldShard::Happenings`] variant from the provided information.
-    pub fn build(self) -> WorldShard {
+    pub fn build<'a>(self) -> WorldShard<'a> {
         WorldShard::Happenings {
             view: self.view,
             filter: if self.filter.is_empty() {
@@ -686,16 +686,4 @@ pub enum Tag {
     VideoGame,
     Warzone,
     WorldAssembly,
-}
-
-#[doc(hidden)]
-pub(crate) fn format_census_ranks(
-    param_map: &mut HashMap<String, String>,
-    scale: &Option<CensusScales>,
-    start: &Option<u32>,
-) {
-    format_census_scale(param_map, scale);
-    if let Some(s) = start {
-        param_map.insert("start".to_string(), s.to_string());
-    }
 }
