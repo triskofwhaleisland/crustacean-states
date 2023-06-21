@@ -154,10 +154,7 @@ impl From<WorldShard> for Shard {
                             param_map.insert("dispatchauthor".to_string(), a);
                         }
                         if let Some(c) = category {
-                            param_map.insert(
-                                "dispatchcategory".to_string(),
-                                c.to_string(),
-                            );
+                            param_map.insert("dispatchcategory".to_string(), c.to_string());
                         }
                         if let Some(s) = sort {
                             param_map.insert("dispatchsort".to_string(), s.to_string());
@@ -435,37 +432,53 @@ pub enum MetaCategory {
 
 impl Display for FactbookCategory {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", match self {
-            FactbookCategory::Any => String::new(),
-            c => format!("{c:?}")
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                FactbookCategory::Any => String::new(),
+                c => format!("{c:?}"),
+            }
+        )
     }
 }
 
 impl Display for BulletinCategory {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", match self {
-            BulletinCategory::Any => String::new(),
-            c => format!("{c:?}")
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                BulletinCategory::Any => String::new(),
+                c => format!("{c:?}"),
+            }
+        )
     }
 }
 
 impl Display for AccountCategory {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", match self {
-            AccountCategory::Any => String::new(),
-            c => format!("{c:?}")
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                AccountCategory::Any => String::new(),
+                c => format!("{c:?}"),
+            }
+        )
     }
 }
 
 impl Display for MetaCategory {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", match self {
-            MetaCategory::Any => String::new(),
-            c => format!("{c:?}")
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                MetaCategory::Any => String::new(),
+                c => format!("{c:?}"),
+            }
+        )
     }
 }
 
