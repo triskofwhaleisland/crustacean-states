@@ -1,30 +1,43 @@
+//! National, regional, and world happenings.
+
 use crate::parsers::nation::RawEvent;
 use once_cell::sync::Lazy;
 use regex::{Regex, RegexSet};
 
+/// A happenings line.
 #[derive(Debug)]
+#[non_exhaustive]
 pub struct Event {
+    /// The Unix timestamp when the event happened.
     pub timestamp: u64,
+    /// The exact contents of the event.
+    /// Nations are wrapped in double @s, while regions are wrapped in double %s.
     pub text: String,
+    /// The nations mentioned in the event text.
     pub nations: Vec<String>,
+    /// The regions mentioned in the event text.
     pub regions: Vec<String>,
+    /// The kind of event that this was.
+    /// NOTE: this will always default to "None" until the happenings parsing update.
     pub kind: Option<EventKind>,
 }
 
 #[derive(Debug)]
+#[non_exhaustive]
+/// The kind of event. Not currently implemented.
 pub enum EventKind {
-    NewLaw {
-        nation: String,
-        joke: String,
-    },
-    NationReclassified {
-        nation: String,
-        from: String,
-        to: String,
-    },
-    AlteredFlag {
-        nation: String,
-    },
+    // NewLaw {
+    //     nation: String,
+    //     joke: String,
+    // },
+    // NationReclassified {
+    //     nation: String,
+    //     from: String,
+    //     to: String,
+    // },
+    // AlteredFlag {
+    //     nation: String,
+    // },
     // can you tell where this is going?
 }
 

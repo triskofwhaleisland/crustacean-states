@@ -315,14 +315,14 @@ impl From<PublicNationShard> for Shard {
             query: Self::name(&value),
             params: {
                 let mut param_map = Params::new();
-                match &value {
+                match value {
                     PublicNationShard::Census { scale, modes } => {
-                        format_census(&mut param_map, scale, modes);
+                        format_census(&mut param_map, &scale, &modes);
                     }
                     PublicNationShard::TGCanCampaign { from }
                     | PublicNationShard::TGCanRecruit { from } => {
-                        if let Some(f) = from.as_ref() {
-                            param_map.insert("from".to_string(), f.clone());
+                        if let Some(f) = from {
+                            param_map.insert("from".to_string(), f);
                         }
                     }
                     _ => {} // no other public nation shards require parameters
@@ -345,7 +345,7 @@ pub(crate) fn format_census(
 
 #[doc(hidden)]
 pub(crate) fn format_census_scale(param_map: &mut Params, scale: &Option<CensusScales>) {
-    if let Some(s) = scale.as_ref() {
+    if let Some(ref s) = scale {
         param_map.insert(
             "scale".to_string(),
             match s {
@@ -359,7 +359,7 @@ pub(crate) fn format_census_scale(param_map: &mut Params, scale: &Option<CensusS
 
 #[doc(hidden)]
 pub(crate) fn format_census_modes(param_map: &mut Params, modes: &Option<CensusModes>) {
-    if let Some(m) = modes.as_ref() {
+    if let Some(ref m) = modes {
         match m {
             CensusModes::History { from, to } => {
                 param_map.insert("mode".to_string(), "history".to_string());

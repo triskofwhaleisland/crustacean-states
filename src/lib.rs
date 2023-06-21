@@ -27,10 +27,13 @@ pub fn pretty_name(safe_name: impl ToString) -> String {
         .replace('_', " ")
         .chars()
         .fold(String::new(), |s, c| {
-            if s.is_empty() || s.ends_with(' ') {
-                s + c.to_ascii_uppercase().to_string().as_str()
-            } else {
-                s + c.to_string().as_str()
-            }
+            format!(
+                "{s}{}",
+                if s.is_empty() || s.ends_with(' ') {
+                    c.to_ascii_uppercase()
+                } else {
+                    c
+                }
+            )
         })
 }

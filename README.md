@@ -1,5 +1,7 @@
 A NationStates API in Rust.
 
+Proud to be 100% safe. Takes full advantage of Rust's type system.
+
 ## License
 
 Licensed under either of 

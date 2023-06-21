@@ -1,4 +1,5 @@
 //! Contains everything needed to make region shard requests.
+
 use crate::shards::public_nation_shards::{format_census, CensusModes, CensusScales};
 use crate::shards::world_shards::format_census_ranks;
 use crate::shards::{Params, Shard};
@@ -125,12 +126,12 @@ impl From<RegionShard> for Shard {
             query: Self::name(&value),
             params: {
                 let mut param_map = Params::new();
-                match &value {
+                match value {
                     RegionShard::Census { scale, modes } => {
-                        format_census(&mut param_map, scale, modes);
+                        format_census(&mut param_map, &scale, &modes);
                     }
                     RegionShard::CensusRanks { scale, start } => {
-                        format_census_ranks(&mut param_map, &scale.map(CensusScales::One), start);
+                        format_census_ranks(&mut param_map, &scale.map(CensusScales::One), &start);
                     }
                     RegionShard::Messages {
                         limit,

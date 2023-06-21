@@ -1,3 +1,16 @@
+//! A shard is a tiny request, composed of two parts: the query and the extra parameters.
+//! You add multiple shards together in order to get the most efficient response.
+//! Remember: 50 requests per 30 seconds is both a lot and very little at the same time!
+//!
+//! There are two very important restrictions for shards: first, you can only combine shards that are
+//! - for the same nation, or
+//! - for the same region, or
+//! - for the same World Assembly council, or
+//! - for the world.
+//! Second, it is not possible to make two requests that use extra parameters with the same name.
+//! Right now, `crustacean-states` allows for parameters to be overwritten.
+//! In the future, it may be possible to create a series of requests that do not overlap.
+
 pub mod public_nation_shards;
 pub mod region_shards;
 pub mod world_assembly_shards;
@@ -6,13 +19,16 @@ pub mod world_shards;
 use crate::safe_name;
 use crate::shards::public_nation_shards::PublicNationShard;
 use crate::shards::region_shards::RegionShard;
-use crate::shards::world_assembly_shards::WACouncil;
+use crate::shards::world_assembly_shards::{WACouncil, WAShard};
+use crate::shards::world_shards::WorldShard;
 use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
 
+/// Type that maps extra parameters in the query to their values.
 pub type Params = HashMap<String, String>;
 
 #[derive(Debug)]
+/// The smallest possible request that can be made to the website.
 pub struct Shard {
     pub(crate) query: String,
     pub(crate) params: HashMap<String, String>,
@@ -45,17 +61,31 @@ impl Shard {
     }
 }
 
+/// The intermediate representation of a NationStates API request.
 pub struct NSRequest {
     kind: NSRequestKind,
     query: String,
     params: Params,
 }
 
+/// The kind of request being made.
+/// NOTE: as the API continues to expand, more categories of requests will be supported.
+#[non_exhaustive]
 pub enum NSRequestKind {
+    /// A request about a nation (using public data).
     PublicNation(String),
+    /// A request about a region.
     Region(String),
+    /// A request about the world.
     World,
-    WA { council: WACouncil, id: Option<u16> },
+    /// A request about the World Assembly.
+    WA {
+        /// The council that the request is about.
+        council: WACouncil,
+        /// The ID of the resolution being inquired of.
+        /// If left "None", the response will be for the current at-vote resolution.
+        id: Option<u16>,
+    },
 }
 
 impl NSRequest {
@@ -141,6 +171,39 @@ impl NSRequest {
             params: Default::default(),
         }
     }
+
+    /// Create a world request
+    pub fn new_world(shards: &[WorldShard]) -> Self {
+        let (query, params) = Shard::query_and_params(shards);
+        Self {
+            kind: NSRequestKind::World,
+            query,
+            params,
+        }
+    }
+
+    /// Create a WA request
+    pub fn new_wa(id: Option<u16>, shards: &[WAShard]) -> Self {
+        let (query, params) = Shard::query_and_params(shards);
+        Self {
+            kind: NSRequestKind::WA {
+                council: {
+                    shards
+                        .iter()
+                        .find_map(|s| match s {
+                            WAShard::Proposals(council)
+                            | WAShard::CurrentResolution(council, _)
+                            | WAShard::LastResolution(council) => Some(council.clone()),
+                            _ => None,
+                        })
+                        .unwrap_or_default()
+                },
+                id,
+            },
+            query,
+            params,
+        }
+    }
 }
 
 impl Display for NSRequest {
@@ -148,11 +211,11 @@ impl Display for NSRequest {
         write!(
             f,
             "{}{}{}",
-            match &self.kind {
-                NSRequestKind::PublicNation(n) => format!("nation={}", safe_name(n)),
-                NSRequestKind::Region(r) => format!("region={}", safe_name(r)),
+            match self.kind {
+                NSRequestKind::PublicNation(ref n) => format!("nation={}", safe_name(n)),
+                NSRequestKind::Region(ref r) => format!("region={}", safe_name(r)),
                 NSRequestKind::World => String::new(),
-                NSRequestKind::WA { council, id } => match id {
+                NSRequestKind::WA { ref council, id } => match id {
                     Some(i) => format!("wa={}&id={i}", council.clone() as u8),
                     None => format!("wa={}", council.clone() as u8),
                 },

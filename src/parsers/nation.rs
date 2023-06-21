@@ -1,3 +1,5 @@
+//! The nation parser.
+
 use crate::parsers::happenings::Event;
 use crate::pretty_name;
 use crate::shards::world_assembly_shards::WACouncil;
@@ -284,6 +286,7 @@ pub struct Sectors {
 }
 
 #[derive(Debug)]
+#[non_exhaustive]
 pub struct Nation {
     pub name: String,
     pub kind: Option<String>,
@@ -436,13 +439,13 @@ impl TryFrom<RawNation> for Nation {
             .endorsements
             .map(|e| e.split(|c| c == ',').map(pretty_name).collect());
 
-        let deaths = value.deaths.as_ref().map(|d| d.causes.clone());
-        let admirables = value.admirables.as_ref().map(|a| a.traits.clone());
-        let banners = value.banners.as_ref().map(|a| a.banners.clone());
-        let census = value.census.as_ref().map(|c| c.data.clone());
-        let legislation = value.legislation.as_ref().map(|l| l.laws.clone());
-        let notables = value.notables.as_ref().map(|n| n.notables.clone());
-        let policies = value.policies.as_ref().map(|p| p.policies.clone());
+        let deaths = value.deaths.map(|d| d.causes);
+        let admirables = value.admirables.map(|a| a.traits);
+        let banners = value.banners.map(|a| a.banners);
+        let census = value.census.map(|c| c.data);
+        let legislation = value.legislation.map(|l| l.laws);
+        let notables = value.notables.map(|n| n.notables);
+        let policies = value.policies.map(|p| p.policies);
 
         let dispatch_list: Option<Vec<Dispatch>> = if let Some(v) = value.dispatchlist {
             Some(
@@ -479,7 +482,6 @@ impl TryFrom<RawNation> for Nation {
 
         let happenings = value
             .happenings
-            .as_ref()
             .map(|h| h.events.iter().map(|e| Event::from(e.clone())).collect());
 
         Ok(Self {
@@ -562,7 +564,7 @@ fn try_into_dispatch_category(
     sub_category: &str,
 ) -> Result<DispatchCategory, IntoNationError> {
     match main_category {
-        "Factbook" => Ok(DispatchCategory::Factbook(Some(match sub_category {
+        "Factbook" => Ok(DispatchCategory::Factbook(match sub_category {
             "Overview" => Ok(FactbookCategory::Overview),
             "History" => Ok(FactbookCategory::History),
             "Geography" => Ok(FactbookCategory::Geography),
@@ -578,8 +580,8 @@ fn try_into_dispatch_category(
             other => Err(IntoNationError::MalformedDispatchCategory(format!(
                 "Factbook:{other}"
             ))),
-        }?))),
-        "Bulletin" => Ok(DispatchCategory::Bulletin(Some(match sub_category {
+        }?)),
+        "Bulletin" => Ok(DispatchCategory::Bulletin(match sub_category {
             "Policy" => Ok(BulletinCategory::Policy),
             "News" => Ok(BulletinCategory::News),
             "Opinion" => Ok(BulletinCategory::Opinion),
@@ -587,8 +589,8 @@ fn try_into_dispatch_category(
             other => Err(IntoNationError::MalformedDispatchCategory(format!(
                 "Bulletin:{other}"
             ))),
-        }?))),
-        "Account" => Ok(DispatchCategory::Account(Some(match sub_category {
+        }?)),
+        "Account" => Ok(DispatchCategory::Account(match sub_category {
             "Military" => Ok(AccountCategory::Military),
             "Trade" => Ok(AccountCategory::Trade),
             "Sport" => Ok(AccountCategory::Sport),
@@ -600,14 +602,14 @@ fn try_into_dispatch_category(
             other => Err(IntoNationError::MalformedDispatchCategory(format!(
                 "Account:{other}"
             ))),
-        }?))),
-        "Meta" => Ok(DispatchCategory::Meta(Some(match sub_category {
+        }?)),
+        "Meta" => Ok(DispatchCategory::Meta(match sub_category {
             "Gameplay" => Ok(MetaCategory::Gameplay),
             "Reference" => Ok(MetaCategory::Reference),
             other => Err(IntoNationError::MalformedDispatchCategory(format!(
                 "Meta:{other}"
             ))),
-        }?))),
+        }?)),
         other => Err(IntoNationError::MalformedDispatchCategory(
             other.to_string(),
         )),
