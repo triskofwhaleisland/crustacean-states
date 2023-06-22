@@ -1,14 +1,13 @@
 //! Contains everything needed to make public nation shard requests.
 
 use crate::shards::{Params, Shard};
-use itertools::Itertools;
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::num::NonZeroU64;
 
 /// A nation request available to anyone.
 #[derive(Clone, Debug)]
-pub enum PublicNationShard {
+pub enum PublicNationShard<'a> {
     /// A randomly-selected compliment for the nation.
     Admirable,
     /// All possible compliments for the nation.
@@ -229,12 +228,12 @@ pub enum PublicNationShard {
     /// Whether a recruitment telegram can be sent to the nation or not.
     TGCanRecruit {
         /// Whether the nation will deny a recruitment telegram from this region in particular due to having received one too recently.
-        from: Option<String>,
+        from: Option<&'a str>,
     },
     /// Whether a campaign telegram can be sent to the nation or not.
     TGCanCampaign {
         /// Whether the nation will deny a campaign telegram from this region in particular due to having received one too recently.
-        from: Option<String>,
+        from: Option<&'a str>,
     },
     /// The pre-title of the nation.
     Type,
@@ -309,70 +308,26 @@ impl Display for CensusCurrentModes {
     }
 }
 
-impl From<PublicNationShard> for Shard {
-    fn from(value: PublicNationShard) -> Self {
+impl<'a> From<PublicNationShard<'a>> for Shard<'a> {
+    fn from(value: PublicNationShard<'a>) -> Self {
         Self {
             query: Self::name(&value),
             params: {
-                let mut param_map = Params::new();
+                let mut param_map = Params::default();
                 match value {
                     PublicNationShard::Census { scale, modes } => {
-                        format_census(&mut param_map, &scale, &modes);
+                        param_map.insert_scale(&scale).insert_modes(&modes);
                     }
                     PublicNationShard::TGCanCampaign { from }
                     | PublicNationShard::TGCanRecruit { from } => {
                         if let Some(f) = from {
-                            param_map.insert("from".to_string(), f);
+                            param_map.0.insert("from", f.to_string());
                         }
                     }
                     _ => {} // no other public nation shards require parameters
                 };
                 param_map
             },
-        }
-    }
-}
-
-#[doc(hidden)]
-pub(crate) fn format_census(
-    param_map: &mut Params,
-    scale: &Option<CensusScales>,
-    modes: &Option<CensusModes>,
-) {
-    format_census_scale(param_map, scale);
-    format_census_modes(param_map, modes);
-}
-
-#[doc(hidden)]
-pub(crate) fn format_census_scale(param_map: &mut Params, scale: &Option<CensusScales>) {
-    if let Some(ref s) = scale {
-        param_map.insert(
-            "scale".to_string(),
-            match s {
-                CensusScales::One(scale) => scale.to_string(),
-                CensusScales::Many(scales) => scales.iter().join("+"),
-                CensusScales::All => "all".to_string(),
-            },
-        );
-    }
-}
-
-#[doc(hidden)]
-pub(crate) fn format_census_modes(param_map: &mut Params, modes: &Option<CensusModes>) {
-    if let Some(ref m) = modes {
-        match m {
-            CensusModes::History { from, to } => {
-                param_map.insert("mode".to_string(), "history".to_string());
-                if let Some(x) = from {
-                    param_map.insert("from".to_string(), x.to_string());
-                }
-                if let Some(x) = to {
-                    param_map.insert("to".to_string(), x.to_string());
-                }
-            }
-            CensusModes::Current(current_modes) => {
-                param_map.insert("mode".to_string(), current_modes.iter().join("+"));
-            }
         }
     }
 }

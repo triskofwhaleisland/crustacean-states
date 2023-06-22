@@ -373,7 +373,7 @@ impl TryFrom<RawDispatch> for Dispatch {
     fn try_from(value: RawDispatch) -> Result<Self, Self::Error> {
         Ok(Dispatch {
             id: value.id,
-            title: value.title.clone(),
+            title: value.title,
             author: pretty_name(value.author),
             category: try_into_dispatch_category(&value.category, &value.subcategory)?,
             created: value.created,
@@ -435,9 +435,11 @@ impl TryFrom<RawNation> for Nation {
             Ok(None)
         }?;
 
-        let endorsements: Option<Vec<String>> = value
-            .endorsements
-            .map(|e| e.split(|c| c == ',').map(pretty_name).collect());
+        let endorsements = value.endorsements.map(|e| {
+            e.split(|c| c == ',')
+                .map(pretty_name)
+                .collect::<Vec<String>>()
+        });
 
         let deaths = value.deaths.map(|d| d.causes);
         let admirables = value.admirables.map(|a| a.traits);
@@ -447,42 +449,31 @@ impl TryFrom<RawNation> for Nation {
         let notables = value.notables.map(|n| n.notables);
         let policies = value.policies.map(|p| p.policies);
 
-        let dispatch_list: Option<Vec<Dispatch>> = if let Some(v) = value.dispatchlist {
-            Some(
+        let dispatch_list = value
+            .dispatchlist
+            .map(|v| {
                 v.dispatches
-                    .iter()
-                    .map(|x| Dispatch::try_from(x.clone()))
-                    .collect::<Result<Vec<Dispatch>, IntoNationError>>()?,
-            )
-        } else {
-            None
-        };
-        let factbook_list: Option<Vec<Dispatch>> = if let Some(v) = value.factbooklist {
-            Some(
+                    .into_iter()
+                    .map(Dispatch::try_from)
+                    .collect::<Result<Vec<Dispatch>, IntoNationError>>()
+            })
+            .transpose()?;
+        let factbook_list = value
+            .factbooklist
+            .map(|v| {
                 v.factbooks
-                    .iter()
-                    .map(|x| Dispatch::try_from(x.clone()))
-                    .collect::<Result<Vec<Dispatch>, IntoNationError>>()?,
-            )
-        } else {
-            None
-        };
+                    .into_iter()
+                    .map(Dispatch::try_from)
+                    .collect::<Result<Vec<Dispatch>, IntoNationError>>()
+            })
+            .transpose()?;
 
-        let ga_vote = if let Some(v) = value.gavote {
-            Some(try_into_wa_vote(&v)?)
-        } else {
-            None
-        };
-
-        let sc_vote = if let Some(v) = value.scvote {
-            Some(try_into_wa_vote(&v)?)
-        } else {
-            None
-        };
+        let ga_vote = value.gavote.map(|v| try_into_wa_vote(&v)).transpose()?;
+        let sc_vote = value.scvote.map(|v| try_into_wa_vote(&v)).transpose()?;
 
         let happenings = value
             .happenings
-            .map(|h| h.events.iter().map(|e| Event::from(e.clone())).collect());
+            .map(|h| h.events.into_iter().map(Event::from).collect());
 
         Ok(Self {
             name,
@@ -554,8 +545,8 @@ impl TryFrom<RawNation> for Nation {
 }
 
 impl Nation {
-    pub fn from_xml<'a>(xml: impl Into<&'a str>) -> Result<Self, IntoNationError> {
-        Self::try_from(quick_xml::de::from_str::<RawNation>(xml.into())?)
+    pub fn from_xml(xml: &str) -> Result<Self, IntoNationError> {
+        Self::try_from(quick_xml::de::from_str::<RawNation>(xml)?)
     }
 }
 

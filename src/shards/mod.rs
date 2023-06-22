@@ -17,34 +17,85 @@ pub mod world_assembly_shards;
 pub mod world_shards;
 
 use crate::safe_name;
-use crate::shards::public_nation_shards::PublicNationShard;
+use crate::shards::public_nation_shards::{CensusModes, CensusScales, PublicNationShard};
 use crate::shards::region_shards::RegionShard;
 use crate::shards::world_assembly_shards::{WACouncil, WAShard};
 use crate::shards::world_shards::WorldShard;
+use itertools::Itertools;
 use std::collections::HashMap;
-use std::fmt::{Debug, Display, Formatter};
+use std::fmt::Debug;
+
+const BASE_URL: &str = "https://www.nationstates.net/cgi-bin/api.cgi?";
 
 /// Type that maps extra parameters in the query to their values.
-pub type Params = HashMap<String, String>;
+#[derive(Debug, Default)]
+pub(crate) struct Params<'a>(HashMap<&'a str, String>);
+
+impl<'a> Params<'a> {
+    #[doc(hidden)]
+    pub(crate) fn insert_scale(&mut self, scale: &Option<CensusScales>) -> &mut Self {
+        if let Some(ref s) = scale {
+            self.0.insert("scale", {
+                let p = match s {
+                    CensusScales::One(scale) => scale.to_string(),
+                    CensusScales::Many(scales) => scales.iter().join("+"),
+                    CensusScales::All => "all".to_string(),
+                };
+                p
+            });
+        }
+        self
+    }
+    #[doc(hidden)]
+    pub(crate) fn insert_modes(&mut self, modes: &Option<CensusModes>) -> &mut Self {
+        if let Some(ref m) = modes {
+            match m {
+                CensusModes::History { from, to } => {
+                    self.0.insert("mode", String::from("history"));
+                    if let Some(x) = from {
+                        self.0.insert("from", x.to_string());
+                    }
+                    if let Some(x) = to {
+                        self.0.insert("to", x.to_string());
+                    }
+                }
+                CensusModes::Current(current_modes) => {
+                    self.0.insert("mode", current_modes.iter().join("+"));
+                }
+            }
+        }
+        self
+    }
+    #[doc(hidden)]
+    pub(crate) fn insert_start(&mut self, start: &Option<u32>) -> &mut Self {
+        if let Some(s) = start {
+            self.0.insert("start", s.to_string());
+        }
+        self
+    }
+}
 
 #[derive(Debug)]
 /// The smallest possible request that can be made to the website.
-pub struct Shard {
+pub struct Shard<'a> {
     pub(crate) query: String,
-    pub(crate) params: HashMap<String, String>,
+    pub(crate) params: Params<'a>,
 }
 
-impl Shard {
-    fn query_and_params<T: Into<Self> + Clone>(shards: &[T]) -> (String, Params) {
-        let mut params = Params::new();
+impl<'a> Shard<'a> {
+    fn query_and_params<T>(shards: Vec<T>) -> (String, Params<'a>)
+    where
+        Self: From<T>,
+    {
+        let mut params = Params::default();
         let mut query = String::new();
-        shards.iter().for_each(|s| {
-            let shard: Shard = s.clone().into();
+        shards.into_iter().for_each(|s| {
+            let shard = Shard::from(s);
             if !query.is_empty() {
                 query.push('+');
             }
             query.push_str(shard.query.to_lowercase().as_str());
-            params.extend(shard.params);
+            params.0.extend(shard.params.0);
         });
         (query, params)
     }
@@ -62,10 +113,10 @@ impl Shard {
 }
 
 /// The intermediate representation of a NationStates API request.
-pub struct NSRequest {
+pub struct NSRequest<'a> {
     kind: NSRequestKind,
     query: String,
-    params: Params,
+    params: Params<'a>,
 }
 
 /// The kind of request being made.
@@ -88,7 +139,7 @@ pub enum NSRequestKind {
     },
 }
 
-impl NSRequest {
+impl<'a> NSRequest<'a> {
     /// Create a nation request with any number of [`PublicNationShard`]s.
     ///
     /// # Example
@@ -98,11 +149,11 @@ impl NSRequest {
     /// use crustacean_states::shards::public_nation_shards::PublicNationShard;
     ///
     /// let request = NSRequest::new_nation("Testlandia",
-    ///         &[PublicNationShard::Region, PublicNationShard::Demonym]).to_string();
+    ///         vec![PublicNationShard::Region, PublicNationShard::Demonym]).into_request();
     /// ```
     /// When sent,
     /// it will request information about [Testlandia](https://www.nationstates.net/nation=testlandia)'s region and demonym.
-    pub fn new_nation(nation: impl ToString, shards: &[PublicNationShard]) -> Self {
+    pub fn new_nation(nation: impl ToString, shards: Vec<PublicNationShard<'a>>) -> Self {
         let (query, params) = Shard::query_and_params(shards);
         Self {
             kind: NSRequestKind::PublicNation(nation.to_string()),
@@ -150,12 +201,12 @@ impl NSRequest {
     /// use crustacean_states::shards::region_shards::RegionShard;
     ///
     /// let request = NSRequest::new_region("Testregionia",
-    ///         &[RegionShard::Delegate, RegionShard::Flag]).to_string();
+    ///         vec![RegionShard::Delegate, RegionShard::Flag]).into_request();
     /// ```
     ///
     /// When sent,
     /// it will request information about [Testregionia](https://www.nationstates.net/region=testregionia)'s delegate and flag.
-    pub fn new_region(region: impl ToString, shards: &[RegionShard]) -> Self {
+    pub fn new_region(region: impl ToString, shards: Vec<RegionShard>) -> Self {
         let (query, params) = Shard::query_and_params(shards);
         Self {
             kind: NSRequestKind::Region(region.to_string()),
@@ -173,7 +224,7 @@ impl NSRequest {
     }
 
     /// Create a world request
-    pub fn new_world(shards: &[WorldShard]) -> Self {
+    pub fn new_world(shards: Vec<WorldShard<'a>>) -> Self {
         let (query, params) = Shard::query_and_params(shards);
         Self {
             kind: NSRequestKind::World,
@@ -183,17 +234,17 @@ impl NSRequest {
     }
 
     /// Create a WA request
-    pub fn new_wa(id: Option<u16>, shards: &[WAShard]) -> Self {
-        let (query, params) = Shard::query_and_params(shards);
+    pub fn new_wa(id: Option<u16>, shards: Vec<WAShard<'a>>) -> Self {
+        let (query, params) = Shard::query_and_params(shards.clone());
         Self {
             kind: NSRequestKind::WA {
                 council: {
                     shards
-                        .iter()
+                        .into_iter()
                         .find_map(|s| match s {
                             WAShard::Proposals(council)
                             | WAShard::CurrentResolution(council, _)
-                            | WAShard::LastResolution(council) => Some(council.clone()),
+                            | WAShard::LastResolution(council) => Some(council),
                             _ => None,
                         })
                         .unwrap_or_default()
@@ -204,13 +255,10 @@ impl NSRequest {
             params,
         }
     }
-}
 
-impl Display for NSRequest {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}{}{}",
+    pub fn into_request(self) -> String {
+        format!(
+            "{BASE_URL}{}{}{}",
             match self.kind {
                 NSRequestKind::PublicNation(ref n) => format!("nation={}", safe_name(n)),
                 NSRequestKind::Region(ref r) => format!("region={}", safe_name(r)),
@@ -223,9 +271,10 @@ impl Display for NSRequest {
             (!self.query.is_empty())
                 .then(|| format!("&q={}", self.query))
                 .unwrap_or_default(),
-            (!self.params.is_empty())
+            (!self.params.0.is_empty())
                 .then(|| self
                     .params
+                    .0
                     .iter()
                     .fold(String::new(), |acc, (k, v)| format!("{acc}&{k}={v}")))
                 .unwrap_or_default(),

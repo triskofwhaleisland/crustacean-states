@@ -1,7 +1,6 @@
 //! Contains everything needed to make region shard requests.
 
-use crate::shards::public_nation_shards::{format_census, CensusModes, CensusScales};
-use crate::shards::world_shards::format_census_ranks;
+use crate::shards::public_nation_shards::{CensusModes, CensusScales};
 use crate::shards::{Params, Shard};
 
 /// A request of a region.
@@ -120,18 +119,20 @@ pub enum RegionShard {
     WANations,
 }
 
-impl From<RegionShard> for Shard {
+impl<'a> From<RegionShard> for Shard<'a> {
     fn from(value: RegionShard) -> Self {
         Self {
             query: Self::name(&value),
             params: {
-                let mut param_map = Params::new();
+                let mut param_map = Params::default();
                 match value {
                     RegionShard::Census { scale, modes } => {
-                        format_census(&mut param_map, &scale, &modes);
+                        param_map.insert_scale(&scale).insert_modes(&modes);
                     }
                     RegionShard::CensusRanks { scale, start } => {
-                        format_census_ranks(&mut param_map, &scale.map(CensusScales::One), &start);
+                        param_map
+                            .insert_scale(&scale.map(CensusScales::One))
+                            .insert_start(&start);
                     }
                     RegionShard::Messages {
                         limit,
@@ -139,13 +140,13 @@ impl From<RegionShard> for Shard {
                         from_id,
                     } => {
                         if let Some(l) = limit {
-                            param_map.insert("limit".to_string(), l.to_string());
+                            param_map.0.insert("limit", l.to_string());
                         }
                         if let Some(o) = offset {
-                            param_map.insert("offset".to_string(), o.to_string());
+                            param_map.0.insert("offset", o.to_string());
                         }
                         if let Some(f) = from_id {
-                            param_map.insert("fromid".to_string(), f.to_string());
+                            param_map.0.insert("fromid", f.to_string());
                         }
                     }
                     _ => {}

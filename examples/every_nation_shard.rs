@@ -2,15 +2,18 @@ use crustacean_states::parsers::nation::Nation;
 use crustacean_states::rate_limiter::client_request;
 use crustacean_states::shards::public_nation_shards::PublicNationShard::*;
 use crustacean_states::shards::NSRequest;
-use reqwest::Client;
 use std::error::Error;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
+    dotenv::dotenv()?;
+    let user_agent = std::env::var("USER_AGENT")?;
+    let client = reqwest::ClientBuilder::new().user_agent(user_agent).build()?;
+
     let target_name = "Aramos";
     let request = NSRequest::new_nation(
         target_name,
-        &[
+        vec![
             Admirable,
             Admirables,
             Animal,
@@ -80,11 +83,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
             WCensus,
         ],
     )
-    .to_string();
-    let client = Client::new();
+    .into_request();
+    eprintln!("{request}");
     let raw_response = client_request(&client, &request).await?.text().await?;
-    let response = Nation::from_xml(raw_response.as_str())?;
-    eprintln!("{response:?}");
+    let response = Nation::from_xml(&raw_response)?;
+    println!("{response:?}");
 
     Ok(())
 }

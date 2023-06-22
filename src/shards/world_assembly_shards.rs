@@ -48,7 +48,7 @@ pub enum WAShard<'a> {
     PreviousResolution(WACouncil, u16),
 }
 
-impl<'a> From<WAShard<'a>> for Shard {
+impl<'a> From<WAShard<'a>> for Shard<'a> {
     fn from(value: WAShard) -> Self {
         Self {
             query: match value {
