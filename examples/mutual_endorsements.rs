@@ -40,7 +40,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
     }
     println!(
-        "{} is endorsing {} of the {} nations that endorse you.",
+        "{} is endorsing {} of the {} nations that endorse it.",
         target, n, l
     );
 
