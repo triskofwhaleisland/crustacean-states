@@ -1,19 +1,13 @@
-use dotenv::dotenv;
 use reqwest::header::HeaderMap;
 use reqwest::Response;
-use std::env;
 use std::error::Error;
-
-const BASE_URL: &str = "https://www.nationstates.net/cgi-bin/api.cgi?";
 
 pub async fn client_request(
     client: &reqwest::Client,
     request: &str,
 ) -> Result<Response, reqwest::Error> {
-    dotenv().ok();
     client
-        .get(format!("{BASE_URL}{request}"))
-        .header(reqwest::header::USER_AGENT, env::var("USER_AGENT").unwrap())
+        .get(request)
         .send()
         .await
 }

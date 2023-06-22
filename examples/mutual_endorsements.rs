@@ -4,16 +4,14 @@ use crustacean_states::{
     rate_limiter::{client_request, RateLimits},
     shards::public_nation_shards::PublicNationShard::Endorsements,
 };
-use dotenv::dotenv;
-use reqwest::Client;
 use std::error::Error;
 use std::time::Duration;
-use tokio::time::sleep;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    dotenv().ok();
-    let client = Client::new();
+    dotenv::dotenv()?;
+    let user_agent = std::env::var("USER_AGENT")?;
+    let client = reqwest::ClientBuilder::new().user_agent(user_agent).build()?;
     eprintln!("Made client!");
     let target = "Aramos";
     let request = NSRequest::new_nation(target.to_string(), vec![Endorsements]).into_request();
@@ -31,7 +29,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let rate_limiter = RateLimits::new(response.headers())?;
             let wait_time = rate_limiter.retry_after.unwrap();
             eprintln!("Waiting for {} seconds to comply with API.", wait_time);
-            sleep(Duration::from_secs(wait_time as u64)).await;
+            tokio::time::sleep(Duration::from_secs(wait_time as u64)).await;
             response = client_request(&client, &request).await?;
         }
         let text = response.text().await?;

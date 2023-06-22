@@ -25,6 +25,8 @@ use itertools::Itertools;
 use std::collections::HashMap;
 use std::fmt::Debug;
 
+const BASE_URL: &str = "https://www.nationstates.net/cgi-bin/api.cgi?";
+
 /// Type that maps extra parameters in the query to their values.
 #[derive(Debug, Default)]
 pub(crate) struct Params<'a>(HashMap<&'a str, String>);
@@ -256,7 +258,7 @@ impl<'a> NSRequest<'a> {
 
     pub fn into_request(self) -> String {
         format!(
-            "{}{}{}",
+            "{BASE_URL}{}{}{}",
             match self.kind {
                 NSRequestKind::PublicNation(ref n) => format!("nation={}", safe_name(n)),
                 NSRequestKind::Region(ref r) => format!("region={}", safe_name(r)),

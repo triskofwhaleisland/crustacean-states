@@ -308,7 +308,7 @@ impl Display for CensusCurrentModes {
     }
 }
 
-impl<'a, 'b> From<PublicNationShard<'a>> for Shard<'a> {
+impl<'a> From<PublicNationShard<'a>> for Shard<'a> {
     fn from(value: PublicNationShard<'a>) -> Self {
         Self {
             query: Self::name(&value),
