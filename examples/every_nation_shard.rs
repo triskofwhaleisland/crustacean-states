@@ -10,7 +10,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let target_name = "Aramos";
     let request = NSRequest::new_nation(
         target_name,
-        &[
+        vec![
             Admirable,
             Admirables,
             Animal,
@@ -80,11 +80,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
             WCensus,
         ],
     )
-    .to_string();
+    .into_request();
     let client = Client::new();
     let raw_response = client_request(&client, &request).await?.text().await?;
     let response = Nation::from_xml(raw_response.as_str())?;
-    eprintln!("{response:?}");
+    println!("{response:?}");
 
     Ok(())
 }

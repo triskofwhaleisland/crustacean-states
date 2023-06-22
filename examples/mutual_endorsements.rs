@@ -16,14 +16,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let client = Client::new();
     eprintln!("Made client!");
     let target = "Aramos";
-    let request = NSRequest::new_nation_standard(target.to_string()).to_string();
+    let request = NSRequest::new_nation(target.to_string(), vec![Endorsements]).into_request();
     let response = client_request(&client, &request).await?;
     let text = response.text().await?;
-    let target_nation = Nation::from_xml(&*text)?;
-    let l = target_nation.endorsements.clone().unwrap().len();
+    let target_nation = Nation::from_xml(&text)?;
+    let l = target_nation.endorsements.as_ref().unwrap().len();
     let mut n = 0;
     for endorsed_nation in target_nation.endorsements.unwrap() {
-        let request = NSRequest::new_nation(endorsed_nation, &[Endorsements]).to_string();
+        let request = NSRequest::new_nation(endorsed_nation, vec![Endorsements]).into_request();
         let mut response = client_request(&client, &request).await?;
         if response.status().is_client_error() {
             let rate_limiter = RateLimits::new(response.headers())?;
@@ -33,13 +33,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
             response = client_request(&client, &request).await?;
         }
         let text = response.text().await?;
-        let nation = Nation::from_xml(&*text)?;
+        let nation = Nation::from_xml(&text)?;
         if nation.endorsements.unwrap().contains(&target.to_string()) {
             n += 1;
             continue;
         }
     }
-    eprintln!(
+    println!(
         "{} is endorsing {} of the {} nations that endorse you.",
         target, n, l
     );

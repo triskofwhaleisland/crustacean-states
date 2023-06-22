@@ -130,7 +130,9 @@ impl<'a> From<RegionShard> for Shard<'a> {
                         param_map.insert_scale(&scale).insert_modes(&modes);
                     }
                     RegionShard::CensusRanks { scale, start } => {
-                        param_map.insert_scale(&scale.map(CensusScales::One)).insert_start(&start);
+                        param_map
+                            .insert_scale(&scale.map(CensusScales::One))
+                            .insert_start(&start);
                     }
                     RegionShard::Messages {
                         limit,

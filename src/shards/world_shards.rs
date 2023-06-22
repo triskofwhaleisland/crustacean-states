@@ -1,9 +1,7 @@
 //! Contains everything needed to make world shard requests.
 
 use crate::impl_display_as_debug;
-use crate::shards::public_nation_shards::{
-    CensusModes, CensusScales,
-};
+use crate::shards::public_nation_shards::{CensusModes, CensusScales};
 use crate::shards::world_shards::HappeningsViewType::{Nation, Region};
 use crate::shards::{Params, Shard};
 use itertools::Itertools;
@@ -140,7 +138,9 @@ impl<'a> From<WorldShard<'a>> for Shard<'a> {
                         }
                     }
                     WorldShard::CensusRanks { scale, start } => {
-                        param_map.insert_scale(&scale.map(CensusScales::One)).insert_start(&start);
+                        param_map
+                            .insert_scale(&scale.map(CensusScales::One))
+                            .insert_start(&start);
                     }
                     WorldShard::Dispatch(id) => {
                         param_map.0.insert("dispatchid", id.to_string());
@@ -264,14 +264,14 @@ impl HappeningsShardBuilder {
 
     /// Add one filter to the events request.
     pub fn add_filter(self, filter: HappeningsFilterType) -> Self {
-        self.add_filters(&[filter])
+        self.add_filters(vec![filter])
     }
 
     /// Add several filters to the events request.
-    pub fn add_filters(mut self, filters: &[HappeningsFilterType]) -> Self {
+    pub fn add_filters(mut self, filters: Vec<HappeningsFilterType>) -> Self {
         filters
-            .iter()
-            .for_each(|filter| self.filter.push(filter.clone()));
+            .into_iter()
+            .for_each(|filter| self.filter.push(filter));
         self
     }
 
