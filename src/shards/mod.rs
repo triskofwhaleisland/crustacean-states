@@ -149,7 +149,7 @@ impl<'a> NSRequest<'a> {
     /// use crustacean_states::shards::public_nation_shards::PublicNationShard;
     ///
     /// let request = NSRequest::new_nation("Testlandia",
-    ///         vec![PublicNationShard::Region, PublicNationShard::Demonym]).to_string();
+    ///         vec![PublicNationShard::Region, PublicNationShard::Demonym]).into_request();
     /// ```
     /// When sent,
     /// it will request information about [Testlandia](https://www.nationstates.net/nation=testlandia)'s region and demonym.
@@ -201,7 +201,7 @@ impl<'a> NSRequest<'a> {
     /// use crustacean_states::shards::region_shards::RegionShard;
     ///
     /// let request = NSRequest::new_region("Testregionia",
-    ///         vec![RegionShard::Delegate, RegionShard::Flag]).to_string();
+    ///         vec![RegionShard::Delegate, RegionShard::Flag]).into_request();
     /// ```
     ///
     /// When sent,
