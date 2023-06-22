@@ -81,6 +81,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         ],
     )
     .into_request();
+    eprintln!("{request}");
     let client = Client::new();
     let raw_response = client_request(&client, &request).await?.text().await?;
     let response = Nation::from_xml(raw_response.as_str())?;

@@ -17,6 +17,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     eprintln!("Made client!");
     let target = "Aramos";
     let request = NSRequest::new_nation(target.to_string(), vec![Endorsements]).into_request();
+    eprintln!("{request}");
     let response = client_request(&client, &request).await?;
     let text = response.text().await?;
     let target_nation = Nation::from_xml(&text)?;
@@ -24,6 +25,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut n = 0;
     for endorsed_nation in target_nation.endorsements.unwrap() {
         let request = NSRequest::new_nation(endorsed_nation, vec![Endorsements]).into_request();
+        eprintln!("{request}");
         let mut response = client_request(&client, &request).await?;
         if response.status().is_client_error() {
             let rate_limiter = RateLimits::new(response.headers())?;
