@@ -1,12 +1,12 @@
 //! A NationStates API wrapper that takes full advantage of Rust's type system.
 
-// #![deny(missing_docs)]
+#![deny(missing_docs)]
 
 #[doc(hidden)]
 mod macros;
 
 pub mod parsers;
-pub mod rate_limiter;
+pub mod request;
 pub mod shards;
 
 /// Takes a nation name with capital letters and spaces and turns it into a safe-to-send, lowercase name.

@@ -11,16 +11,16 @@
 //! Right now, `crustacean-states` allows for parameters to be overwritten.
 //! In the future, it may be possible to create a series of requests that do not overlap.
 
-pub mod public_nation_shards;
-pub mod region_shards;
-pub mod world_assembly_shards;
-pub mod world_shards;
+pub mod public_nation;
+pub mod region;
+pub mod world;
+pub mod world_assembly;
 
 use crate::safe_name;
-use crate::shards::public_nation_shards::{CensusModes, CensusScales, PublicNationShard};
-use crate::shards::region_shards::RegionShard;
-use crate::shards::world_assembly_shards::{WACouncil, WAShard};
-use crate::shards::world_shards::WorldShard;
+use crate::shards::public_nation::{CensusModes, CensusScales, PublicNationShard};
+use crate::shards::region::RegionShard;
+use crate::shards::world::WorldShard;
+use crate::shards::world_assembly::{WACouncil, WAShard};
 use itertools::Itertools;
 use std::collections::HashMap;
 use std::fmt::Debug;
@@ -146,7 +146,7 @@ impl<'a> NSRequest<'a> {
     ///
     /// ```
     /// use crustacean_states::shards::NSRequest;
-    /// use crustacean_states::shards::public_nation_shards::PublicNationShard;
+    /// use crustacean_states::shards::public_nation::PublicNationShard;
     ///
     /// let request = NSRequest::new_nation("Testlandia",
     ///         vec![PublicNationShard::Region, PublicNationShard::Demonym]).into_request();
@@ -198,7 +198,7 @@ impl<'a> NSRequest<'a> {
     ///
     /// ```
     /// use crustacean_states::shards::NSRequest;
-    /// use crustacean_states::shards::region_shards::RegionShard;
+    /// use crustacean_states::shards::region::RegionShard;
     ///
     /// let request = NSRequest::new_region("Testregionia",
     ///         vec![RegionShard::Delegate, RegionShard::Flag]).into_request();

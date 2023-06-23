@@ -1,3 +1,5 @@
+//!
+
 use reqwest::header::HeaderMap;
 use reqwest::Response;
 use std::error::Error;
@@ -6,10 +8,7 @@ pub async fn client_request(
     client: &reqwest::Client,
     request: &str,
 ) -> Result<Response, reqwest::Error> {
-    client
-        .get(request)
-        .send()
-        .await
+    client.get(request).send().await
 }
 
 #[derive(Debug)]

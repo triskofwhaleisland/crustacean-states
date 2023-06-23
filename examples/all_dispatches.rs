@@ -1,6 +1,6 @@
 use crustacean_states::parsers::nation::Nation;
-use crustacean_states::rate_limiter::client_request;
-use crustacean_states::shards::public_nation_shards::PublicNationShard::DispatchList;
+use crustacean_states::request::client_request;
+use crustacean_states::shards::public_nation::PublicNationShard::DispatchList;
 use crustacean_states::shards::NSRequest;
 use std::error::Error;
 
@@ -8,7 +8,9 @@ use std::error::Error;
 async fn main() -> Result<(), Box<dyn Error>> {
     dotenv::dotenv()?;
     let user_agent = std::env::var("USER_AGENT")?;
-    let client = reqwest::ClientBuilder::new().user_agent(user_agent).build()?;
+    let client = reqwest::ClientBuilder::new()
+        .user_agent(user_agent)
+        .build()?;
     eprintln!("Made client!");
 
     let target_nation = "Testlandia";

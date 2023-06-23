@@ -2,10 +2,10 @@
 
 use crate::parsers::happenings::Event;
 use crate::pretty_name;
-use crate::shards::world_assembly_shards::WACouncil;
-use crate::shards::world_shards::{
+use crate::shards::world::{
     AccountCategory, BulletinCategory, DispatchCategory, FactbookCategory, MetaCategory,
 };
+use crate::shards::world_assembly::WACouncil;
 use quick_xml::DeError;
 use serde::Deserialize;
 use std::fmt::Debug;

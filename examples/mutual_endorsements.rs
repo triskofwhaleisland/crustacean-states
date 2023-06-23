@@ -1,8 +1,8 @@
 use crustacean_states::shards::NSRequest;
 use crustacean_states::{
     parsers::nation::Nation,
-    rate_limiter::{client_request, RateLimits},
-    shards::public_nation_shards::PublicNationShard::Endorsements,
+    request::{client_request, RateLimits},
+    shards::public_nation::PublicNationShard::Endorsements,
 };
 use std::error::Error;
 use std::time::Duration;
@@ -11,7 +11,9 @@ use std::time::Duration;
 async fn main() -> Result<(), Box<dyn Error>> {
     dotenv::dotenv()?;
     let user_agent = std::env::var("USER_AGENT")?;
-    let client = reqwest::ClientBuilder::new().user_agent(user_agent).build()?;
+    let client = reqwest::ClientBuilder::new()
+        .user_agent(user_agent)
+        .build()?;
     eprintln!("Made client!");
     let target = "Aramos";
     let request = NSRequest::new_nation(target.to_string(), vec![Endorsements]).into_request();

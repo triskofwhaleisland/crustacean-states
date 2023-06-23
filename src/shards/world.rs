@@ -1,8 +1,8 @@
 //! Contains everything needed to make world shard requests.
 
 use crate::impl_display_as_debug;
-use crate::shards::public_nation_shards::{CensusModes, CensusScales};
-use crate::shards::world_shards::HappeningsViewType::{Nation, Region};
+use crate::shards::public_nation::{CensusModes, CensusScales};
+use crate::shards::world::HappeningsViewType::{Nation, Region};
 use crate::shards::{Params, Shard};
 use itertools::Itertools;
 
@@ -19,7 +19,7 @@ pub enum WorldShard<'a> {
     ///
     /// Parallels [`PublicNationShard::Census`].
     ///
-    /// [`PublicNationShard`]: crate::shards::public_nation_shards::PublicNationShard
+    /// [`PublicNationShard`]: crate::shards::public_nation::PublicNationShard
     Census {
         /// Specify the World Census scale(s) to list, using numerical IDs.
         /// For all scales, use `Some(`[`CensusScales::All`]`)`.
@@ -347,17 +347,25 @@ pub enum DispatchSort {
 
 impl_display_as_debug!(DispatchSort);
 
-/// The categories
+/// The categories of dispatches.
 #[derive(Clone, Debug)]
 pub enum DispatchCategory {
+    /// Factbooks officially describe a nation.
     Factbook(FactbookCategory),
+    /// Bulletins address gameplay.
     Bulletin(BulletinCategory),
+    /// Accounts are articles or stories involving a nation's people.
     Account(AccountCategory),
+    /// Meta dispatches tend to address out-of-character and outside-of-role-play situations.
     Meta(MetaCategory),
 }
 
 #[derive(Clone, Debug)]
 #[allow(missing_docs)]
+#[non_exhaustive]
+/// The subcategories of factbooks.
+/// Note that the [`FactbookCategory::Any`] variant can be used as a shard
+/// to ask for any factbook.
 pub enum FactbookCategory {
     Overview,
     History,
@@ -382,6 +390,10 @@ pub enum FactbookCategory {
 
 #[derive(Clone, Debug)]
 #[allow(missing_docs)]
+#[non_exhaustive]
+/// The subcategories of bulletins.
+/// Note that the [`BulletinCategory::Any`] variant can be used as a shard
+/// to ask for any bulletin.
 pub enum BulletinCategory {
     Policy,
     News,
@@ -398,6 +410,10 @@ pub enum BulletinCategory {
 
 #[derive(Clone, Debug)]
 #[allow(missing_docs)]
+#[non_exhaustive]
+/// The subcategories of accounts.
+/// Note that the [`AccountCategory::Any`] variant can be used as a shard
+/// to ask for any account.
 pub enum AccountCategory {
     Military,
     Trade,
@@ -418,6 +434,10 @@ pub enum AccountCategory {
 
 #[derive(Clone, Debug)]
 #[allow(missing_docs)]
+#[non_exhaustive]
+/// The subcategories of meta-category dispatches.
+/// Note that the [`MetaCategory::Any`] variant can be used as a shard
+/// to ask for any meta-category dispatch.
 pub enum MetaCategory {
     Gameplay,
     Reference,
@@ -533,21 +553,57 @@ pub enum HappeningsViewType {
     Region(Vec<String>),
 }
 
+/// The happenings shard can target multiple kinds of events.
 #[derive(Clone, Debug)]
+#[non_exhaustive]
 pub enum HappeningsFilterType {
+    /// Triggered by answering an issue (dismissing the issue results in no event).
+    /// Follows the form "Following new legislation in NATION, \[joke about new policy]."
     Law,
+    /// This category includes multiple events,
+    /// such as nations being reclassified due to their responses to issues,
+    /// altering of national flags and other custom fields, and creating custom banners.
     Change,
+    /// Announces the publishing of a dispatch.
+    /// Follows the form "NATION published "Dispatch Title" (Category: Subcategory)."
     Dispatch,
+    /// A nation posted on a regional message board.
+    /// Follows the form "NATION lodged a message on the REGION regional message board."
     Rmb,
+    /// Has to do with embassies between regions:
+    /// proposing construction, agreeing to construction,
+    /// rejecting requests, aborting construction, ordering closure,
+    /// cancelling closure, establishment, and cancellation.
     Embassy,
+    /// Has to do with the ejection or ejection + ban ("banjection") of a nation from a region.
+    /// Follows the form "NATION was ejected (and banned) from REGION by OTHER NATION."
     Eject,
+    /// Has to do with all administrative actions done in a region,
+    /// such as banning nations, updating regional tags,
+    /// updating the World Factbook Entry,
+    /// appointing and dismissing regional officers,
+    /// etc. It is also where WA rule-violators get ejected from the WA.
     Admin,
+    /// A nation moving from one region to another.
+    /// Follows the form "NATION relocated from REGION1 to REGION2."
     Move,
+    /// A nation is founded.
+    /// Note that if a nation is being revived, it is called a "refound".
+    /// Follows the form "NATION was (re)founded in FEEDER/FRONTIER REGION
     Founding,
+    /// A nation ceases to exist if it has not been logged in to for the past 28 days.
+    /// If you enable "vacation mode" on your nation, it will cease to exist after 60 days.
+    /// All CTEs happen at updates, except for when a nation is deleted by moderators.
+    /// Follows the form "NATION ceased to exist in REGION."
     Cte,
+    /// A nation casts a vote or withdraws its vote in the World Assembly.
     Vote,
+    /// A World Assembly proposal is submitted, approved, withdrawn, or it fails to reach quorum.
     Resolution,
+    /// A nation applies to, is admitted to, or resigns from the World Assembly.
     Member,
+    /// A nation in the World Assembly endorses another nation in the World Assembly in the same region.
+    /// Follows the form "NATION1 endorsed NATION2."
     Endo,
 }
 
@@ -557,9 +613,22 @@ impl Display for HappeningsFilterType {
     }
 }
 
+/// When searching regions by tag, you can do it by including certain tags and excluding others.
+/// Example:
+/// ```
+/// use crustacean_states::shards::NSRequest;
+/// use crustacean_states::shards::world::IncludeOrExcludeTag::{Exclude, Include};
+/// use crustacean_states::shards::world::Tag::{Fandom, Fascist, RegionalGovernment};
+/// use crustacean_states::shards::world::WorldShard;
+///
+/// let request = NSRequest::new_world(vec![WorldShard::RegionsByTag(vec![Include(RegionalGovernment), Include(Fandom), Exclude(Fascist)])]).into_request();
+/// assert_eq!(request.as_str(), "https://www.nationstates.net/cgi-bin/api.cgi?q=regionsbytag&tags=regionalgovernment,fandom,-fascist")
+/// ```
 #[derive(Clone, Debug)]
 pub enum IncludeOrExcludeTag {
+    /// Include this tag.
     Include(Tag),
+    /// Exclude this tag.
     Exclude(Tag),
 }
 
