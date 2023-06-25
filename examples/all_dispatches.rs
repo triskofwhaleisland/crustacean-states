@@ -1,22 +1,21 @@
+use crustacean_states::client::Client;
 use crustacean_states::parsers::nation::Nation;
-use crustacean_states::request::client_request;
 use crustacean_states::shards::public_nation::PublicNationShard::DispatchList;
 use crustacean_states::shards::NSRequest;
 use std::error::Error;
+use url::Url;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     dotenv::dotenv()?;
     let user_agent = std::env::var("USER_AGENT")?;
-    let client = reqwest::ClientBuilder::new()
-        .user_agent(user_agent)
-        .build()?;
+    let mut client = Client::new(user_agent)?;
     eprintln!("Made client!");
 
     let target_nation = "Testlandia";
-    let request = NSRequest::new_nation(target_nation, vec![DispatchList]).into_request();
+    let request = Url::from(NSRequest::new_nation(target_nation, vec![DispatchList]));
     // eprintln!("{request}");
-    let raw_response = client_request(&client, &request).await?;
+    let raw_response = client.get(request).await?;
     let text = raw_response.text().await?;
     // eprintln!("{text}");
     let response = Nation::from_xml(&text)?;

@@ -1,16 +1,15 @@
-use crustacean_states::parsers::nation::Nation;
-use crustacean_states::request::client_request;
-use crustacean_states::shards::public_nation::PublicNationShard::*;
-use crustacean_states::shards::NSRequest;
+use crustacean_states::{
+    client::Client,
+    parsers::nation::Nation,
+    shards::{public_nation::PublicNationShard::*, NSRequest},
+};
 use std::error::Error;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     dotenv::dotenv()?;
     let user_agent = std::env::var("USER_AGENT")?;
-    let client = reqwest::ClientBuilder::new()
-        .user_agent(user_agent)
-        .build()?;
+    let mut client = Client::new(user_agent)?;
 
     let target_name = "Aramos";
     let request = NSRequest::new_nation(
@@ -85,9 +84,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
             WCensus,
         ],
     )
-    .into_request();
+    .to_string();
     eprintln!("{request}");
-    let raw_response = client_request(&client, &request).await?.text().await?;
+    let raw_response = client.get(request).await?.text().await?;
     let response = Nation::from_xml(&raw_response)?;
     println!("{response:?}");
 

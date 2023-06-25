@@ -117,6 +117,7 @@ pub enum WorldShard<'a> {
 }
 
 impl<'a> From<WorldShard<'a>> for Shard<'a> {
+    //noinspection SpellCheckingInspection
     fn from(value: WorldShard) -> Self {
         Self {
             query: Self::name(&value),
@@ -609,20 +610,26 @@ pub enum HappeningsFilterType {
 
 impl Display for HappeningsFilterType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", format!("{:?}", self).to_lowercase())
+        write!(f, "{}", format!("{:?}", self).to_ascii_lowercase())
     }
 }
 
 /// When searching regions by tag, you can do it by including certain tags and excluding others.
 /// Example:
 /// ```
+/// use url::Url;
 /// use crustacean_states::shards::NSRequest;
 /// use crustacean_states::shards::world::IncludeOrExcludeTag::{Exclude, Include};
 /// use crustacean_states::shards::world::Tag::{Fandom, Fascist, RegionalGovernment};
 /// use crustacean_states::shards::world::WorldShard;
 ///
-/// let request = NSRequest::new_world(vec![WorldShard::RegionsByTag(vec![Include(RegionalGovernment), Include(Fandom), Exclude(Fascist)])]).into_request();
-/// assert_eq!(request.as_str(), "https://www.nationstates.net/cgi-bin/api.cgi?q=regionsbytag&tags=regionalgovernment,fandom,-fascist")
+/// let request = Url::from(NSRequest::new_world(vec![WorldShard::RegionsByTag(vec![
+///     Include(RegionalGovernment), Include(Fandom), Exclude(Fascist)
+/// ])]));
+/// assert_eq!(
+///     request.as_str(),
+///     "https://www.nationstates.net/cgi-bin/api.cgi?q=regionsbytag&tags=regionalgovernment%2Cfandom%2C-fascist",
+/// )
 /// ```
 #[derive(Clone, Debug)]
 pub enum IncludeOrExcludeTag {
@@ -639,16 +646,17 @@ impl Display for IncludeOrExcludeTag {
             "{}",
             match self {
                 IncludeOrExcludeTag::Include(tag) => {
-                    format!("{:?}", tag)
+                    format!("{:?}", tag).to_ascii_lowercase()
                 }
                 IncludeOrExcludeTag::Exclude(tag) => {
-                    format!("-{:?}", tag)
+                    format!("-{:?}", tag).to_ascii_lowercase()
                 }
             }
         )
     }
 }
 
+//noinspection SpellCheckingInspection
 #[derive(Clone, Debug)]
 #[non_exhaustive]
 #[allow(missing_docs)]

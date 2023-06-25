@@ -293,6 +293,7 @@ pub enum CensusCurrentModes {
 }
 
 impl Display for CensusCurrentModes {
+    //noinspection SpellCheckingInspection
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(
             f,

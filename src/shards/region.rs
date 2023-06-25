@@ -120,6 +120,7 @@ pub enum RegionShard {
 }
 
 impl<'a> From<RegionShard> for Shard<'a> {
+    //noinspection SpellCheckingInspection
     fn from(value: RegionShard) -> Self {
         Self {
             query: Self::name(&value),

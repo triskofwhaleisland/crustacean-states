@@ -22,8 +22,9 @@ use crate::shards::region::RegionShard;
 use crate::shards::world::WorldShard;
 use crate::shards::world_assembly::{WACouncil, WAShard};
 use itertools::Itertools;
+use reqwest::Url;
 use std::collections::HashMap;
-use std::fmt::Debug;
+use std::fmt::{Debug, Display, Formatter};
 
 const BASE_URL: &str = "https://www.nationstates.net/cgi-bin/api.cgi?";
 
@@ -94,7 +95,7 @@ impl<'a> Shard<'a> {
             if !query.is_empty() {
                 query.push('+');
             }
-            query.push_str(shard.query.to_lowercase().as_str());
+            query.push_str(shard.query.to_ascii_lowercase().as_str());
             params.0.extend(shard.params.0);
         });
         (query, params)
@@ -149,7 +150,7 @@ impl<'a> NSRequest<'a> {
     /// use crustacean_states::shards::public_nation::PublicNationShard;
     ///
     /// let request = NSRequest::new_nation("Testlandia",
-    ///         vec![PublicNationShard::Region, PublicNationShard::Demonym]).into_request();
+    ///         vec![PublicNationShard::Region, PublicNationShard::Demonym]);
     /// ```
     /// When sent,
     /// it will request information about [Testlandia](https://www.nationstates.net/nation=testlandia)'s region and demonym.
@@ -201,7 +202,7 @@ impl<'a> NSRequest<'a> {
     /// use crustacean_states::shards::region::RegionShard;
     ///
     /// let request = NSRequest::new_region("Testregionia",
-    ///         vec![RegionShard::Delegate, RegionShard::Flag]).into_request();
+    ///         vec![RegionShard::Delegate, RegionShard::Flag]);
     /// ```
     ///
     /// When sent,
@@ -255,9 +256,12 @@ impl<'a> NSRequest<'a> {
             params,
         }
     }
+}
 
-    pub fn into_request(self) -> String {
-        format!(
+impl<'a> Display for NSRequest<'a> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
             "{BASE_URL}{}{}{}",
             match self.kind {
                 NSRequestKind::PublicNation(ref n) => format!("nation={}", safe_name(n)),
@@ -279,5 +283,26 @@ impl<'a> NSRequest<'a> {
                     .fold(String::new(), |acc, (k, v)| format!("{acc}&{k}={v}")))
                 .unwrap_or_default(),
         )
+    }
+}
+
+impl<'a> From<NSRequest<'a>> for Url {
+    fn from(value: NSRequest<'a>) -> Self {
+        let mut params = Vec::with_capacity(value.params.0.len() + 3);
+        // at most, three more parameters can be added to the query
+        match value.kind {
+            NSRequestKind::PublicNation(ref n) => params.push(("nation", safe_name(n))),
+            NSRequestKind::Region(ref r) => params.push(("region", safe_name(r))),
+            NSRequestKind::WA { ref council, id } => {
+                params.push(("wa", (council.clone() as u8).to_string()));
+                if let Some(i) = id {
+                    params.push(("id", i.to_string()));
+                }
+            }
+            _ => {}
+        }
+        params.push(("q", value.query));
+        params.extend(value.params.0.into_iter());
+        Url::parse_with_params(BASE_URL, params).unwrap()
     }
 }

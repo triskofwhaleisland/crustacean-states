@@ -55,7 +55,7 @@ impl<'a> From<WAShard<'a>> for Shard<'a> {
                 WAShard::CurrentResolution(_, additional_shards) => additional_shards
                     .iter()
                     .fold(String::from("resolution"), |acc, s| format!("{acc}+{s:?}"))
-                    .to_lowercase(),
+                    .to_ascii_lowercase(),
                 other => Self::name(&other),
             },
             params: Default::default(),

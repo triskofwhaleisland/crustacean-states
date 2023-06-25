@@ -12,7 +12,7 @@ use std::fmt::Debug;
 use std::num::{NonZeroU16, NonZeroU32, NonZeroU64};
 use thiserror::Error;
 
-//noinspection ALL
+//noinspection SpellCheckingInspection
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 /// The Rust representation of a nation, as interpreted from a response to a request.
@@ -106,6 +106,7 @@ pub enum WAStatus {
     NonMember,
 }
 
+//noinspection SpellCheckingInspection
 #[derive(Debug, Deserialize)]
 pub struct Government {
     #[serde(rename = "ADMINISTRATION")]
@@ -134,6 +135,7 @@ pub struct Government {
     pub welfare: f32,
 }
 
+//noinspection SpellCheckingInspection
 #[derive(Debug, Deserialize)]
 pub struct Freedoms {
     #[serde(rename = "CIVILRIGHTS")]
@@ -144,6 +146,7 @@ pub struct Freedoms {
     pub political_freedom: String,
 }
 
+//noinspection SpellCheckingInspection
 #[derive(Debug, Deserialize)]
 pub struct FreedomScores {
     #[serde(rename = "CIVILRIGHTS")]
@@ -186,6 +189,7 @@ struct Census {
     data: Vec<CensusData>,
 }
 
+//noinspection SpellCheckingInspection
 #[derive(Clone, Debug, Deserialize)]
 pub struct CensusData {
     #[serde(rename = "@id")]
@@ -275,6 +279,7 @@ pub struct Policy {
     pub description: String,
 }
 
+//noinspection SpellCheckingInspection
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 pub struct Sectors {
