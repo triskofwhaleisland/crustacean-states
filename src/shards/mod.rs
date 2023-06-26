@@ -103,11 +103,12 @@ impl<'a> Shard<'a> {
 
     fn name<T: Debug>(shard: &T) -> String {
         let true_debug = format!("{shard:?}");
-        if let Some((tuple, _)) = true_debug.split_once('(') {
-            tuple.to_string()
-        } else if let Some((struct_like, _)) = true_debug.split_once(' ') {
+        eprintln!("{true_debug}");
+        if let Some((struct_like, _)) = true_debug.split_once(' ') {
             struct_like.to_string()
-        } else {
+        } else if let Some((tuple, _)) = true_debug.split_once('(') {
+            tuple.to_string()
+        } else  {
             true_debug
         }
     }

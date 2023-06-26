@@ -1,9 +1,13 @@
+use crustacean_states::shards::public_nation::{CensusCurrentModes::*, CensusModes, CensusScales};
 use crustacean_states::{
     client::Client,
     parsers::nation::Nation,
     shards::{public_nation::PublicNationShard::*, NSRequest},
 };
 use std::error::Error;
+use std::fs::{File, OpenOptions};
+use std::io::{Read, Write};
+use std::path::Path;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -25,8 +29,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
             Capital,
             Category,
             Census {
-                scale: None,
-                modes: None,
+                scale: Some(CensusScales::All),
+                modes: Some(CensusModes::Current(vec![
+                    Score,
+                    Rank,
+                    PercentRank,
+                    RegionRank,
+                    PercentRegionRank,
+                ])),
             },
             Crime,
             Currency,
@@ -87,7 +97,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
     .to_string();
     eprintln!("{request}");
     let raw_response = client.get(request).await?.text().await?;
-    let response = Nation::from_xml(&raw_response)?;
+    if !Path::exists("response.xml".as_ref()) {
+        File::create("response.xml")?;
+    }
+    OpenOptions::new().write(true).open("response.xml")?.write_all(&raw_response.into_bytes())?;
+    let mut contents: Vec<u8> = Vec::new();
+    File::open("response.xml")?.read_to_end(&mut contents)?;
+    let raw_response = std::str::from_utf8(&contents)?;
+    let response = Nation::from_xml(raw_response)?;
     println!("{response:?}");
 
     Ok(())

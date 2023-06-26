@@ -1,5 +1,6 @@
 //! Contains everything needed to make world shard requests.
 
+use std::error::Error;
 use crate::impl_display_as_debug;
 use crate::shards::public_nation::{CensusModes, CensusScales};
 use crate::shards::world::HappeningsViewType::{Nation, Region};
@@ -7,6 +8,7 @@ use crate::shards::{Params, Shard};
 use itertools::Itertools;
 
 use std::fmt::{Display, Formatter};
+use crate::shards::world::BannerIdCategory::Agriculture;
 
 /// A request for the wide world of NationStates.
 #[derive(Clone, Debug)]
@@ -333,9 +335,158 @@ impl HappeningsShardBuilder {
 
 /// The ID of a banner. WIP. TODO make banner ids
 #[derive(Clone, Debug)]
-pub struct BannerId {}
+pub struct BannerId {
+    category: BannerIdCategory,
+    number: u8,
+}
 
-impl_display_as_debug!(BannerId);
+//noinspection IdentifierGrammar
+/// Credit: [https://www.nationstates.net/page=dispatch/id=1518537],
+/// authored by
+/// (The United Missourtama States)[https://www.nationstates.net/nation=the_unified_missourtama_states]
+#[derive(Clone, Debug)]
+pub enum BannerIdCategory {
+    Agriculture,
+    Buildings,
+    Cities,
+    DeathAndDestruction,
+    Economics,
+    Forests,
+    GovtGrandeur,
+    HotAndDry,
+    Industries,
+    Culture,
+    Landscapes,
+    Military,
+    HealthSciences,
+    OceansAndSeas,
+    People,
+    AnimalsPetsAndClimate,
+    Ruins,
+    LawEnforcement,
+    TownsAndRuralArchitecture,
+    Urban,
+    Violet,
+    Otherworldly,
+    X,
+    EverythingElse,
+    Other(char),
+}
+
+#[derive(Debug)]
+pub struct NotAsciiAlphabetic {
+    bad_char: char,
+}
+
+impl Display for NotAsciiAlphabetic {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{bad_char} is not in the ASCII alphabetic range [a-zA-Z]")
+    }
+}
+
+impl Error for NotAsciiAlphabetic {}
+
+impl TryFrom<char> for BannerIdCategory {
+    type Error = NotAsciiAlphabetic;
+
+    fn try_from(value: char) -> Result<Self, Self::Error> {
+        use BannerIdCategory::*;
+        match value.to_ascii_lowercase() {
+            'a' => Ok(Agriculture),
+            'b' => Ok(Buildings),
+            'c' => Ok(Cities),
+            'd' => Ok(DeathAndDestruction),
+            'e' => Ok(Economics),
+            'f' => Ok(Forests),
+            'g' => Ok(GovtGrandeur),
+            'h' => Ok(HotAndDry),
+            'i' => Ok(Industries),
+            'k' => Ok(Culture),
+            'l' => Ok(Landscapes),
+            'm' => Ok(Military),
+            'n' => Ok(HealthSciences),
+            'o' => Ok(OceansAndSeas),
+            'p' => Ok(People),
+            'q' => Ok(AnimalsPetsAndClimate),
+            'r' => Ok(Ruins),
+            's' => Ok(LawEnforcement),
+            't' => Ok(TownsAndRuralArchitecture),
+            'u' => Ok(Urban),
+            'v' => Ok(Violet),
+            'w' => Ok(Otherworldly),
+            'x' => Ok(X),
+            'z' => Ok(EverythingElse),
+            c if c.is_ascii_alphabetic() => Ok(Other(c)),
+            c => Err(NotAsciiAlphabetic {bad_char: c})
+        }
+    }
+}
+
+impl From<BannerIdCategory> for char {
+    fn from(value: BannerIdCategory) -> Self {
+        use BannerIdCategory::*;
+        match value {
+            Agriculture => 'a',
+            Buildings => 'b',
+            Cities => 'c',
+            DeathAndDestruction => 'd',
+            Economics => 'e',
+            Forests => 'f',
+            GovtGrandeur => 'g',
+            HotAndDry => 'h',
+            Industries => 'i',
+            Culture => 'k',
+            Landscapes => 'l',
+            Military => 'm',
+            HealthSciences => 'n',
+            OceansAndSeas => 'o',
+            People => 'p',
+            AnimalsPetsAndClimate => 'q',
+            Ruins => 'r',
+            LawEnforcement => 's',
+            TownsAndRuralArchitecture => 't',
+            Urban => 'u',
+            Violet => 'v',
+            Otherworldly => 'w',
+            X => 'x',
+            EverythingElse => 'z',
+            Other(c) => c,
+        }
+    }
+}
+
+impl Display for BannerIdCategory {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        use BannerIdCategory::*;
+        write!(f, "{}", match self {
+            Agriculture => "Agriculture",
+            Buildings => "Buildings",
+            Cities => "Cities",
+            DeathAndDestruction => "Death and Destruction",
+            Economics => "Economics",
+            Forests => "Forests",
+            GovtGrandeur => "Government Grandeur",
+            HotAndDry => "Hot and Dry",
+            Industries => "Industries",
+            Culture => "Culture",
+            Landscapes => "Landscapes",
+            Military => "Military",
+            HealthSciences => "Health Sciences",
+            OceansAndSeas => "Oceans and Seas",
+            People => "People",
+            AnimalsPetsAndClimate => "Animals/Pets/Climate",
+            Ruins => "Ruins",
+            LawEnforcement => "Law Enforcement and Suppression of Speech",
+            TownsAndRuralArchitecture => "Towns and Rural Architecture",
+            Urban => "Urban",
+            Violet => "Violet",
+            Otherworldly => "Otherworldly",
+            X => "X",
+            EverythingElse => "Everything Else",
+            Other(char) => std::str::from_utf8(&vec![u8::try_from(char).unwrap()]),
+        })
+    }
+}
 
 /// The ways to sort dispatches.
 #[derive(Clone, Debug)]
