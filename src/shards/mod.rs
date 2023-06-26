@@ -108,7 +108,7 @@ impl<'a> Shard<'a> {
             struct_like.to_string()
         } else if let Some((tuple, _)) = true_debug.split_once('(') {
             tuple.to_string()
-        } else  {
+        } else {
             true_debug
         }
     }

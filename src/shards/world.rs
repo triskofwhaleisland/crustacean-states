@@ -1,20 +1,20 @@
 //! Contains everything needed to make world shard requests.
 
-use std::error::Error;
 use crate::impl_display_as_debug;
 use crate::shards::public_nation::{CensusModes, CensusScales};
 use crate::shards::world::HappeningsViewType::{Nation, Region};
 use crate::shards::{Params, Shard};
 use itertools::Itertools;
 
+use crate::parsers::nation::IntoNationError;
 use std::fmt::{Display, Formatter};
-use crate::shards::world::BannerIdCategory::Agriculture;
+use std::str::FromStr;
 
 /// A request for the wide world of NationStates.
 #[derive(Clone, Debug)]
 pub enum WorldShard<'a> {
     /// Provides the name of a banner given its ID, as well as the necessary conditions to unlock it.
-    Banner(Vec<&'a str>), // TODO convert to BannerId
+    Banner(Vec<BannerId>),
     /// By default, returns the score, rank, and region rank on today's featured World Census scale.
     /// Can be optionally configured with additional parameters.
     /// [source](https://www.nationstates.net/pages/api.html#nationapi-publicshards)
@@ -127,7 +127,9 @@ impl<'a> From<WorldShard<'a>> for Shard<'a> {
                 let mut param_map = Params::default();
                 match value {
                     WorldShard::Banner(banners) => {
-                        param_map.0.insert("banner", banners.iter().join(","));
+                        param_map
+                            .0
+                            .insert("banner", banners.iter().map(BannerId::to_string).join(","));
                     }
                     WorldShard::Census { scale, modes } => {
                         param_map.insert_scale(&scale).insert_modes(&modes);
@@ -336,155 +338,36 @@ impl HappeningsShardBuilder {
 /// The ID of a banner. WIP. TODO make banner ids
 #[derive(Clone, Debug)]
 pub struct BannerId {
-    category: BannerIdCategory,
-    number: u8,
+    pub(crate) category: String,
+    pub(crate) number: u8,
 }
 
-//noinspection IdentifierGrammar
-/// Credit: [https://www.nationstates.net/page=dispatch/id=1518537],
-/// authored by
-/// (The United Missourtama States)[https://www.nationstates.net/nation=the_unified_missourtama_states]
-#[derive(Clone, Debug)]
-pub enum BannerIdCategory {
-    Agriculture,
-    Buildings,
-    Cities,
-    DeathAndDestruction,
-    Economics,
-    Forests,
-    GovtGrandeur,
-    HotAndDry,
-    Industries,
-    Culture,
-    Landscapes,
-    Military,
-    HealthSciences,
-    OceansAndSeas,
-    People,
-    AnimalsPetsAndClimate,
-    Ruins,
-    LawEnforcement,
-    TownsAndRuralArchitecture,
-    Urban,
-    Violet,
-    Otherworldly,
-    X,
-    EverythingElse,
-    Other(char),
-}
-
-#[derive(Debug)]
-pub struct NotAsciiAlphabetic {
-    bad_char: char,
-}
-
-impl Display for NotAsciiAlphabetic {
+impl Display for BannerId {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{bad_char} is not in the ASCII alphabetic range [a-zA-Z]")
+        write!(f, "{}{}", self.category.to_ascii_lowercase(), self.number)
     }
 }
 
-impl Error for NotAsciiAlphabetic {}
-
-impl TryFrom<char> for BannerIdCategory {
-    type Error = NotAsciiAlphabetic;
-
-    fn try_from(value: char) -> Result<Self, Self::Error> {
-        use BannerIdCategory::*;
-        match value.to_ascii_lowercase() {
-            'a' => Ok(Agriculture),
-            'b' => Ok(Buildings),
-            'c' => Ok(Cities),
-            'd' => Ok(DeathAndDestruction),
-            'e' => Ok(Economics),
-            'f' => Ok(Forests),
-            'g' => Ok(GovtGrandeur),
-            'h' => Ok(HotAndDry),
-            'i' => Ok(Industries),
-            'k' => Ok(Culture),
-            'l' => Ok(Landscapes),
-            'm' => Ok(Military),
-            'n' => Ok(HealthSciences),
-            'o' => Ok(OceansAndSeas),
-            'p' => Ok(People),
-            'q' => Ok(AnimalsPetsAndClimate),
-            'r' => Ok(Ruins),
-            's' => Ok(LawEnforcement),
-            't' => Ok(TownsAndRuralArchitecture),
-            'u' => Ok(Urban),
-            'v' => Ok(Violet),
-            'w' => Ok(Otherworldly),
-            'x' => Ok(X),
-            'z' => Ok(EverythingElse),
-            c if c.is_ascii_alphabetic() => Ok(Other(c)),
-            c => Err(NotAsciiAlphabetic {bad_char: c})
+impl BannerId {
+    fn new(category: impl ToString, number: u8) -> Self {
+        Self {
+            category: category.to_string(),
+            number,
         }
     }
 }
 
-impl From<BannerIdCategory> for char {
-    fn from(value: BannerIdCategory) -> Self {
-        use BannerIdCategory::*;
-        match value {
-            Agriculture => 'a',
-            Buildings => 'b',
-            Cities => 'c',
-            DeathAndDestruction => 'd',
-            Economics => 'e',
-            Forests => 'f',
-            GovtGrandeur => 'g',
-            HotAndDry => 'h',
-            Industries => 'i',
-            Culture => 'k',
-            Landscapes => 'l',
-            Military => 'm',
-            HealthSciences => 'n',
-            OceansAndSeas => 'o',
-            People => 'p',
-            AnimalsPetsAndClimate => 'q',
-            Ruins => 'r',
-            LawEnforcement => 's',
-            TownsAndRuralArchitecture => 't',
-            Urban => 'u',
-            Violet => 'v',
-            Otherworldly => 'w',
-            X => 'x',
-            EverythingElse => 'z',
-            Other(c) => c,
-        }
-    }
-}
+impl TryFrom<String> for BannerId {
+    type Error = IntoNationError;
 
-impl Display for BannerIdCategory {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        use BannerIdCategory::*;
-        write!(f, "{}", match self {
-            Agriculture => "Agriculture",
-            Buildings => "Buildings",
-            Cities => "Cities",
-            DeathAndDestruction => "Death and Destruction",
-            Economics => "Economics",
-            Forests => "Forests",
-            GovtGrandeur => "Government Grandeur",
-            HotAndDry => "Hot and Dry",
-            Industries => "Industries",
-            Culture => "Culture",
-            Landscapes => "Landscapes",
-            Military => "Military",
-            HealthSciences => "Health Sciences",
-            OceansAndSeas => "Oceans and Seas",
-            People => "People",
-            AnimalsPetsAndClimate => "Animals/Pets/Climate",
-            Ruins => "Ruins",
-            LawEnforcement => "Law Enforcement and Suppression of Speech",
-            TownsAndRuralArchitecture => "Towns and Rural Architecture",
-            Urban => "Urban",
-            Violet => "Violet",
-            Otherworldly => "Otherworldly",
-            X => "X",
-            EverythingElse => "Everything Else",
-            Other(char) => std::str::from_utf8(&vec![u8::try_from(char).unwrap()]),
-        })
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        let split_index = value.chars().position(|c| c.is_ascii_digit());
+        if split_index.is_none() || split_index == Some(0) {
+            return Err(IntoNationError::MalformedBannerId(value));
+        }
+        let (cat, num) = value.split_at(split_index.unwrap());
+        let num = u8::from_str(num).map_err(|_| IntoNationError::MalformedBannerId(value.clone()))?;
+        Ok(BannerId::new(cat, num))
     }
 }
 

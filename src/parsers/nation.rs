@@ -1,15 +1,16 @@
 //! The nation parser.
 
 use crate::parsers::happenings::Event;
-use crate::pretty_name;
 use crate::shards::world::{
-    AccountCategory, BulletinCategory, DispatchCategory, FactbookCategory, MetaCategory,
+    AccountCategory, BannerId, BulletinCategory, DispatchCategory, FactbookCategory, MetaCategory,
 };
 use crate::shards::world_assembly::WACouncil;
+use crate::{pretty_name};
 use quick_xml::DeError;
 use serde::Deserialize;
 use std::fmt::Debug;
 use std::num::{NonZeroU16, NonZeroU32, NonZeroU64};
+
 use thiserror::Error;
 
 //noinspection SpellCheckingInspection
@@ -69,9 +70,7 @@ struct RawNation {
     admirable: Option<String>,
     admirables: Option<Admirables>,
     animaltrait: Option<String>,
-    // TODO: Option<BannerID>
     banner: Option<String>,
-    // TODO: Option<Vec<BannerID>>
     banners: Option<Banners>,
     census: Option<Census>,
     crime: Option<String>,
@@ -332,8 +331,8 @@ pub struct Nation {
     pub admirable: Option<String>,
     pub admirables: Option<Vec<String>>,
     pub animal_trait: Option<String>,
-    pub banner: Option<String>,       // TODO: Option<BannerID>
-    pub banners: Option<Vec<String>>, // TODO: Option<Vec<BannerID>>
+    pub banner: Option<BannerId>,
+    pub banners: Option<Vec<BannerId>>,
     pub census: Option<Vec<CensusData>>,
     pub crime: Option<String>,
     pub dispatch_list: Option<Vec<Dispatch>>,
@@ -408,6 +407,8 @@ pub enum IntoNationError {
         bad_vote: String,
         council: WACouncil,
     },
+    #[error("malformed banner id: {0}")]
+    MalformedBannerId(String),
 }
 
 #[derive(Clone, Debug)]
@@ -416,6 +417,8 @@ pub enum WAVote {
     Against,
     Undecided,
 }
+
+// static BANNER_RE: Lazy<&Regex> = Lazy::new(|| regex!(r"(?P<cat>[a-z]+)(?P<num>[0-9]+)"));
 
 impl TryFrom<RawNation> for Nation {
     type Error = IntoNationError;
@@ -448,7 +451,16 @@ impl TryFrom<RawNation> for Nation {
 
         let deaths = value.deaths.map(|d| d.causes);
         let admirables = value.admirables.map(|a| a.traits);
-        let banners = value.banners.map(|a| a.banners);
+        let banner = value.banner.map(BannerId::try_from).transpose()?;
+        let banners = value
+            .banners
+            .map(|a| {
+                a.banners
+                    .into_iter()
+                    .map(BannerId::try_from)
+                    .collect::<Result<Vec<BannerId>, IntoNationError>>()
+            })
+            .transpose()?;
         let census = value.census.map(|c| c.data);
         let legislation = value.legislation.map(|l| l.laws);
         let notables = value.notables.map(|n| n.notables);
@@ -519,7 +531,7 @@ impl TryFrom<RawNation> for Nation {
             admirable: value.admirable,
             admirables,
             animal_trait: value.animaltrait,
-            banner: value.banner,
+            banner,
             banners,
             census,
             crime: value.crime,
@@ -551,7 +563,9 @@ impl TryFrom<RawNation> for Nation {
 
 impl Nation {
     pub fn from_xml(xml: &str) -> Result<Self, IntoNationError> {
-        Self::try_from(quick_xml::de::from_str::<RawNation>(xml)?)
+        let value = quick_xml::de::from_str::<RawNation>(xml)?;
+        eprintln!("Got raw!");
+        Self::try_from(value)
     }
 }
 
