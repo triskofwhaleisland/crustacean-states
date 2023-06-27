@@ -1,5 +1,5 @@
 use crustacean_states::{
-    client::{Client, RateLimits},
+    client::{Client, ClientError},
     parsers::nation::Nation,
     shards::{public_nation::PublicNationShard::Endorsements, NSRequest},
 };
@@ -27,14 +27,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
     for endorsed_nation in target_nation.endorsements.unwrap() {
         let request = Url::from(NSRequest::new_nation(endorsed_nation, vec![Endorsements]));
         eprintln!("{request:?}");
-        let mut response = client.get(request.as_str()).await?;
-        if response.status().is_client_error() {
-            let rate_limiter = RateLimits::new(response.headers())?;
-            let wait_time = rate_limiter.retry_after.unwrap();
-            eprintln!("Waiting for {} seconds to comply with API.", wait_time);
-            tokio::time::sleep(Duration::from_secs(wait_time as u64)).await;
-            response = client.get(request).await?;
-        }
+        let response = match client.get(request.as_str()).await {
+            Ok(r) => Ok(r),
+            Err(ClientError::RateLimitedError(t)) => {
+                tokio::time::sleep_until(tokio::time::Instant::from(t)).await;
+                client.get(request).await
+            }
+            Err(e) => Err(e),
+        }?;
+
         let text = response.text().await?;
         let nation = Nation::from_xml(&text)?;
         if nation.endorsements.unwrap().contains(&target.to_string()) {

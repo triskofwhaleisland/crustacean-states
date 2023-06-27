@@ -74,6 +74,7 @@ name = "crustacean-states"
 version = "0.1.0-alpha.2"
 dependencies = [
  "dotenv",
+ "http",
  "itertools",
  "once_cell",
  "quick-xml",

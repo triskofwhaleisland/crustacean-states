@@ -1,11 +1,11 @@
 //! The nation parser.
 
 use crate::parsers::happenings::Event;
+use crate::pretty_name;
 use crate::shards::world::{
     AccountCategory, BannerId, BulletinCategory, DispatchCategory, FactbookCategory, MetaCategory,
 };
 use crate::shards::world_assembly::WACouncil;
-use crate::{pretty_name};
 use quick_xml::DeError;
 use serde::Deserialize;
 use std::fmt::Debug;

@@ -366,7 +366,8 @@ impl TryFrom<String> for BannerId {
             return Err(IntoNationError::MalformedBannerId(value));
         }
         let (cat, num) = value.split_at(split_index.unwrap());
-        let num = u16::from_str(num).map_err(|_| IntoNationError::MalformedBannerId(value.clone()))?;
+        let num =
+            u16::from_str(num).map_err(|_| IntoNationError::MalformedBannerId(value.clone()))?;
         Ok(BannerId::new(cat, num))
     }
 }
