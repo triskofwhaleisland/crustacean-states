@@ -339,7 +339,7 @@ impl HappeningsShardBuilder {
 #[derive(Clone, Debug)]
 pub struct BannerId {
     pub(crate) category: String,
-    pub(crate) number: u8,
+    pub(crate) number: u16,
 }
 
 impl Display for BannerId {
@@ -349,7 +349,7 @@ impl Display for BannerId {
 }
 
 impl BannerId {
-    fn new(category: impl ToString, number: u8) -> Self {
+    fn new(category: impl ToString, number: u16) -> Self {
         Self {
             category: category.to_string(),
             number,
@@ -366,7 +366,7 @@ impl TryFrom<String> for BannerId {
             return Err(IntoNationError::MalformedBannerId(value));
         }
         let (cat, num) = value.split_at(split_index.unwrap());
-        let num = u8::from_str(num).map_err(|_| IntoNationError::MalformedBannerId(value.clone()))?;
+        let num = u16::from_str(num).map_err(|_| IntoNationError::MalformedBannerId(value.clone()))?;
         Ok(BannerId::new(cat, num))
     }
 }

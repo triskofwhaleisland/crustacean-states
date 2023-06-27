@@ -200,9 +200,9 @@ pub struct CensusData {
     #[serde(rename = "RRANK")]
     pub region_rank: Option<u32>,
     #[serde(rename = "PRANK")]
-    pub percent_world_rank: Option<u8>,
+    pub percent_world_rank: Option<f32>,
     #[serde(rename = "PRRANK")]
-    pub percent_region_rank: Option<u8>,
+    pub percent_region_rank: Option<f32>,
     #[serde(rename = "TIMESTAMP")]
     pub timestamp: Option<NonZeroU64>,
 }
@@ -563,9 +563,7 @@ impl TryFrom<RawNation> for Nation {
 
 impl Nation {
     pub fn from_xml(xml: &str) -> Result<Self, IntoNationError> {
-        let value = quick_xml::de::from_str::<RawNation>(xml)?;
-        eprintln!("Got raw!");
-        Self::try_from(value)
+        Self::try_from(quick_xml::de::from_str::<RawNation>(xml)?)
     }
 }
 
