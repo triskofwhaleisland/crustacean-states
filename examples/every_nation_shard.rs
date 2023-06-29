@@ -96,18 +96,18 @@ async fn main() -> Result<(), Box<dyn Error>> {
     )
     .to_string();
     let raw_response = client.get(request).await?.text().await?;
-    if !Path::exists("response.xml".as_ref()) {
-        File::create("response.xml")?;
-    }
-    OpenOptions::new()
-        .write(true)
-        .open("response.xml")?
-        .write_all(&raw_response.into_bytes())?;
-    let mut contents: Vec<u8> = Vec::new();
-    File::open("response.xml")?.read_to_end(&mut contents)?;
-    let raw_response = std::str::from_utf8(&contents)?;
-    let response = Nation::from_xml(raw_response)?;
-    println!("{response:?}");
+    // if !Path::exists("response.xml".as_ref()) {
+    //     File::create("response.xml")?;
+    // }
+    // OpenOptions::new()
+    //     .write(true)
+    //     .open("response.xml")?
+    //     .write_all(&raw_response.into_bytes())?;
+    // let mut contents: Vec<u8> = Vec::new();
+    // File::open("response.xml")?.read_to_end(&mut contents)?;
+    // let raw_response = std::str::from_utf8(&contents)?;
+    let response = Nation::from_xml(&raw_response)?;
+    println!("{response:#?}");
 
     Ok(())
 }

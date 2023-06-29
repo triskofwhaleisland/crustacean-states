@@ -42,7 +42,7 @@ struct RawNation {
     freedom: Option<Freedoms>,
     region: Option<String>,
     population: Option<u32>,
-    tax: Option<f32>,
+    tax: Option<f64>,
     animal: Option<String>,
     currency: Option<String>,
     demonym: Option<String>,
@@ -58,7 +58,7 @@ struct RawNation {
     lastactivity: Option<String>,
     influence: Option<String>,
     freedomscores: Option<FreedomScores>,
-    publicsector: Option<f32>,
+    publicsector: Option<f64>,
     deaths: Option<Deaths>,
     leader: Option<String>,
     capital: Option<String>,
@@ -98,44 +98,59 @@ struct RawNation {
     wcensus: Option<NonZeroU32>,
 }
 
+/// The status of a nation in the World Assembly.
 #[derive(Debug)]
 pub enum WAStatus {
+    /// The nation is delegate of a region.
     Delegate,
+    /// The nation is simply a member.
     Member,
+    /// The nation is not part of the World Assembly.
     NonMember,
 }
 
+/// Describes a nation's government spending as percentages.
+/// Each field represents a category.
+/// All fields *should* add up to 100.0,
+/// but expect it to not be exact due to floating-point arithmetic and on-site rounding error.
 //noinspection SpellCheckingInspection
 #[derive(Debug, Deserialize)]
+#[allow(missing_docs)]
 pub struct Government {
     #[serde(rename = "ADMINISTRATION")]
-    pub administration: f32,
+    pub administration: f64,
     #[serde(rename = "DEFENCE")]
-    pub defence: f32,
+    pub defence: f64,
     #[serde(rename = "EDUCATION")]
-    pub education: f32,
+    pub education: f64,
     #[serde(rename = "ENVIRONMENT")]
-    pub environment: f32,
+    pub environment: f64,
     #[serde(rename = "HEALTHCARE")]
-    pub healthcare: f32,
+    pub healthcare: f64,
     #[serde(rename = "COMMERCE")]
-    pub commerce: f32,
+    pub commerce: f64,
     #[serde(rename = "INTERNATIONALAID")]
-    pub international_aid: f32,
+    pub international_aid: f64,
     #[serde(rename = "LAWANDORDER")]
-    pub law_and_order: f32,
+    pub law_and_order: f64,
     #[serde(rename = "PUBLICTRANSPORT")]
-    pub public_transport: f32,
+    pub public_transport: f64,
     #[serde(rename = "SOCIALEQUALITY")]
-    pub social_equality: f32,
+    pub social_equality: f64,
     #[serde(rename = "SPIRITUALITY")]
-    pub spirituality: f32,
+    pub spirituality: f64,
     #[serde(rename = "WELFARE")]
-    pub welfare: f32,
+    pub welfare: f64,
 }
 
+/// Describes national freedoms as explained on-site.
+///
+/// Note:
+/// in a future release,
+/// the fields in this struct will be converted from `String`s to enum variants.
 //noinspection SpellCheckingInspection
 #[derive(Debug, Deserialize)]
+#[allow(missing_docs)]
 pub struct Freedoms {
     #[serde(rename = "CIVILRIGHTS")]
     pub civil_rights: String,
@@ -145,8 +160,10 @@ pub struct Freedoms {
     pub political_freedom: String,
 }
 
+/// Gives a score out of 100 for the three types of national freedom.
 //noinspection SpellCheckingInspection
 #[derive(Debug, Deserialize)]
+#[allow(missing_docs)]
 pub struct FreedomScores {
     #[serde(rename = "CIVILRIGHTS")]
     pub civil_rights: u8,
@@ -162,12 +179,16 @@ struct Deaths {
     causes: Vec<Cause>,
 }
 
+/// Causes of death in a nation.
+/// Note: at some point, the field `kind` in this struct will be converted to enum variants.
 #[derive(Clone, Debug, Deserialize)]
 pub struct Cause {
+    /// The way in which citizens die.
     #[serde(rename = "@type")]
     pub kind: String,
+    /// How common this cause of death is, to the nearest tenth of a percent.
     #[serde(rename = "$value")]
-    pub frequency: f32,
+    pub frequency: f64,
 }
 
 #[derive(Debug, Deserialize)]
@@ -188,21 +209,35 @@ struct Census {
     data: Vec<CensusData>,
 }
 
+/// A piece of World Census data about the nation.
 //noinspection SpellCheckingInspection
 #[derive(Clone, Debug, Deserialize)]
 pub struct CensusData {
+    /// The ID used for the data point. For example,
     #[serde(rename = "@id")]
     pub id: u8,
+    /// The score of the nation on the Census scale.
     #[serde(rename = "SCORE")]
     pub score: Option<f64>,
+    /// The placement the nation holds in the world ranking.
     #[serde(rename = "RANK")]
     pub world_rank: Option<u32>,
+    /// The placement the nation holds in its region ranking.
     #[serde(rename = "RRANK")]
     pub region_rank: Option<u32>,
+    /// Kind of like a percentile, but backwards:
+    /// the nation is in the top x% of nations according to this category,
+    /// with x being this field.
+    /// Note that all percentiles are to the nearest whole except for <1%,
+    /// which are to the nearest tenth.
     #[serde(rename = "PRANK")]
-    pub percent_world_rank: Option<f32>,
+    pub percent_world_rank: Option<f64>,
+    /// Like `percent_world_rank`, but only for the nation's region ranking.
     #[serde(rename = "PRRANK")]
-    pub percent_region_rank: Option<f32>,
+    pub percent_region_rank: Option<f64>,
+    /// When the nation was ranked.
+    /// This usually corresponds to a time around the major
+    /// (midnight Eastern Time) or minor (noon Eastern Time) game updates.
     #[serde(rename = "TIMESTAMP")]
     pub timestamp: Option<NonZeroU64>,
 }
@@ -263,30 +298,32 @@ struct Notables {
 #[derive(Debug, Deserialize)]
 struct Policies {
     #[serde(rename = "POLICY")]
-    policies: Vec<Policy>,
+    policies: Vec<RawPolicy>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
-pub struct Policy {
+struct RawPolicy {
     #[serde(rename = "NAME")]
-    pub name: String,
+    name: String,
     #[serde(rename = "PIC")]
-    pub picture: String,
+    picture: String,
     #[serde(rename = "CAT")]
-    pub category: String,
+    category: String,
     #[serde(rename = "DESC")]
-    pub description: String,
+    description: String,
 }
 
+/// A breakdown of the relative economic power of each economic sector.
 //noinspection SpellCheckingInspection
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
+#[allow(missing_docs)] // TODO learn economics so I can explain this
 pub struct Sectors {
     #[serde(rename = "BLACKMARKET")]
-    pub black_market: f32,
-    pub government: f32,
-    pub industry: f32,
-    pub public: f32,
+    pub black_market: f64,
+    pub government: f64,
+    pub industry: f64,
+    pub public: f64,
 }
 
 #[derive(Debug)]
@@ -303,7 +340,7 @@ pub struct Nation {
     pub freedom: Option<Freedoms>,
     pub region: Option<String>,
     pub population: Option<u32>,
-    pub tax: Option<f32>,
+    pub tax: Option<f64>,
     pub animal: Option<String>,
     pub currency: Option<String>,
     pub demonym: Option<String>,
@@ -319,7 +356,7 @@ pub struct Nation {
     pub last_activity: Option<String>,
     pub influence: Option<String>,
     pub freedom_scores: Option<FreedomScores>,
-    pub public_sector: Option<f32>,
+    pub public_sector: Option<f64>,
     pub deaths: Option<Vec<Cause>>,
     pub leader: Option<String>,
     pub capital: Option<String>,
@@ -384,6 +421,28 @@ impl TryFrom<RawDispatch> for Dispatch {
             edited: value.edited,
             views: value.views,
             score: value.score,
+        })
+    }
+}
+
+/// Describes a national policy.
+#[derive(Debug)]
+pub struct Policy {
+    pub name: String,
+    pub picture: BannerId,
+    pub category: String,
+    pub description: String,
+}
+
+impl TryFrom<RawPolicy> for Policy {
+    type Error = IntoNationError;
+
+    fn try_from(value: RawPolicy) -> Result<Self, Self::Error> {
+        Ok(Self {
+            name: value.name,
+            picture: BannerId::try_from(value.picture)?,
+            category: value.category,
+            description: value.description,
         })
     }
 }
@@ -464,7 +523,15 @@ impl TryFrom<RawNation> for Nation {
         let census = value.census.map(|c| c.data);
         let legislation = value.legislation.map(|l| l.laws);
         let notables = value.notables.map(|n| n.notables);
-        let policies = value.policies.map(|p| p.policies);
+        let policies = value
+            .policies
+            .map(|v| {
+                v.policies
+                    .into_iter()
+                    .map(Policy::try_from)
+                    .collect::<Result<Vec<Policy>, IntoNationError>>()
+            })
+            .transpose()?;
 
         let dispatch_list = value
             .dispatchlist

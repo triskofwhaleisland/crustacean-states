@@ -4,7 +4,6 @@ use crustacean_states::{
     shards::{public_nation::PublicNationShard::Endorsements, NSRequest},
 };
 use std::error::Error;
-use std::time::Duration;
 use url::Url;
 
 #[tokio::main]
@@ -30,7 +29,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         let response = match client.get(request.as_str()).await {
             Ok(r) => Ok(r),
             Err(ClientError::RateLimitedError(t)) => {
-                tokio::time::sleep_until(tokio::time::Instant::from(t)).await;
+                tokio::time::sleep_until(t).await;
                 client.get(request).await
             }
             Err(e) => Err(e),
