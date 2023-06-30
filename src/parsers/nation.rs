@@ -10,6 +10,7 @@ use quick_xml::DeError;
 use serde::Deserialize;
 use std::fmt::Debug;
 use std::num::{NonZeroU16, NonZeroU32, NonZeroU64};
+use crate::shards::public_nation::PublicNationShard;
 
 use thiserror::Error;
 
@@ -326,18 +327,59 @@ pub struct Sectors {
     pub public: f64,
 }
 
+/// A nation, with every piece of information you could ask for!
+/// Note that aside from the `name` field, every field is an `Option`.
+/// This is because,
+/// depending on the [`PublicNationShard`]s used to make the request,
+/// only certain fields will be returned.
 #[derive(Debug)]
 #[non_exhaustive]
 pub struct Nation {
+    /// The name of the nation.
+    /// This is the only field that is guaranteed to be filled in.
+    /// Note that because of limitations to the way the name is sent by NationStates,
+    /// it may not be capitalized properly by the "pretty name" function.
+    /// The only way to get the accurate capitalization is to request [`PublicNationShard::Name`].
     pub name: String,
+    /// Gets the pre-title of the nation.
+    ///
+    /// Requested using
+    /// [`PublicNationShard::Type`]
+    /// (`type` is a reserved word in Rust, so `kind` is used in its place).
     pub kind: Option<String>,
+    /// Gets the full name of the nation.
+    ///
+    /// Requested using [`PublicNationShard::FullName`].
     pub full_name: Option<String>,
+    /// Gets the motto of the nation.
+    ///
+    /// Requested using [`PublicNationShard::Motto`].
     pub motto: Option<String>,
+    /// Gets the category of the nation.
+    /// Note that this is currently a `String` representation,
+    /// but will eventually become its own type.
+    ///
+    /// Requested using [`PublicNationShard::Category`].
     pub category: Option<String>,
+    /// Gets the WA status of the nation.
+    ///
+    /// Requested using [`PublicNationShard::WA`].
     pub wa_status: Option<WAStatus>,
+    /// Gets a list of nations that endorse the nation.
+    /// 
+    /// Requested using [`PublicNationShard::Endorsements`].
     pub endorsements: Option<Vec<String>>,
+    /// Gets the number of issues answered by the nation.
+    /// 
+    /// Requested using [`PublicNationShard::Answered`].
     pub issues_answered: Option<u32>,
+    /// Gets the freedom statistics of the nation.
+    /// 
+    /// Requested using [`PublicNationShard::Freedom`].
     pub freedom: Option<Freedoms>,
+    /// Gets the region that the nation resides in.
+    ///
+    /// Requested using [`PublicNationShard::Region`].
     pub region: Option<String>,
     pub population: Option<u32>,
     pub tax: Option<f64>,
@@ -358,9 +400,9 @@ pub struct Nation {
     pub freedom_scores: Option<FreedomScores>,
     pub public_sector: Option<f64>,
     pub deaths: Option<Vec<Cause>>,
-    pub leader: Option<String>,
-    pub capital: Option<String>,
-    pub religion: Option<String>,
+    pub leader:   Option<Option<String>>,
+    pub capital:  Option<Option<String>>,
+    pub religion: Option<Option<String>>,
     pub factbooks: Option<u16>,
     pub dispatches: Option<u16>,
     pub dbid: Option<u32>,
@@ -508,6 +550,8 @@ impl TryFrom<RawNation> for Nation {
                 .collect::<Vec<String>>()
         });
 
+        let leader = value.leader.map(|l| if l.is_empty() || l.as_str() == "Leader" { None } else { Some(l)});
+
         let deaths = value.deaths.map(|d| d.causes);
         let admirables = value.admirables.map(|a| a.traits);
         let banner = value.banner.map(BannerId::try_from).transpose()?;
@@ -589,7 +633,7 @@ impl TryFrom<RawNation> for Nation {
             freedom_scores: value.freedomscores,
             public_sector: value.publicsector,
             deaths,
-            leader: value.leader,
+            leader,
             capital: value.capital,
             religion: value.religion,
             factbooks: value.factbooks,

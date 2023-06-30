@@ -1,6 +1,6 @@
 //! A NationStates API wrapper that takes full advantage of Rust's type system.
 
-// #![deny(missing_docs)]
+#![deny(missing_docs)]
 
 #[doc(hidden)]
 mod macros;
