@@ -2,15 +2,16 @@
 
 use crate::parsers::happenings::Event;
 use crate::pretty_name;
+use crate::shards::public_nation::PublicNationShard;
 use crate::shards::world::{
     AccountCategory, BannerId, BulletinCategory, DispatchCategory, FactbookCategory, MetaCategory,
 };
 use crate::shards::world_assembly::WACouncil;
+use either::{Either, Left, Right};
 use quick_xml::DeError;
 use serde::Deserialize;
 use std::fmt::Debug;
 use std::num::{NonZeroU16, NonZeroU32, NonZeroU64};
-use crate::shards::public_nation::PublicNationShard;
 
 use thiserror::Error;
 
@@ -366,15 +367,15 @@ pub struct Nation {
     /// Requested using [`PublicNationShard::WA`].
     pub wa_status: Option<WAStatus>,
     /// Gets a list of nations that endorse the nation.
-    /// 
+    ///
     /// Requested using [`PublicNationShard::Endorsements`].
     pub endorsements: Option<Vec<String>>,
     /// Gets the number of issues answered by the nation.
-    /// 
+    ///
     /// Requested using [`PublicNationShard::Answered`].
     pub issues_answered: Option<u32>,
     /// Gets the freedom statistics of the nation.
-    /// 
+    ///
     /// Requested using [`PublicNationShard::Freedom`].
     pub freedom: Option<Freedoms>,
     /// Gets the region that the nation resides in.
@@ -400,9 +401,9 @@ pub struct Nation {
     pub freedom_scores: Option<FreedomScores>,
     pub public_sector: Option<f64>,
     pub deaths: Option<Vec<Cause>>,
-    pub leader:   Option<Option<String>>,
-    pub capital:  Option<Option<String>>,
-    pub religion: Option<Option<String>>,
+    pub leader: Option<Either<String, String>>,
+    pub capital: Option<Either<String, String>>,
+    pub religion: Option<Either<String, String>>,
     pub factbooks: Option<u16>,
     pub dispatches: Option<u16>,
     pub dbid: Option<u32>,
@@ -519,7 +520,8 @@ pub enum WAVote {
     Undecided,
 }
 
-// static BANNER_RE: Lazy<&Regex> = Lazy::new(|| regex!(r"(?P<cat>[a-z]+)(?P<num>[0-9]+)"));
+const DEFAULT_LEADER: &'static str = "Leader";
+const DEFAULT_RELIGION: &'static str = "a major religion";
 
 impl TryFrom<RawNation> for Nation {
     type Error = IntoNationError;
@@ -550,7 +552,27 @@ impl TryFrom<RawNation> for Nation {
                 .collect::<Vec<String>>()
         });
 
-        let leader = value.leader.map(|l| if l.is_empty() || l.as_str() == "Leader" { None } else { Some(l)});
+        let capital = value.capital.map(|c| {
+            if c.is_empty() {
+                Right(format!("{name} City"))
+            } else {
+                Left(c)
+            }
+        });
+        let leader = value.leader.map(|l| {
+            if l.is_empty() {
+                Right(DEFAULT_LEADER.to_string())
+            } else {
+                Left(l)
+            }
+        });
+        let religion = value.religion.map(|r| {
+            if r.is_empty() {
+                Right(DEFAULT_RELIGION.to_string())
+            } else {
+                Left(r)
+            }
+        });
 
         let deaths = value.deaths.map(|d| d.causes);
         let admirables = value.admirables.map(|a| a.traits);
@@ -634,8 +656,8 @@ impl TryFrom<RawNation> for Nation {
             public_sector: value.publicsector,
             deaths,
             leader,
-            capital: value.capital,
-            religion: value.religion,
+            capital,
+            religion,
             factbooks: value.factbooks,
             dispatches: value.dispatches,
             dbid: value.dbid,

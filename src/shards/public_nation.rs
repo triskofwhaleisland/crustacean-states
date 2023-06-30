@@ -32,7 +32,7 @@ pub enum PublicNationShard<'a> {
     /// The capital if a custom capital was chosen, or the nation name with "City"
     /// appended at the end if one has not been chosen yet.
     ///
-    /// See also: [`PublicNationShard::CustomCapital`]
+    // /// See also: [`PublicNationShard::CustomCapital`]
     Capital,
     /// One of the 27 national classifications that the game assigns based on personal,
     /// economic, and political freedom.
@@ -51,21 +51,22 @@ pub enum PublicNationShard<'a> {
     Crime,
     /// Name of the national currency.
     Currency,
-    /// The national leader only if a leader was chosen.
-    /// If no leader was chosen, the field will return as `Some(None)`.
-    ///
-    /// See also: [`PublicNationShard::Leader`]
-    CustomLeader,
-    /// The national capital only if a capital was chosen.
-    /// If no capital was chosen, the field will return as `Some(None)`.
-    ///
-    /// See also: [`PublicNationShard::Capital`]
-    CustomCapital,
-    /// The national religion only if a religion was chosen.
-    /// If no religion was chosen, the field will return as `Some(None)`.
-    ///
-    /// See also: [`PublicNationShard::Religion`]
-    CustomReligion,
+    // Disabled for overlap with other shards.
+    // /// The national leader only if a leader was chosen.
+    // /// If no leader was chosen, the field will return as `Some(None)`.
+    // ///
+    // /// See also: [`PublicNationShard::Leader`]
+    // CustomLeader,
+    // /// The national capital only if a capital was chosen.
+    // /// If no capital was chosen, the field will return as `Some(None)`.
+    // ///
+    // /// See also: [`PublicNationShard::Capital`]
+    // CustomCapital,
+    // /// The national religion only if a religion was chosen.
+    // /// If no religion was chosen, the field will return as `Some(None)`.
+    // ///
+    // /// See also: [`PublicNationShard::Religion`]
+    // CustomReligion,
     /// The database ID of the nation.
     DbId,
     /// Causes of death and their frequencies as a percentage.
@@ -164,7 +165,7 @@ pub enum PublicNationShard<'a> {
     /// The national leader if a custom leader was chosen, or "Leader"
     /// if one has not been chosen yet.
     ///
-    /// See also: [`PublicNationShard::CustomLeader`]
+    // /// See also: [`PublicNationShard::CustomLeader`]
     Leader,
     /// The list of descriptions of laws in the nation found on its nation page.
     Legislation,
@@ -204,7 +205,7 @@ pub enum PublicNationShard<'a> {
     /// The national religion if a custom religion was chosen,
     /// or "a major religion" if one has not been chosen yet.
     ///
-    /// See also: [`PublicNationShard::CustomReligion`]
+    // /// See also: [`PublicNationShard::CustomReligion`]
     Religion,
     /// The average income of the richest 10% in the nation.
     Richest,
@@ -310,12 +311,18 @@ impl Display for CensusCurrentModes {
 }
 
 impl<'a> From<PublicNationShard<'a>> for Shard<'a> {
+    //noinspection SpellCheckingInspection
     fn from(value: PublicNationShard<'a>) -> Self {
         Self {
-            query: Self::name(&value),
+            query: match &value {
+                PublicNationShard::Capital => "customcapital".to_string(),
+                PublicNationShard::Leader => "customleader".to_string(),
+                PublicNationShard::Religion => "customreligion".to_string(),
+                other => Self::name(&other),
+            },
             params: {
                 let mut param_map = Params::default();
-                match value {
+                match &value {
                     PublicNationShard::Census { scale, modes } => {
                         param_map.insert_scale(&scale).insert_modes(&modes);
                     }
