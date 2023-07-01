@@ -1048,12 +1048,13 @@ impl TryFrom<RawNation> for Nation {
             income: value.income,
             industry_desc: value.industrydesc,
             legislation: value.legislation.map(|l| l.laws),
-            notable: value.notable /*.map(|n| {
-                eprintln!("{n}");
-                let (first, back) = n.split_once(", ").unwrap();
-                let (second, third) = back.split_once(" and ").unwrap();
-                [first.to_string(), second.to_string(), third.to_string()]
-            }) */,
+            notable: value.notable, 
+            // .map(|n| {
+            //     eprintln!("{n}");
+            //     let (first, back) = n.split_once(", ").unwrap();
+            //     let (second, third) = back.split_once(" and ").unwrap();
+            //     [first.to_string(), second.to_string(), third.to_string()]
+            // })
             notables: value.notables.map(|n| n.notables),
             policies: value
                 .policies
@@ -1069,10 +1070,11 @@ impl TryFrom<RawNation> for Nation {
             richest: value.richest,
             sc_vote,
             sectors: value.sectors,
-            sensibilities: value.sensibilities /*.map(|s| {
-                let v = s.split(", ").collect::<Vec<_>>();
-                [v[0].to_string(), v[1].to_string()]
-            }) */,
+            sensibilities: value.sensibilities,
+            // .map(|s| {
+            //     let v = s.split(", ").collect::<Vec<_>>();
+            //     [v[0].to_string(), v[1].to_string()]
+            // })
             tg_can_recruit: value
                 .tgcanrecruit
                 .map(|x| match x {
@@ -1152,8 +1154,6 @@ fn try_into_dispatch_category(
                 "Meta:{other}"
             ))),
         }?)),
-        other => Err(IntoNationError::BadDispatchCategory(
-            other.to_string(),
-        )),
+        other => Err(IntoNationError::BadDispatchCategory(other.to_string())),
     }
 }

@@ -5,9 +5,9 @@ edition = "2021"
 authors = ["Trisk (Aramos)"]
 license = "MIT OR Apache-2.0"
 description = "A NationStates API wrapper designed for ease of use"
+repository = "https://github.com/triskofwhaleisland/crustacean-states"
 
 [dependencies]
-dotenv = "0.15"
 either = "1.8"
 http = "0.2"
 itertools = "0.11"
@@ -19,3 +19,6 @@ serde = { version = "1", features = ["derive"] }
 tokio = { version = "1", default-features = false, features = ["rt-multi-thread", "macros"] }
 thiserror = "1"
 url = "2.2"
+
+[dev-dependencies]
+dotenv = "0.15"

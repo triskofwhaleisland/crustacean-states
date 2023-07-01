@@ -55,10 +55,8 @@ impl Client {
                     if let Some(ref r) = self.rate_limiter {
                         self.send_after = if r.remaining == 0 {
                             Some(r.reset)
-                        } else if let Some(t) = r.retry_after {
-                            Some(t)
                         } else {
-                            None
+                            r.retry_after
                         }
                         .map(|t| self.last_sent.unwrap().add(Duration::from_secs(t as u64)))
                     }
@@ -71,11 +69,9 @@ impl Client {
 
     /// A guide on how long to wait between requests.
     pub fn wait_duration(&self) -> Option<Duration> {
-        if let Some(ref r) = self.rate_limiter {
-            Some(Duration::from_secs_f64(r.remaining as f64 / r.reset as f64))
-        } else {
-            None
-        }
+        self.rate_limiter
+            .as_ref()
+            .map(|r| Duration::from_secs_f64(r.remaining as f64 / r.reset as f64))
     }
 }
 
