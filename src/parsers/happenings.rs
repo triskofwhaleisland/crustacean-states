@@ -1,6 +1,7 @@
 //! National, regional, and world happenings.
 
 use crate::parsers::nation::RawEvent;
+use crate::regex;
 use once_cell::sync::Lazy;
 use regex::{Regex, RegexSet};
 
@@ -39,14 +40,6 @@ pub enum EventKind {
     //     nation: String,
     // },
     // can you tell where this is going?
-}
-
-// #[macro_export]
-macro_rules! regex {
-    ($re:literal $(,)?) => {{
-        static RE: once_cell::sync::OnceCell<regex::Regex> = once_cell::sync::OnceCell::new();
-        RE.get_or_init(|| regex::Regex::new($re).unwrap())
-    }};
 }
 
 static NATION_RE: Lazy<&Regex> = Lazy::new(|| regex!(r"@@[\w-]+@@"));

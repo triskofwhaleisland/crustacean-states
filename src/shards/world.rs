@@ -1,4 +1,4 @@
-//! Contains everything needed to make world shard requests.
+//! For world shard requests.
 
 use crate::impl_display_as_debug;
 use crate::shards::public_nation::{CensusModes, CensusScales};
@@ -19,9 +19,7 @@ pub enum WorldShard<'a> {
     /// Can be optionally configured with additional parameters.
     /// [source](https://www.nationstates.net/pages/api.html#nationapi-publicshards)
     ///
-    /// Parallels [`PublicNationShard::Census`].
-    ///
-    /// [`PublicNationShard`]: crate::shards::public_nation::PublicNationShard
+    /// Parallels [`PublicNationShard::Census`][crate::shards::public_nation::PublicNationShard::Census].
     Census {
         /// Specify the World Census scale(s) to list, using numerical IDs.
         /// For all scales, use `Some(`[`CensusScales::All`]`)`.
@@ -363,11 +361,11 @@ impl TryFrom<String> for BannerId {
     fn try_from(value: String) -> Result<Self, Self::Error> {
         let split_index = value.chars().position(|c| c.is_ascii_digit());
         if split_index.is_none() || split_index == Some(0) {
-            return Err(IntoNationError::MalformedBannerId(value));
+            return Err(IntoNationError::BadBannerId(value));
         }
         let (cat, num) = value.split_at(split_index.unwrap());
         let num =
-            u16::from_str(num).map_err(|_| IntoNationError::MalformedBannerId(value.clone()))?;
+            u16::from_str(num).map_err(|_| IntoNationError::BadBannerId(value.clone()))?;
         Ok(BannerId::new(cat, num))
     }
 }
@@ -418,9 +416,7 @@ pub enum FactbookCategory {
     /// The type to choose if you are not picking a subcategory.
     /// NOTE:
     /// This is only used in shard queries;
-    /// no [`Dispatch`] will ever be tagged [`FactbookCategory::Any`].
-    ///
-    /// [Dispatch]: crate::parsers::nation::Dispatch
+    /// no [`Dispatch`][crate::parsers::nation::Dispatch] will ever be tagged [`FactbookCategory::Any`].
     Any,
 }
 
@@ -438,9 +434,7 @@ pub enum BulletinCategory {
     /// The type to choose if you are not picking a subcategory.
     /// NOTE:
     /// This is only used in shard queries;
-    /// no [`Dispatch`] will ever be tagged [`BulletinCategory::Any`].
-    ///
-    /// [Dispatch]: crate::parsers::nation::Dispatch
+    /// no [`Dispatch`][crate::parsers::nation::Dispatch] will ever be tagged [`BulletinCategory::Any`].
     Any,
 }
 
@@ -462,9 +456,7 @@ pub enum AccountCategory {
     /// The type to choose if you are not picking a subcategory.
     /// NOTE:
     /// This is only used in shard queries;
-    /// no [`Dispatch`] will ever be tagged [`AccountCategory::Any`].
-    ///
-    /// [Dispatch]: crate::parsers::nation::Dispatch
+    /// no [`Dispatch`][crate::parsers::nation::Dispatch] will ever be tagged [`AccountCategory::Any`].
     Any,
 }
 
@@ -480,9 +472,7 @@ pub enum MetaCategory {
     /// The type to choose if you are not picking a subcategory.
     /// NOTE:
     /// This is only used in shard queries;
-    /// no [`Dispatch`] will ever be tagged [`MetaCategory::Any`].
-    ///
-    /// [Dispatch]: crate::parsers::nation::Dispatch
+    /// no [`Dispatch`][crate::parsers::nation::Dispatch] will ever be tagged [`MetaCategory::Any`].
     Any,
 }
 

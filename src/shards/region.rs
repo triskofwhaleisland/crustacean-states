@@ -1,4 +1,4 @@
-//! Contains everything needed to make region shard requests.
+//! For region shard requests.
 
 use crate::shards::public_nation::{CensusModes, CensusScales};
 use crate::shards::{Params, Shard};
@@ -18,9 +18,7 @@ pub enum RegionShard {
     /// Can be optionally configured with additional parameters.
     /// [source](https://www.nationstates.net/pages/api.html#nationapi-publicshards)
     ///
-    /// Parallels [`PublicNationShard::Census`].
-    ///
-    /// [`PublicNationShard`]: crate::shards::public_nation::PublicNationShard
+    /// Parallels [`PublicNationShard::Census`][crate::shards::public_nation::PublicNationShard::Census].
     Census {
         /// Specify the World Census scale(s) to list, using numerical IDs.
         /// For all scales, use `Some(`[`CensusScales::All`]`)`.
@@ -30,9 +28,7 @@ pub enum RegionShard {
     },
     /// Information on how nations in the region rank according to the World Census.
     ///
-    /// Parallels [`WorldShard::CensusRanks`].
-    ///
-    /// [`WorldShard`]: crate::shards::world::WorldShard
+    /// Parallels [`WorldShard::CensusRanks`][crate::shards::world::WorldShard::CensusRanks].
     CensusRanks {
         /// The World Census ranking to use. If `None`, returns the day's featured World Census ranking.
         scale: Option<u8>,

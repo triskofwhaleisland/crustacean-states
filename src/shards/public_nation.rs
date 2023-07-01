@@ -1,4 +1,4 @@
-//! Contains everything needed to make public nation shard requests.
+//! For public nation shard requests.
 
 use crate::shards::{Params, Shard};
 use std::fmt;
@@ -19,7 +19,7 @@ pub enum PublicNationShard<'a> {
     /// Number of issues answered.
     Answered,
     /// Returns one Rift banner code that should be displayed for this nation:
-    /// the nation's primary banner, if one is set; otherwise a randomly chosen eligible banner.
+    /// the nation's primary banner, if one is set; otherwise, a randomly chosen eligible banner.
     /// [source](https://www.nationstates.net/pages/api.html#nationapi-publicshards)
     Banner,
     /// Returns a list of Rift banners that should be displayed:
@@ -53,7 +53,7 @@ pub enum PublicNationShard<'a> {
     Currency,
 
     // ---
-    // Disabled for overlap with other shards.
+    // **Disabled for overlap with other shards.**
     // /// The national leader only if a leader was chosen.
     // /// If no leader was chosen, the field will return as `Some(None)`.
     // ///
@@ -70,7 +70,6 @@ pub enum PublicNationShard<'a> {
     // /// See also: [`PublicNationShard::Religion`]
     // CustomReligion,
     // ---
-
     /// The database ID of the nation.
     DbId,
     /// Causes of death and their frequencies as a percentage.

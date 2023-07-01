@@ -173,8 +173,8 @@ impl<'a> NSRequest<'a> {
     /// `public_sector`, `deaths`, `factbooks`, `dispatches`, `dbid`
     ///
     ///
-    /// The following fields are either default ([`Either::Left`]) or custom
-    /// ([`Either::Right`])
+    /// The following fields are either default ([`Either::Left`][either::Either::Left]) or custom
+    /// ([`Either::Right`][either::Either::Right])
     /// and will only become custom if the nation has reached a certain population
     /// and answered the relevant issue:
     ///

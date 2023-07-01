@@ -1,6 +1,10 @@
 //! A NationStates API wrapper that takes full advantage of Rust's type system.
+//!
+//! Using the library usually takes three steps:
+//!
+//! 1. Creating a
 
-// #![deny(missing_docs)]
+#![deny(missing_docs)]
 
 #[doc(hidden)]
 mod macros;

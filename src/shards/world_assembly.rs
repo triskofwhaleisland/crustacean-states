@@ -1,3 +1,5 @@
+//! For World Assembly shard requests.
+
 use crate::shards::Shard;
 
 /// One of the two World Assembly chambers (or "councils").
