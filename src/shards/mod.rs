@@ -173,16 +173,12 @@ impl<'a> NSRequest<'a> {
     /// `public_sector`, `deaths`, `factbooks`, `dispatches`, `dbid`
     ///
     ///
-    /// The following fields will be filled
-    /// only if the nation has reached a certain population and answered the relevant issue:
-    /// - `capital`: 250 million
+    /// The following fields are either default ([`Either::Left`]) or custom
+    /// ([`Either::Right`])
+    /// and will only become custom if the nation has reached a certain population
+    /// and answered the relevant issue:
     ///
-    /// - `kind` will deviate from the original pre-titles after 500 million.
-    /// (No issue must be completed to unlock this ability.)
-    ///
-    /// - `leader`: 750 million
-    ///
-    /// - `religion`: 1 billion
+    /// `capital` at 250 million, `leader` at 750 million, and `religion` at 1 billion.
     ///
     /// [`Nation`]: crate::parsers::nation::Nation
     pub fn new_nation_standard(nation: impl ToString) -> Self {

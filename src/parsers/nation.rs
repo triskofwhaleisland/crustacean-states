@@ -3,6 +3,7 @@
 use crate::parsers::happenings::Event;
 use crate::pretty_name;
 use crate::shards::public_nation::PublicNationShard;
+use crate::shards::NSRequest;
 use crate::shards::world::{
     AccountCategory, BannerId, BulletinCategory, DispatchCategory, FactbookCategory, MetaCategory,
 };
@@ -304,15 +305,12 @@ struct Policies {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "UPPERCASE")]
 struct RawPolicy {
-    #[serde(rename = "NAME")]
     name: String,
-    #[serde(rename = "PIC")]
-    picture: String,
-    #[serde(rename = "CAT")]
-    category: String,
-    #[serde(rename = "DESC")]
-    description: String,
+    pic: String,
+    cat: String,
+    desc: String,
 }
 
 /// A breakdown of the relative economic power of each economic sector.
@@ -342,70 +340,198 @@ pub struct Nation {
     /// it may not be capitalized properly by the "pretty name" function.
     /// The only way to get the accurate capitalization is to request [`PublicNationShard::Name`].
     pub name: String,
-    /// Gets the pre-title of the nation.
+    /// The pre-title of the nation.
+    /// (`type` is a reserved word in Rust, so `kind` is used in its place.)
     ///
     /// Requested using
-    /// [`PublicNationShard::Type`]
-    /// (`type` is a reserved word in Rust, so `kind` is used in its place).
+    /// [`PublicNationShard::Type`].
+    /// [`NSRequest::new_nation_standard`] requests this field.
     pub kind: Option<String>,
-    /// Gets the full name of the nation.
+    /// The full name of the nation.
     ///
     /// Requested using [`PublicNationShard::FullName`].
+    /// [`NSRequest::new_nation_standard`] requests this field.
     pub full_name: Option<String>,
-    /// Gets the motto of the nation.
+    /// The motto of the nation.
     ///
     /// Requested using [`PublicNationShard::Motto`].
+    /// [`NSRequest::new_nation_standard`] requests this field.
     pub motto: Option<String>,
-    /// Gets the category of the nation.
+    /// The category of the nation.
     /// Note that this is currently a `String` representation,
     /// but will eventually become its own type.
     ///
     /// Requested using [`PublicNationShard::Category`].
+    /// [`NSRequest::new_nation_standard`] requests this field.
     pub category: Option<String>,
-    /// Gets the WA status of the nation.
+    /// The WA status of the nation.
     ///
     /// Requested using [`PublicNationShard::WA`].
+    /// [`NSRequest::new_nation_standard`] requests this field.
     pub wa_status: Option<WAStatus>,
-    /// Gets a list of nations that endorse the nation.
+    /// A list of nations that endorse the nation.
     ///
     /// Requested using [`PublicNationShard::Endorsements`].
+    /// [`NSRequest::new_nation_standard`] requests this field.
     pub endorsements: Option<Vec<String>>,
-    /// Gets the number of issues answered by the nation.
+    /// The number of issues answered by the nation.
     ///
     /// Requested using [`PublicNationShard::Answered`].
+    /// [`NSRequest::new_nation_standard`] requests this field.
     pub issues_answered: Option<u32>,
-    /// Gets the freedom statistics of the nation.
+    /// The freedom statistics of the nation.
     ///
     /// Requested using [`PublicNationShard::Freedom`].
+    /// [`NSRequest::new_nation_standard`] requests this field.
     pub freedom: Option<Freedoms>,
-    /// Gets the region that the nation resides in.
+    /// The region that the nation resides in.
     ///
     /// Requested using [`PublicNationShard::Region`].
+    /// [`NSRequest::new_nation_standard`] requests this field.
     pub region: Option<String>,
+    /// The population of the nation in millions of people.
+    ///
+    /// Requested using [`PublicNationShard::Population`].
+    /// [`NSRequest::new_nation_standard`] requests this field.
     pub population: Option<u32>,
+    /// The effective tax rate of the nation.
+    ///
+    /// Requested using [`PublicNationShard::Tax`].
+    /// [`NSRequest::new_nation_standard`] requests this field.
     pub tax: Option<f64>,
+    /// The national animal.
+    ///
+    /// Requested using [`PublicNationShard::Animal`].
+    /// [`NSRequest::new_nation_standard`] requests this field.
     pub animal: Option<String>,
+    /// The national currency.
+    ///
+    /// Requested using [`PublicNationShard::Currency`].
+    /// [`NSRequest::new_nation_standard`] requests this field.
     pub currency: Option<String>,
-    pub demonym: Option<String>,
-    pub demonym2: Option<String>,
-    pub demonym2_plural: Option<String>,
+    /// The adjective used to describe a citizen of the nation.
+    /// (An example would be: I am **French**.)
+    ///
+    /// Requested using [`PublicNationShard::Demonym`].
+    /// [`NSRequest::new_nation_standard`] requests this field.
+    pub demonym_adjective: Option<String>,
+    /// The singular noun used to describe a citizen of the nation.
+    /// (An example would be: I am a **Frenchman**.)
+    ///
+    /// Requested using [`PublicNationShard::Demonym2`].
+    /// [`NSRequest::new_nation_standard`] requests this field.
+    pub demonym_singular: Option<String>,
+    /// The plural noun used to describe a citizen of the nation.
+    /// (An example would be: They are (some) **Frenchmen**.)
+    ///
+    /// Requested using [`PublicNationShard::Demonym2Plural`].
+    /// [`NSRequest::new_nation_standard`] requests this field.
+    pub demonym_plural: Option<String>,
+    /// The URL to the flag of the nation.
+    ///
+    /// Requested using [`PublicNationShard::Flag`].
+    /// [`NSRequest::new_nation_standard`] requests this field.
     pub flag: Option<String>,
+    /// The largest industry in the nation.
+    ///
+    /// Requested using [`PublicNationShard::MajorIndustry`].
+    /// [`NSRequest::new_nation_standard`] requests this field.
     pub major_industry: Option<String>,
+    /// The financial sector where the government spends the most money.
+    ///
+    /// Requested using [`PublicNationShard::GovtPriority`].
+    /// [`NSRequest::new_nation_standard`] requests this field.
     pub government_priority: Option<String>,
+    /// The nation's government spending as percentages in various financial areas.
+    ///
+    /// Requested using [`PublicNationShard::Govt`].
+    /// [`NSRequest::new_nation_standard`] requests this field.
     pub government: Option<Government>,
-    pub founded: Option<String>,
+    /// When the nation was founded as a relative timestamp.
+    ///
+    /// Requested using [`PublicNationShard::Founded`].
+    /// [`NSRequest::new_nation_standard`] requests this field.
+    pub founded: Option<MaybeAncient>,
+    /// The Unix timestamp of when the nation first logged in.
+    ///
+    /// Requested using [`PublicNationShard::FirstLogin`].
+    /// [`NSRequest::new_nation_standard`] requests this field.
     pub first_login: Option<u64>,
+    /// The Unix timestamp of when the nation most recently logged in.
+    ///
+    /// Requested using [`PublicNationShard::LastLogin`].
+    /// [`NSRequest::new_nation_standard`] requests this field.
     pub last_login: Option<u64>,
+    /// When the nation was last active as a relative timestamp.
+    ///
+    /// Requested using [`PublicNationShard::LastActivity`].
+    /// [`NSRequest::new_nation_standard`] requests this field.
     pub last_activity: Option<String>,
+    /// The influence of the nation in its region using qualitative descriptors.
+    /// Note that this is currently a `String` representation,
+    /// but will shift to an enum in the future.
+    ///
+    /// Requested using [`PublicNationShard::Influence`].
+    /// [`NSRequest::new_nation_standard`] requests this field.
     pub influence: Option<String>,
+    /// The economy, political freedoms, and civil rights within the country,
+    /// described using a quantitative scale.
+    ///
+    /// Requested using [`PublicNationShard::FreedomScores`].
+    /// [`NSRequest::new_nation_standard`] requests this field.
     pub freedom_scores: Option<FreedomScores>,
+    /// The percentage of the economy controlled or funded by the government and the public.
+    ///
+    /// Requested using [`PublicNationShard::PublicSector`].
+    /// [`NSRequest::new_nation_standard`] requests this field.
     pub public_sector: Option<f64>,
+    /// The national statistics on deaths.
+    ///
+    /// Requested using [`PublicNationShard::Deaths`].
+    /// [`NSRequest::new_nation_standard`] requests this field.
     pub deaths: Option<Vec<Cause>>,
+    /// The national leader.
+    ///
+    /// If there is a custom leader,
+    /// the [`Left`] variant is filled with the custom leader's name;
+    /// if not, the [`Right`] variant is filled with the default leader name.
+    ///
+    /// Requested using [`PublicNationShard::Leader`].
+    /// [`NSRequest::new_nation_standard`] requests this field.
     pub leader: Option<Either<String, String>>,
+    /// The national capital.
+    ///
+    /// If there is a custom capital,
+    /// the [`Left`] variant is filled with the custom capital name;
+    /// if not, the [`Right`] variant is filled with the default capital name.
+    ///
+    /// Requested using [`PublicNationShard::Capital`].
+    /// [`NSRequest::new_nation_standard`] requests this field.
     pub capital: Option<Either<String, String>>,
+    /// The national religion.
+    ///
+    /// If there is a custom religion,
+    /// the [`Left`] variant is filled with the custom religion;
+    /// if not, the [`Right`] variant is filled with the default religion.
+    ///
+    /// Requested using [`PublicNationShard::Religion`].
+    /// [`NSRequest::new_nation_standard`] requests this field.
     pub religion: Option<Either<String, String>>,
+    /// The number of factbooks the nation has published.
+    ///
+    /// Requested using [`PublicNationShard::Factbooks`].
+    /// [`NSRequest::new_nation_standard`] requests this field.
     pub factbooks: Option<u16>,
+    /// The number of dispatches the nation has published.
+    ///
+    /// Requested using [`PublicNationShard::Dispatches`].
+    /// [`NSRequest::new_nation_standard`] requests this field.
     pub dispatches: Option<u16>,
+    /// The ID of the nation in the NationStates database.
+    /// Note that earlier nations update first.
+    ///
+    /// Requested using [`PublicNationShard::DbId`].
+    /// [`NSRequest::new_nation_standard`] requests this field.
     pub dbid: Option<u32>,
     // END default
     pub admirable: Option<String>,
@@ -417,7 +543,7 @@ pub struct Nation {
     pub crime: Option<String>,
     pub dispatch_list: Option<Vec<Dispatch>>,
     pub factbook_list: Option<Vec<Dispatch>>,
-    pub founded_time: Option<u64>,
+    pub founded_time: Option<Option<NonZeroU64>>,
     pub ga_vote: Option<WAVote>,
     pub gdp: Option<u64>,
     pub govt_desc: Option<String>,
@@ -483,10 +609,35 @@ impl TryFrom<RawPolicy> for Policy {
     fn try_from(value: RawPolicy) -> Result<Self, Self::Error> {
         Ok(Self {
             name: value.name,
-            picture: BannerId::try_from(value.picture)?,
-            category: value.category,
-            description: value.description,
+            picture: BannerId::try_from(value.pic)?,
+            category: value.cat,
+            description: value.desc,
         })
+    }
+}
+
+#[derive(Debug)]
+pub enum MaybeAncient {
+    Recorded(String),
+    Antiquity,
+}
+
+impl From<MaybeAncient> for Option<String> {
+    fn from(value: MaybeAncient) -> Self {
+        match value {
+            MaybeAncient::Recorded(s) => Some(s),
+            MaybeAncient::Antiquity => None,
+        }
+    }
+}
+
+impl From<String> for MaybeAncient {
+    fn from(value: String) -> Self {
+        if value.is_empty() {
+            MaybeAncient::Antiquity
+        } else {
+            MaybeAncient::Recorded(value)
+        }
     }
 }
 
@@ -535,95 +686,17 @@ impl TryFrom<RawNation> for Nation {
             },
         }?;
 
-        let wa_status = if let Some(s) = value.unstatus {
-            match s.as_str() {
-                "WA Delegate" => Ok(Some(WAStatus::Delegate)),
-                "WA Member" => Ok(Some(WAStatus::Member)),
-                "Non-member" => Ok(Some(WAStatus::NonMember)),
-                other => Err(IntoNationError::MalformedWAStatusError(other.to_string())),
-            }
-        } else {
-            Ok(None)
-        }?;
-
-        let endorsements = value.endorsements.map(|e| {
-            e.split(|c| c == ',')
-                .map(pretty_name)
-                .collect::<Vec<String>>()
-        });
-
-        let capital = value.capital.map(|c| {
-            if c.is_empty() {
-                Right(format!("{name} City"))
-            } else {
-                Left(c)
-            }
-        });
-        let leader = value.leader.map(|l| {
-            if l.is_empty() {
-                Right(DEFAULT_LEADER.to_string())
-            } else {
-                Left(l)
-            }
-        });
-        let religion = value.religion.map(|r| {
-            if r.is_empty() {
-                Right(DEFAULT_RELIGION.to_string())
-            } else {
-                Left(r)
-            }
-        });
-
-        let deaths = value.deaths.map(|d| d.causes);
-        let admirables = value.admirables.map(|a| a.traits);
-        let banner = value.banner.map(BannerId::try_from).transpose()?;
-        let banners = value
-            .banners
-            .map(|a| {
-                a.banners
-                    .into_iter()
-                    .map(BannerId::try_from)
-                    .collect::<Result<Vec<BannerId>, IntoNationError>>()
-            })
-            .transpose()?;
-        let census = value.census.map(|c| c.data);
-        let legislation = value.legislation.map(|l| l.laws);
-        let notables = value.notables.map(|n| n.notables);
-        let policies = value
-            .policies
-            .map(|v| {
-                v.policies
-                    .into_iter()
-                    .map(Policy::try_from)
-                    .collect::<Result<Vec<Policy>, IntoNationError>>()
-            })
-            .transpose()?;
-
-        let dispatch_list = value
-            .dispatchlist
-            .map(|v| {
-                v.dispatches
-                    .into_iter()
-                    .map(Dispatch::try_from)
-                    .collect::<Result<Vec<Dispatch>, IntoNationError>>()
-            })
-            .transpose()?;
-        let factbook_list = value
-            .factbooklist
-            .map(|v| {
-                v.factbooks
-                    .into_iter()
-                    .map(Dispatch::try_from)
-                    .collect::<Result<Vec<Dispatch>, IntoNationError>>()
-            })
-            .transpose()?;
-
-        let ga_vote = value.gavote.map(|v| try_into_wa_vote(&v)).transpose()?;
-        let sc_vote = value.scvote.map(|v| try_into_wa_vote(&v)).transpose()?;
-
         let happenings = value
             .happenings
             .map(|h| h.events.into_iter().map(Event::from).collect());
+
+        let capital = value.capital.map(|c| {
+            if c.is_empty() {
+                Left(format!("{} City", &name))
+            } else {
+                Right(c)
+            }
+        });
 
         Ok(Self {
             name,
@@ -631,8 +704,21 @@ impl TryFrom<RawNation> for Nation {
             full_name: value.fullname,
             motto: value.motto,
             category: value.category,
-            wa_status,
-            endorsements,
+            wa_status: if let Some(s) = value.unstatus {
+                match s.as_str() {
+                    "WA Delegate" => Ok(Some(WAStatus::Delegate)),
+                    "WA Member" => Ok(Some(WAStatus::Member)),
+                    "Non-member" => Ok(Some(WAStatus::NonMember)),
+                    other => Err(IntoNationError::MalformedWAStatusError(other.to_string())),
+                }
+            } else {
+                Ok(None)
+            }?,
+            endorsements: value.endorsements.map(|e| {
+                e.split(|c| c == ',')
+                    .map(pretty_name)
+                    .collect::<Vec<String>>()
+            }),
             issues_answered: value.issues_answered,
             freedom: value.freedom,
             region: value.region,
@@ -640,51 +726,98 @@ impl TryFrom<RawNation> for Nation {
             tax: value.tax,
             animal: value.animal,
             currency: value.currency,
-            demonym: value.demonym,
-            demonym2: value.demonym2,
-            demonym2_plural: value.demonym2plural,
+            demonym_adjective: value.demonym,
+            demonym_singular: value.demonym2,
+            demonym_plural: value.demonym2plural,
             flag: value.flag,
             major_industry: value.majorindustry,
             government_priority: value.govtpriority,
             government: value.govt,
-            founded: value.founded,
+            founded: value.founded.map(MaybeAncient::from),
             first_login: value.firstlogin,
             last_login: value.lastlogin,
             last_activity: value.lastactivity,
             influence: value.influence,
             freedom_scores: value.freedomscores,
             public_sector: value.publicsector,
-            deaths,
-            leader,
+            deaths: value.deaths.map(|d| d.causes),
+            leader: value.leader.map(|l| {
+                if l.is_empty() {
+                    Left(DEFAULT_LEADER.to_string())
+                } else {
+                    Right(l)
+                }
+            }),
             capital,
-            religion,
+            religion: value.religion.map(|r| {
+                if r.is_empty() {
+                    Left(DEFAULT_RELIGION.to_string())
+                } else {
+                    Right(r)
+                }
+            }),
             factbooks: value.factbooks,
             dispatches: value.dispatches,
             dbid: value.dbid,
             admirable: value.admirable,
-            admirables,
+            admirables: value.admirables.map(|a| a.traits),
             animal_trait: value.animaltrait,
-            banner,
-            banners,
-            census,
+            banner: value.banner.map(BannerId::try_from).transpose()?,
+            banners: value
+                .banners
+                .map(|a| {
+                    a.banners
+                        .into_iter()
+                        .map(BannerId::try_from)
+                        .collect::<Result<Vec<BannerId>, IntoNationError>>()
+                })
+                .transpose()?,
+            census: value.census.map(|c| c.data),
             crime: value.crime,
-            dispatch_list,
-            factbook_list,
-            founded_time: value.foundedtime,
-            ga_vote,
+            dispatch_list: value
+                .dispatchlist
+                .map(|v| {
+                    v.dispatches
+                        .into_iter()
+                        .map(Dispatch::try_from)
+                        .collect::<Result<Vec<Dispatch>, IntoNationError>>()
+                })
+                .transpose()?,
+            factbook_list: value
+                .factbooklist
+                .map(|v| {
+                    v.factbooks
+                        .into_iter()
+                        .map(Dispatch::try_from)
+                        .collect::<Result<Vec<Dispatch>, IntoNationError>>()
+                })
+                .transpose()?,
+            founded_time: value.foundedtime.map(|t| match NonZeroU64::try_from(t) {
+                Ok(x) => Some(x),
+                Err(_) => None,
+            }),
+            ga_vote: value.gavote.map(|v| try_into_wa_vote(&v)).transpose()?,
             gdp: value.gdp,
             govt_desc: value.govtdesc,
             happenings,
             income: value.income,
             industry_desc: value.industrydesc,
-            legislation,
+            legislation: value.legislation.map(|l| l.laws),
             notable: value.notable,
-            notables,
-            policies,
+            notables: value.notables.map(|n| n.notables),
+            policies: value
+                .policies
+                .map(|v| {
+                    v.policies
+                        .into_iter()
+                        .map(Policy::try_from)
+                        .collect::<Result<Vec<Policy>, IntoNationError>>()
+                })
+                .transpose()?,
             poorest: value.poorest,
             regional_census: value.rcensus,
             richest: value.richest,
-            sc_vote,
+            sc_vote: value.scvote.map(|v| try_into_wa_vote(&v)).transpose()?,
             sectors: value.sectors,
             sensibilities: value.sensibilities,
             tg_can_recruit: value.tgcanrecruit,

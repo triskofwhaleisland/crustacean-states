@@ -51,6 +51,8 @@ pub enum PublicNationShard<'a> {
     Crime,
     /// Name of the national currency.
     Currency,
+
+    // ---
     // Disabled for overlap with other shards.
     // /// The national leader only if a leader was chosen.
     // /// If no leader was chosen, the field will return as `Some(None)`.
@@ -67,18 +69,25 @@ pub enum PublicNationShard<'a> {
     // ///
     // /// See also: [`PublicNationShard::Religion`]
     // CustomReligion,
+    // ---
+
     /// The database ID of the nation.
     DbId,
     /// Causes of death and their frequencies as a percentage.
     Deaths,
-    /// Singular noun used to describe a citizen of the nation: e.g. I am a Frenchman.
-    Demonym,
     /// Adjective used to describe citizens of the nation: e.g. I am French.
+    Demonym,
+    /// Singular noun used to describe a citizen of the nation: e.g. I am a Frenchman.
     Demonym2,
-    /// Plural noun used to describe citizens of the nation: e.g. They are Frenchmen.
-    // (It should be noted that the words "Frenchman" and "Frenchmen"
-    // are no longer preferred English words to describe French people;
-    // the adjectival demonym with the words "person" or "people" is now preferred.)
+    /// Plural noun used to describe citizens of the nation: e.g. They are (some) Frenchmen.
+    ///
+    /// Note that in the English language,
+    /// the word "some" is not normally used in that way,
+    /// but it would be more inaccurate to say "the".
+    /// It should also be noted that the words "Frenchman" and "Frenchmen"
+    /// are no longer preferred English words to describe French people;
+    /// the adjectival demonym with the words "person" or "people" is now preferred,
+    /// e.g. I am a French (adj.) person.
     Demonym2Plural,
     /// The number of dispatches published by this nation.
     ///
@@ -113,7 +122,7 @@ pub enum PublicNationShard<'a> {
     FirstLogin,
     /// The URL of the flag used by this nation.
     Flag,
-    /// A formatted string that denotes how long ago the nation was founded.
+    /// A relative timestamp that denotes how long ago the nation was founded.
     ///
     /// Note: some nations have existed "since antiquity" (before this statistic was logged).
     Founded,
@@ -122,8 +131,11 @@ pub enum PublicNationShard<'a> {
     /// Note: some nations have existed "since antiquity" (before this statistic was logged).
     FoundedTime,
     /// Describes civil rights, the economy,
-    /// and political freedom within the country using qualitative descriptors.
+    /// and political freedom within the country using *qualitative* descriptors.
     Freedom,
+    /// Describes civil rights, the economy,
+    /// and political freedom within the country using *quantitative* descriptors.
+    FreedomScores,
     /// The full name of the nation.
     ///
     /// Will always be equivalent to "The {[`PublicNationShard::Type`]} of {[`PublicNationShard::Name`]}",
@@ -158,7 +170,7 @@ pub enum PublicNationShard<'a> {
     IndustryDesc,
     /// Describes the influence of the nation in its region using qualitative descriptors.
     Influence,
-    /// A formatted string that denotes when the nation was last active.
+    /// A relative timestamp that denotes when the nation was last active.
     LastActivity,
     /// The Unix timestamp of when the nation was last logged into.
     LastLogin,

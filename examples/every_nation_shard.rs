@@ -55,6 +55,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             Founded,
             FoundedTime,
             Freedom,
+            FreedomScores,
             FullName,
             GAVote,
             Gdp,
