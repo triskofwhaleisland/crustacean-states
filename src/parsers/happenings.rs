@@ -42,8 +42,8 @@ pub enum EventKind {
     // can you tell where this is going?
 }
 
-static NATION_RE: Lazy<&Regex> = Lazy::new(|| regex!(r"@@[\w-]+@@"));
-static REGION_RE: Lazy<&Regex> = Lazy::new(|| regex!(r"%%[\w-]+%%"));
+static NATION_RE: Lazy<&Regex> = Lazy::new(|| regex!(r"@@[a-zA-Z0-9-]+@@"));
+static REGION_RE: Lazy<&Regex> = Lazy::new(|| regex!(r"%%[a-zA-Z0-9-]+%%"));
 static ALL_EXPRESSIONS: Lazy<RegexSet> =
     Lazy::new(|| RegexSet::new([NATION_RE.as_str(), REGION_RE.as_str()]).unwrap());
 

@@ -616,10 +616,10 @@ pub struct Nation {
     ///
     /// Requested using [`PublicNationShard::Legislation`].
     pub legislation: Option<Vec<String>>,
-    /// Three notable facts about the nation, randomly selected by the API.
+    /// Notable facts about the nation, randomly selected by the API.
     ///
     /// Requested using [`PublicNationShard::Notable`].
-    pub notable: Option<[String; 3]>,
+    pub notable: Option<String>,
     /// All possible notable facts about the nation.
     ///
     /// Requested using [`PublicNationShard::Notables`].
@@ -654,10 +654,10 @@ pub struct Nation {
     ///
     /// Requested using [`PublicNationShard::Sectors`].
     pub sectors: Option<Sectors>,
-    /// Two adjectives that describe the nation's population on its nation page.
+    /// The adjectives that describe the nation's population on its nation page.
     ///
     /// Requested using [`PublicNationShard::Sensibilities`].
-    pub sensibilities: Option<[String; 2]>,
+    pub sensibilities: Option<String>,
     /// Whether a recruitment telegram can be sent to the nation or not.
     ///
     /// Requested and configured using [`PublicNationShard::TGCanRecruit`].
@@ -1048,12 +1048,12 @@ impl TryFrom<RawNation> for Nation {
             income: value.income,
             industry_desc: value.industrydesc,
             legislation: value.legislation.map(|l| l.laws),
-            notable: value.notable.map(|n| {
-                let mut v = n.split(", ").collect::<Vec<_>>();
-                let third = v.get_mut(2).unwrap();
-                *third = third.split_once("and ").unwrap().1;
-                [v[0].to_string(), v[1].to_string(), v[2].to_string()]
-            }),
+            notable: value.notable /*.map(|n| {
+                eprintln!("{n}");
+                let (first, back) = n.split_once(", ").unwrap();
+                let (second, third) = back.split_once(" and ").unwrap();
+                [first.to_string(), second.to_string(), third.to_string()]
+            }) */,
             notables: value.notables.map(|n| n.notables),
             policies: value
                 .policies
@@ -1069,10 +1069,10 @@ impl TryFrom<RawNation> for Nation {
             richest: value.richest,
             sc_vote,
             sectors: value.sectors,
-            sensibilities: value.sensibilities.map(|s| {
+            sensibilities: value.sensibilities /*.map(|s| {
                 let v = s.split(", ").collect::<Vec<_>>();
                 [v[0].to_string(), v[1].to_string()]
-            }),
+            }) */,
             tg_can_recruit: value
                 .tgcanrecruit
                 .map(|x| match x {

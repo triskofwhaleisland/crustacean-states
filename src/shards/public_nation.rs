@@ -335,7 +335,7 @@ impl<'a> From<PublicNationShard<'a>> for Shard<'a> {
                 let mut param_map = Params::default();
                 match &value {
                     PublicNationShard::Census { scale, modes } => {
-                        param_map.insert_scale(&scale).insert_modes(&modes);
+                        param_map.insert_scale(scale).insert_modes(modes);
                     }
                     PublicNationShard::TGCanCampaign { from }
                     | PublicNationShard::TGCanRecruit { from } => {
