@@ -110,8 +110,10 @@ pub enum WorldShard<'a> {
     /// and there have been times when there are even more.
     /// Be careful when requesting this!
     Regions,
-    /// List of regions which do have some tags and don't have others.
-    RegionsByTag(Vec<IncludeOrExcludeTag>),
+    // TODO implement correctly
+    // /// List of regions which do have some tags and don't have others.
+    // RegionsByTag(Vec<IncludeOrExcludeTag>),
+
     /// The number of manual, mass, and API telegrams in the queue.
     TGQueue,
 }
@@ -208,9 +210,9 @@ impl<'a> From<WorldShard<'a>> for Shard<'a> {
                             param_map.0.insert("beforetime", x.to_string());
                         }
                     }
-                    WorldShard::RegionsByTag(complex_tags) => {
-                        param_map.0.insert("tags", complex_tags.iter().join(","));
-                    }
+                    // WorldShard::RegionsByTag(complex_tags) => {
+                    //     param_map.0.insert("tags", complex_tags.iter().join(","));
+                    // }
                     _ => {}
                 }
                 param_map
