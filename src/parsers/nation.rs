@@ -221,9 +221,9 @@ struct RawCensusData {
     #[serde(rename = "SCORE")]
     score: Option<f64>,
     #[serde(rename = "RANK")]
-    world_rank: Option<u32>,
+    world_rank: Option<NonZeroU32>,
     #[serde(rename = "RRANK")]
-    region_rank: Option<u32>,
+    region_rank: Option<NonZeroU32>,
     #[serde(rename = "PRANK")]
     percent_world_rank: Option<f64>,
     #[serde(rename = "PRRANK")]
@@ -761,9 +761,9 @@ pub struct CensusCurrentData {
     /// The score of the nation on the Census scale.
     pub score: Option<f64>,
     /// The placement the nation holds in the world ranking.
-    pub world_rank: Option<u32>,
+    pub world_rank: Option<NonZeroU32>,
     /// The placement the nation holds in its region ranking.
-    pub region_rank: Option<u32>,
+    pub region_rank: Option<NonZeroU32>,
     /// Kind of like a percentile, but backwards:
     /// the nation is in the top x% of nations according to this category,
     /// with x being this field.

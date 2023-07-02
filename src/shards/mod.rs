@@ -153,7 +153,9 @@ impl<'a> NSRequest<'a> {
     ///         vec![PublicNationShard::Region, PublicNationShard::Demonym]);
     /// ```
     /// When sent,
-    /// it will request information about [Testlandia](https://www.nationstates.net/nation=testlandia)'s region and demonym.
+    /// it will request information about
+    /// [Testlandia](https://www.nationstates.net/nation=testlandia)'s
+    /// region and adjectival demonym.
     pub fn new_nation(nation: impl ToString, shards: Vec<PublicNationShard<'a>>) -> Self {
         let (query, params) = Shard::query_and_params(shards);
         Self {
@@ -173,8 +175,7 @@ impl<'a> NSRequest<'a> {
     /// `public_sector`, `deaths`, `factbooks`, `dispatches`, `dbid`
     ///
     ///
-    /// The following fields are either default ([`Either::Left`][either::Either::Left]) or custom
-    /// ([`Either::Right`][either::Either::Right])
+    /// The following fields are [`DefaultOrCustom`][crate::parsers::nation::DefaultOrCustom]
     /// and will only become custom if the nation has reached a certain population
     /// and answered the relevant issue:
     ///

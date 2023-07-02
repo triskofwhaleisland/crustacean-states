@@ -20,7 +20,7 @@
 //! The following functionality is planned, but is not implemented:
 //! - parsers for Region, World, and WA request responses
 //! - private shards
-//! - lighter-weight client
+//! - lighter-weight client using `hyper`
 //! - breaking crate into features
 //!
 //! ## Examples
