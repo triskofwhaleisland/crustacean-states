@@ -1,16 +1,11 @@
 //! The nation parser module.
 
 use crate::parsers::happenings::Event;
-use crate::parsers::{
-    CensusData, DefaultOrCustom, Dispatch,
-    MaybeRelativeTime, MaybeSystemTime,
-};
+use crate::parsers::{CensusData, DefaultOrCustom, Dispatch, MaybeRelativeTime, MaybeSystemTime};
 #[allow(unused_imports)] // needed for docs
 use crate::shards::nation::PublicNationShard;
 use crate::shards::wa::WACouncil;
-use crate::shards::world::{
-    BannerId,
-};
+use crate::shards::world::BannerId;
 #[allow(unused_imports)] // needed for docs
 use crate::shards::NSRequest;
 use quick_xml::DeError;
@@ -76,7 +71,7 @@ pub struct FreedomScores {
 
 /// Causes of death in a nation.
 /// Note: at some point, the field `kind` in this struct will be converted to enum variants.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Cause {
     /// The way in which citizens die.
     pub kind: String,
@@ -467,7 +462,7 @@ pub struct Policy {
 
 /// Represents any one of the errors
 /// that can go wrong between deserialization and creating the Nation struct.
-#[derive(Clone, Debug, Error)]
+#[derive(Debug, Error)]
 pub enum IntoNationError {
     /// A string could not be parsed as a banner ID.
     #[error("malformed banner id: {0}")]
@@ -505,7 +500,7 @@ pub enum IntoNationError {
 }
 
 /// Describes a nation's vote in the World Assembly.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub enum WAVote {
     /// The nation votes for the proposed resolution.
     For,
@@ -530,7 +525,7 @@ impl TryFrom<String> for WAVote {
             "UNDECIDED" => Ok(WAVote::Undecided),
             other => Err(IntoNationError::BadWAVote {
                 bad_vote: other.to_string(),
-                council: WACouncil::SecurityCouncil,
+                council: Default::default(),
             }),
         }
     }

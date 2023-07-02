@@ -6,7 +6,7 @@ use std::fmt::{Display, Formatter};
 use std::num::NonZeroU64;
 
 /// A nation request available to anyone.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub enum PublicNationShard<'a> {
     /// A randomly-selected compliment for the nation.
     Admirable,
@@ -257,7 +257,7 @@ pub enum PublicNationShard<'a> {
     WCensus,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 /// World census scales as numerical IDs.
 /// The IDs can be found [here](https://forum.nationstates.net/viewtopic.php?f=15&t=159491)
 /// or in the URL of [World Census](https://www.nationstates.net/page=list_nations?censusid=0)
@@ -272,7 +272,7 @@ pub enum CensusScales {
     All,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 /// Either describes current or historical data.
 pub enum CensusModes {
     /// This is a special mode that cannot be combined with other modes,
@@ -289,7 +289,7 @@ pub enum CensusModes {
     Current(Vec<CensusCurrentModes>),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 /// Describes data that can currently be found on the World Census.
 pub enum CensusCurrentModes {
     /// Raw value.

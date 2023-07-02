@@ -1,5 +1,8 @@
 use crate::parsers::happenings::Event;
-use crate::parsers::nation::{Cause, Freedoms, FreedomScores, Government, IntoNationError, Nation, Policy, Sectors, WAStatus, WAVote};
+use crate::parsers::nation::{
+    Cause, FreedomScores, Freedoms, Government, IntoNationError, Nation, Policy, Sectors, WAStatus,
+    WAVote,
+};
 use crate::parsers::{
     CensusCurrentData, CensusData, CensusHistoricalData, DefaultOrCustom, Dispatch,
     MaybeRelativeTime, MaybeSystemTime, RawEvent,
@@ -150,7 +153,7 @@ struct Policies {
     inner: Vec<RawPolicy>,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 struct RawPolicy {
     name: String,
@@ -188,7 +191,7 @@ impl From<RawCause> for Cause {
 }
 
 //noinspection SpellCheckingInspection
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Debug, Deserialize)]
 struct RawCensusData {
     #[serde(rename = "@id")]
     id: u8,
@@ -244,7 +247,7 @@ impl From<RawCensusData> for CensusHistoricalData {
     }
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 struct RawDispatch {
     #[serde(rename = "@id")]
@@ -289,7 +292,11 @@ struct RawFreedoms {
 
 impl From<RawFreedoms> for Freedoms {
     fn from(value: RawFreedoms) -> Self {
-        let RawFreedoms { civil_rights, economy, political_freedom } = value;
+        let RawFreedoms {
+            civil_rights,
+            economy,
+            political_freedom,
+        } = value;
         Self {
             civil_rights,
             economy,
@@ -311,7 +318,11 @@ struct RawFreedomScores {
 
 impl From<RawFreedomScores> for FreedomScores {
     fn from(value: RawFreedomScores) -> Self {
-        let RawFreedomScores { civil_rights, economy, political_freedom } = value;
+        let RawFreedomScores {
+            civil_rights,
+            economy,
+            political_freedom,
+        } = value;
         Self {
             civil_rights,
             economy,
@@ -344,7 +355,20 @@ struct RawGovernment {
 
 impl From<RawGovernment> for Government {
     fn from(value: RawGovernment) -> Self {
-        let RawGovernment { administration, defence, education, environment, healthcare, commerce, international_aid, law_and_order, public_transport, social_equality, spirituality, welfare } = value;
+        let RawGovernment {
+            administration,
+            defence,
+            education,
+            environment,
+            healthcare,
+            commerce,
+            international_aid,
+            law_and_order,
+            public_transport,
+            social_equality,
+            spirituality,
+            welfare,
+        } = value;
         Self {
             administration,
             defence,
@@ -523,7 +547,9 @@ impl TryFrom<RawNation> for Nation {
             influence: value.influence,
             freedom_scores: value.freedomscores.map(FreedomScores::from),
             public_sector: value.publicsector,
-            deaths: value.deaths.map(|d| d.inner.into_iter().map(Cause::from).collect::<Vec<_>>()),
+            deaths: value
+                .deaths
+                .map(|d| d.inner.into_iter().map(Cause::from).collect::<Vec<_>>()),
             leader: value.leader.map(|l| {
                 if l.is_empty() {
                     DefaultOrCustom::Default(DEFAULT_LEADER.to_string())

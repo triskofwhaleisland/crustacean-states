@@ -11,7 +11,7 @@ use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
 /// A request for the wide world of NationStates.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub enum WorldShard<'a> {
     /// Provides the name of a banner given its ID, as well as the necessary conditions to unlock it.
     Banner(Vec<BannerId>),
@@ -335,7 +335,7 @@ impl HappeningsShardBuilder {
 }
 
 /// The ID of a banner. WIP. TODO make banner ids
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct BannerId {
     pub(crate) category: String,
     pub(crate) number: u16,
@@ -371,7 +371,7 @@ impl TryFrom<String> for BannerId {
 }
 
 /// The ways to sort dispatches.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub enum DispatchSort {
     /// Newest first.
     New,
@@ -382,7 +382,7 @@ pub enum DispatchSort {
 impl_display_as_debug!(DispatchSort);
 
 /// The categories of dispatches.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub enum DispatchCategory {
     /// Factbooks officially describe a nation.
     Factbook(FactbookCategory),
@@ -394,7 +394,7 @@ pub enum DispatchCategory {
     Meta(MetaCategory),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 #[allow(missing_docs)]
 #[non_exhaustive]
 /// The subcategories of factbooks.
@@ -420,7 +420,7 @@ pub enum FactbookCategory {
     Any,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 #[allow(missing_docs)]
 #[non_exhaustive]
 /// The subcategories of bulletins.
@@ -438,7 +438,7 @@ pub enum BulletinCategory {
     Any,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 #[allow(missing_docs)]
 #[non_exhaustive]
 /// The subcategories of accounts.
@@ -460,7 +460,7 @@ pub enum AccountCategory {
     Any,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 #[allow(missing_docs)]
 #[non_exhaustive]
 /// The subcategories of meta-category dispatches.
@@ -571,7 +571,7 @@ impl Display for DispatchCategory {
 }
 
 /// The happenings shard can either target nations or regions.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub enum HappeningsViewType {
     /// Targets one or more nations.
     Nation(Vec<String>),
@@ -580,7 +580,7 @@ pub enum HappeningsViewType {
 }
 
 /// The happenings shard can target multiple kinds of events.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 #[non_exhaustive]
 pub enum HappeningsFilterType {
     /// Triggered by answering an issue (dismissing the issue results in no event).
@@ -656,7 +656,7 @@ impl Display for HappeningsFilterType {
 // ///     "https://www.nationstates.net/cgi-bin/api.cgi?q=regionsbytag&tags=regionalgovernment%2Cfandom%2C-fascist",
 // /// )
 // /// ```
-// #[derive(Clone, Debug)]
+// #[derive(Debug)]
 // pub enum IncludeOrExcludeTag {
 //     /// Include this tag.
 //     Include(Tag),
@@ -682,7 +682,7 @@ impl Display for HappeningsFilterType {
 // }
 
 //noinspection SpellCheckingInspection
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 #[non_exhaustive]
 #[allow(missing_docs)]
 pub enum Tag {

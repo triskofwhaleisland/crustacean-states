@@ -4,7 +4,7 @@ use crate::shards::nation::{CensusModes, CensusScales};
 use crate::shards::{Params, Shard};
 
 /// A request of a region.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub enum RegionShard {
     /// The list of all nations banned from the region.
     BanList,
