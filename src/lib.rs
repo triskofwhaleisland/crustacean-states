@@ -11,7 +11,7 @@
 //! Currently, the following requests can be formed and sent:
 //! - Nation (public shards only): [`NSRequest::new_nation`], from [`PublicNationShards`][crate::shards::public_nation::PublicNationShard]; also, [`NSRequest::new_nation_standard`]
 //! - Region: [`NSRequest::new_region`], from [`RegionShards`][crate::shards::region::RegionShard]; also, [`NSRequest::new_region_standard`]
-//! - World: [`NSRequest::new_world`], from [`WorldShards`][crate::shards::world::WorldShard]
+//! - World (except for `regionsfromtag`): [`NSRequest::new_world`], from [`WorldShards`][crate::shards::world::WorldShard]
 //! - WA (World Assembly): [`NSRequest::new_wa`], from [`WAShards`][crate::shards::world_assembly::WAShard`]
 //!
 //! The following requests can be parsed:
