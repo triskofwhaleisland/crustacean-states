@@ -95,7 +95,6 @@ name = "crustacean-states"
 version = "0.1.0-beta.1"
 dependencies = [
  "dotenv",
- "either",
  "http",
  "itertools",
  "once_cell",

@@ -10,7 +10,6 @@ use crate::shards::world::{
 use crate::shards::world_assembly::WACouncil;
 #[allow(unused_imports)] // needed for docs
 use crate::shards::NSRequest;
-use either::{Either, Left, Right};
 use quick_xml::DeError;
 use serde::Deserialize;
 use std::fmt::Debug;
@@ -438,12 +437,12 @@ pub struct Nation {
     /// When the nation was founded as a relative timestamp.
     /// Note: NationStates did not track this at the beginning.
     /// For this reason, some nations are considered "founded in antiquity",
-    /// which is represented by `Some(None)`.
-    /// A nation founded more recently would be doubly wrapped in `Some`.
+    /// which is represented by [`MaybeRelativeTime::Antiquity`]
+    /// A nation founded more recently would be [`MaybeRelativeTime::Recorded`].
     ///
     /// Requested using [`PublicNationShard::Founded`].
     /// [`NSRequest::new_nation_standard`] requests this field.
-    pub founded: Option<Option<String>>,
+    pub founded: Option<MaybeRelativeTime>,
     /// The Unix timestamp of when the nation first logged in.
     ///
     /// Requested using [`PublicNationShard::FirstLogin`].
@@ -485,30 +484,30 @@ pub struct Nation {
     /// The national leader.
     ///
     /// If there is a custom leader,
-    /// the [`Left`] variant is filled with the custom leader's name;
-    /// if not, the [`Right`] variant is filled with the default leader name.
+    /// the [`DefaultOrCustom::Custom`] variant is filled with the custom leader's name;
+    /// if not, the [`DefaultOrCustom::Default`] variant is filled with the default leader name.
     ///
     /// Requested using [`PublicNationShard::Leader`].
     /// [`NSRequest::new_nation_standard`] requests this field.
-    pub leader: Option<Either<String, String>>,
+    pub leader: Option<DefaultOrCustom>,
     /// The national capital.
     ///
     /// If there is a custom capital,
-    /// the [`Left`] variant is filled with the custom capital name;
-    /// if not, the [`Right`] variant is filled with the default capital name.
+    /// the [`DefaultOrCustom::Custom`] variant is filled with the custom capital name;
+    /// if not, the [`DefaultOrCustom::Default`] variant is filled with the default capital name.
     ///
     /// Requested using [`PublicNationShard::Capital`].
     /// [`NSRequest::new_nation_standard`] requests this field.
-    pub capital: Option<Either<String, String>>,
+    pub capital: Option<DefaultOrCustom>,
     /// The national religion.
     ///
     /// If there is a custom religion,
-    /// the [`Left`] variant is filled with the custom religion;
-    /// if not, the [`Right`] variant is filled with the default religion.
+    /// the [`DefaultOrCustom::Custom`] variant is filled with the custom religion;
+    /// if not, the [`DefaultOrCustom::Default`] variant is filled with the default religion.
     ///
     /// Requested using [`PublicNationShard::Religion`].
     /// [`NSRequest::new_nation_standard`] requests this field.
-    pub religion: Option<Either<String, String>>,
+    pub religion: Option<DefaultOrCustom>,
     /// The number of factbooks the nation has published.
     ///
     /// Requested using [`PublicNationShard::Factbooks`].
@@ -553,12 +552,12 @@ pub struct Nation {
     pub banners: Option<Vec<BannerId>>,
     /// Information on the nation's score and ranking on the World Census.
     /// If current data was requested (the default),
-    /// the resulting data will be found in the [`Right`] variant,
+    /// the resulting data will be found in the [`CensusData::Current`] variant,
     /// but if historical data was requested,
-    /// the resulting data wil be found in the [`Left`] variant.
+    /// the resulting data wil be found in the [`CensusData::Historical`] variant.
     ///
     /// Requested and configured using [`PublicNationShard::Census`].
-    pub census: Option<Either<Vec<CensusHistoricalData>, Vec<CensusCurrentData>>>,
+    pub census: Option<CensusData>,
     /// Describes crime in the nation on its nation page.
     ///
     /// Requested using [`PublicNationShard::Crime`].
@@ -577,11 +576,11 @@ pub struct Nation {
     /// The Unix timestamp of when the nation was founded.
     /// Note: NationStates did not track this at the beginning.
     /// For this reason, some nations are considered "founded in antiquity",
-    /// which is represented by `Some(None)`.
-    /// A nation founded more recently would be doubly wrapped in `Some`.
+    /// which is represented by [`MaybeSystemTime::Antiquity`].
+    /// A nation founded more recently would be [`MaybeSystemTime::Recorded`].
     ///
     /// Requested using [`PublicNationShard::FoundedTime`].
-    pub founded_time: Option<Option<NonZeroU64>>,
+    pub founded_time: Option<MaybeSystemTime>,
     /// The vote of the nation in the General Assembly.
     ///
     /// Note:
@@ -670,6 +669,87 @@ pub struct Nation {
     ///
     /// Requested using [`PublicNationShard::WCensus`].
     pub world_census: Option<NonZeroU32>,
+}
+
+/// A value that either comes from a default or was customized.
+#[derive(Debug)]
+pub enum DefaultOrCustom {
+    /// The value is the default.
+    Default(String),
+    /// The value is custom.
+    Custom(String),
+}
+
+/// A relative timestamp that may or may not have been recorded.
+#[derive(Debug)]
+pub enum MaybeRelativeTime {
+    /// A known time.
+    Recorded(String),
+    /// A prehistoric time.
+    Antiquity,
+}
+
+impl From<String> for MaybeRelativeTime {
+    fn from(value: String) -> Self {
+        match value.as_str() {
+            "0" => MaybeRelativeTime::Antiquity,
+            _ => MaybeRelativeTime::Recorded(value),
+        }
+    }
+}
+
+impl From<MaybeRelativeTime> for Option<String> {
+    fn from(value: MaybeRelativeTime) -> Self {
+        match value {
+            MaybeRelativeTime::Recorded(x) => Some(x),
+            MaybeRelativeTime::Antiquity => None,
+        }
+    }
+}
+
+impl From<MaybeRelativeTime> for String {
+    fn from(value: MaybeRelativeTime) -> Self {
+        Option::<String>::from(value).unwrap_or_else(|| "0".to_string())
+    }
+}
+
+/// An absolute Unix timestamp that may or may not have been recorded.
+#[derive(Debug)]
+pub enum MaybeSystemTime {
+    /// A known time.
+    Recorded(NonZeroU64),
+    /// A prehistoric time.
+    Antiquity,
+}
+
+impl From<u64> for MaybeSystemTime {
+    fn from(value: u64) -> Self {
+        NonZeroU64::try_from(value).map(MaybeSystemTime::Recorded).unwrap_or_else(|_| MaybeSystemTime::Antiquity)
+    }
+}
+
+impl From<MaybeSystemTime> for Option<NonZeroU64> {
+    fn from(value: MaybeSystemTime) -> Self {
+        match value {
+            MaybeSystemTime::Recorded(x) => Some(x),
+            MaybeSystemTime::Antiquity => None,
+        }
+    }
+}
+
+impl From<MaybeSystemTime> for u64 {
+    fn from(value: MaybeSystemTime) -> Self {
+        Option::<NonZeroU64>::from(value).map(u64::from).unwrap_or_default()
+    }
+}
+
+/// World Census data about the nation. Either Current or Historical.
+#[derive(Debug)]
+pub enum CensusData {
+    /// Current data.
+    Current(Vec<CensusCurrentData>),
+    /// Historical data.
+    Historical(Vec<CensusHistoricalData>),
 }
 
 /// Current World Census data about the nation.
@@ -905,9 +985,9 @@ impl TryFrom<RawNation> for Nation {
 
         let capital = value.capital.map(|c| {
             if c.is_empty() {
-                Left(format!("{} City", &name))
+                DefaultOrCustom::Default(format!("{} City", &name))
             } else {
-                Right(c)
+                DefaultOrCustom::Custom(c)
             }
         });
 
@@ -959,7 +1039,7 @@ impl TryFrom<RawNation> for Nation {
             government: value.govt,
             founded: value
                 .founded
-                .map(|f| if f.as_str() == "0" { None } else { Some(f) }),
+                .map(MaybeRelativeTime::from),
             first_login: value.firstlogin,
             last_login: value.lastlogin,
             last_activity: value.lastactivity,
@@ -969,17 +1049,17 @@ impl TryFrom<RawNation> for Nation {
             deaths: value.deaths.map(|d| d.causes),
             leader: value.leader.map(|l| {
                 if l.is_empty() {
-                    Left(DEFAULT_LEADER.to_string())
+                    DefaultOrCustom::Default(DEFAULT_LEADER.to_string())
                 } else {
-                    Right(l)
+                    DefaultOrCustom::Custom(l)
                 }
             }),
             capital,
             religion: value.religion.map(|r| {
                 if r.is_empty() {
-                    Left(DEFAULT_RELIGION.to_string())
+                    DefaultOrCustom::Default(DEFAULT_RELIGION.to_string())
                 } else {
-                    Right(r)
+                    DefaultOrCustom::Custom(r)
                 }
             }),
             factbooks: value.factbooks,
@@ -1003,13 +1083,13 @@ impl TryFrom<RawNation> for Nation {
                 .map(|c| {
                     if let Some(f) = c.data.first() {
                         Ok(match f.timestamp {
-                            Some(_) => Left(
+                            Some(_) => CensusData::Historical(
                                 c.data
                                     .into_iter()
                                     .map(CensusHistoricalData::from)
                                     .collect::<Vec<_>>(),
                             ),
-                            None => Right(
+                            None => CensusData::Current(
                                 c.data
                                     .into_iter()
                                     .map(CensusCurrentData::from)
@@ -1040,7 +1120,7 @@ impl TryFrom<RawNation> for Nation {
                         .collect::<Result<Vec<Dispatch>, IntoNationError>>()
                 })
                 .transpose()?,
-            founded_time: value.foundedtime.map(|t| NonZeroU64::try_from(t).ok()),
+            founded_time: value.foundedtime.map(MaybeSystemTime::from),
             ga_vote,
             gdp: value.gdp,
             govt_desc: value.govtdesc,
