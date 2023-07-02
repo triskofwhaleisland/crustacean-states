@@ -13,14 +13,14 @@
 
 pub mod nation;
 pub mod region;
-pub mod world;
 pub mod wa;
+pub mod world;
 
 use crate::safe_name;
 use crate::shards::nation::{CensusModes, CensusScales, PublicNationShard};
 use crate::shards::region::RegionShard;
-use crate::shards::world::WorldShard;
 use crate::shards::wa::{WACouncil, WAShard};
+use crate::shards::world::WorldShard;
 use itertools::Itertools;
 use reqwest::Url;
 use std::collections::HashMap;

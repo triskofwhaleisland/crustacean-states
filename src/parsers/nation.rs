@@ -1,20 +1,23 @@
-//! The nation parser.
+//! The nation parser module.
 
 use crate::parsers::happenings::Event;
+use crate::parsers::{
+    CensusCurrentData, CensusData, CensusHistoricalData, DefaultOrCustom, Dispatch,
+    MaybeRelativeTime, MaybeSystemTime, RawEvent,
+};
 use crate::pretty_name;
 #[allow(unused_imports)] // needed for docs
 use crate::shards::nation::PublicNationShard;
+use crate::shards::wa::WACouncil;
 use crate::shards::world::{
     AccountCategory, BannerId, BulletinCategory, DispatchCategory, FactbookCategory, MetaCategory,
 };
-use crate::shards::wa::WACouncil;
 #[allow(unused_imports)] // needed for docs
 use crate::shards::NSRequest;
 use quick_xml::DeError;
 use serde::Deserialize;
 use std::fmt::Debug;
 use std::num::{NonZeroU16, NonZeroU32, NonZeroU64};
-
 use thiserror::Error;
 
 //noinspection SpellCheckingInspection
@@ -22,16 +25,7 @@ use thiserror::Error;
 #[serde(rename_all = "UPPERCASE")]
 /// The Rust representation of a nation, as interpreted from a response to a request.
 struct RawNation {
-    // default shards from ?nation=
-    // #[serde(rename = "$value", deserialize_with = "handle_name")]
-    /// The name of the nation.
-    ///
-    // Note: this is the *only* field that is ever guaranteed to be filled in.
-    // If the [`PublicNationShard::Name`] field was not requested,
-    // this is obtained from the results of [`pretty_name`], which can
-    //
-    // [`PublicNationShard::Name`]:
-    // crate::shards::public_nation_shards::PublicNationShard::Name
+    // default shards
     #[serde(rename = "@id")]
     id: Option<String>,
     name: Option<String>,
@@ -147,6 +141,42 @@ pub struct Government {
     pub welfare: f64,
 }
 
+#[derive(Debug, Deserialize)]
+struct Deaths {
+    #[serde(rename = "CAUSE", default)]
+    inner: Vec<Cause>,
+}
+
+#[derive(Debug, Deserialize)]
+struct Admirables {
+    #[serde(rename = "ADMIRABLE", default)]
+    inner: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct Banners {
+    #[serde(rename = "BANNER", default)]
+    inner: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct Census {
+    #[serde(rename = "SCALE", default)]
+    inner: Vec<RawCensusData>,
+}
+
+#[derive(Debug, Deserialize)]
+struct RawDispatchList {
+    #[serde(rename = "DISPATCH", default)]
+    inner: Vec<RawDispatch>,
+}
+
+#[derive(Debug, Deserialize)]
+struct RawFactbookList {
+    #[serde(rename = "FACTBOOK", default)]
+    inner: Vec<RawDispatch>, // only containing factbooks!!
+}
+
 /// Describes national freedoms as explained on-site.
 ///
 /// Note:
@@ -177,12 +207,6 @@ pub struct FreedomScores {
     pub political_freedom: u8,
 }
 
-#[derive(Debug, Deserialize)]
-struct Deaths {
-    #[serde(rename = "CAUSE")]
-    causes: Vec<Cause>,
-}
-
 /// Causes of death in a nation.
 /// Note: at some point, the field `kind` in this struct will be converted to enum variants.
 #[derive(Clone, Debug, Deserialize)]
@@ -193,24 +217,6 @@ pub struct Cause {
     /// How common this cause of death is, to the nearest tenth of a percent.
     #[serde(rename = "$value")]
     pub frequency: f64,
-}
-
-#[derive(Debug, Deserialize)]
-struct Admirables {
-    #[serde(rename = "ADMIRABLE")]
-    traits: Vec<String>,
-}
-
-#[derive(Debug, Deserialize)]
-struct Banners {
-    #[serde(rename = "BANNER")]
-    banners: Vec<String>,
-}
-
-#[derive(Debug, Deserialize)]
-struct Census {
-    #[serde(rename = "SCALE")]
-    data: Vec<RawCensusData>,
 }
 
 //noinspection SpellCheckingInspection
@@ -232,18 +238,6 @@ struct RawCensusData {
     timestamp: Option<NonZeroU64>,
 }
 
-#[derive(Debug, Deserialize)]
-struct RawDispatchList {
-    #[serde(rename = "DISPATCH", default)]
-    dispatches: Vec<RawDispatch>,
-}
-
-#[derive(Debug, Deserialize)]
-struct RawFactbookList {
-    #[serde(rename = "FACTBOOK", default)]
-    factbooks: Vec<RawDispatch>, // only containing factbooks!!
-}
-
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 struct RawDispatch {
@@ -262,33 +256,26 @@ struct RawDispatch {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 struct Happenings {
-    #[serde(rename = "EVENT")]
-    events: Vec<RawEvent>,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "UPPERCASE")]
-pub(super) struct RawEvent {
-    pub(crate) timestamp: u64,
-    pub(crate) text: String,
+    #[serde(rename = "EVENT", default)]
+    inner: Vec<RawEvent>,
 }
 
 #[derive(Debug, Deserialize)]
 struct Legislation {
-    #[serde(rename = "LAW")]
-    laws: Vec<String>,
+    #[serde(rename = "LAW", default)]
+    inner: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
 struct Notables {
-    #[serde(rename = "NOTABLE")]
-    notables: Vec<String>,
+    #[serde(rename = "NOTABLE", default)]
+    inner: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
 struct Policies {
-    #[serde(rename = "POLICY")]
-    policies: Vec<RawPolicy>,
+    #[serde(rename = "POLICY", default)]
+    inner: Vec<RawPolicy>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -671,109 +658,6 @@ pub struct Nation {
     pub world_census: Option<NonZeroU32>,
 }
 
-/// A value that either comes from a default or was customized.
-#[derive(Debug)]
-pub enum DefaultOrCustom {
-    /// The value is the default.
-    Default(String),
-    /// The value is custom.
-    Custom(String),
-}
-
-/// A relative timestamp that may or may not have been recorded.
-#[derive(Debug)]
-pub enum MaybeRelativeTime {
-    /// A known time.
-    Recorded(String),
-    /// A prehistoric time.
-    Antiquity,
-}
-
-impl From<String> for MaybeRelativeTime {
-    fn from(value: String) -> Self {
-        match value.as_str() {
-            "0" => MaybeRelativeTime::Antiquity,
-            _ => MaybeRelativeTime::Recorded(value),
-        }
-    }
-}
-
-impl From<MaybeRelativeTime> for Option<String> {
-    fn from(value: MaybeRelativeTime) -> Self {
-        match value {
-            MaybeRelativeTime::Recorded(x) => Some(x),
-            MaybeRelativeTime::Antiquity => None,
-        }
-    }
-}
-
-impl From<MaybeRelativeTime> for String {
-    fn from(value: MaybeRelativeTime) -> Self {
-        Option::<String>::from(value).unwrap_or_else(|| "0".to_string())
-    }
-}
-
-/// An absolute Unix timestamp that may or may not have been recorded.
-#[derive(Debug)]
-pub enum MaybeSystemTime {
-    /// A known time.
-    Recorded(NonZeroU64),
-    /// A prehistoric time.
-    Antiquity,
-}
-
-impl From<u64> for MaybeSystemTime {
-    fn from(value: u64) -> Self {
-        NonZeroU64::try_from(value).map(MaybeSystemTime::Recorded).unwrap_or_else(|_| MaybeSystemTime::Antiquity)
-    }
-}
-
-impl From<MaybeSystemTime> for Option<NonZeroU64> {
-    fn from(value: MaybeSystemTime) -> Self {
-        match value {
-            MaybeSystemTime::Recorded(x) => Some(x),
-            MaybeSystemTime::Antiquity => None,
-        }
-    }
-}
-
-impl From<MaybeSystemTime> for u64 {
-    fn from(value: MaybeSystemTime) -> Self {
-        Option::<NonZeroU64>::from(value).map(u64::from).unwrap_or_default()
-    }
-}
-
-/// World Census data about the nation. Either Current or Historical.
-#[derive(Debug)]
-pub enum CensusData {
-    /// Current data.
-    Current(Vec<CensusCurrentData>),
-    /// Historical data.
-    Historical(Vec<CensusHistoricalData>),
-}
-
-/// Current World Census data about the nation.
-//noinspection SpellCheckingInspection
-#[derive(Clone, Debug, Deserialize)]
-pub struct CensusCurrentData {
-    /// The ID used for the data point. For example,
-    pub id: u8,
-    /// The score of the nation on the Census scale.
-    pub score: Option<f64>,
-    /// The placement the nation holds in the world ranking.
-    pub world_rank: Option<NonZeroU32>,
-    /// The placement the nation holds in its region ranking.
-    pub region_rank: Option<NonZeroU32>,
-    /// Kind of like a percentile, but backwards:
-    /// the nation is in the top x% of nations according to this category,
-    /// with x being this field.
-    /// Note that all percentiles are to the nearest whole except for <1%,
-    /// which are to the nearest tenth.
-    pub percent_world_rank: Option<f64>,
-    /// Like `percent_world_rank`, but only for the nation's region ranking.
-    pub percent_region_rank: Option<f64>,
-}
-
 impl From<RawCensusData> for CensusCurrentData {
     fn from(value: RawCensusData) -> Self {
         let RawCensusData {
@@ -796,21 +680,6 @@ impl From<RawCensusData> for CensusCurrentData {
     }
 }
 
-/// Historical data from the World Census.
-/// Note that only scores and not rankings are available this way.
-//noinspection SpellCheckingInspection
-#[derive(Clone, Debug, Deserialize)]
-pub struct CensusHistoricalData {
-    /// The ID used for the data point. For example,
-    pub id: u8,
-    /// When the nation was ranked.
-    /// This usually corresponds to a time around the major
-    /// (midnight Eastern Time) or minor (noon Eastern Time) game updates.
-    pub timestamp: Option<NonZeroU64>,
-    /// The score of the nation on the Census scale.
-    pub score: Option<f64>,
-}
-
 impl From<RawCensusData> for CensusHistoricalData {
     fn from(value: RawCensusData) -> Self {
         let RawCensusData {
@@ -827,30 +696,6 @@ impl From<RawCensusData> for CensusHistoricalData {
     }
 }
 
-/// Metadata about a dispatch.
-#[derive(Clone, Debug)]
-pub struct Dispatch {
-    /// The numerical ID of the dispatch.
-    /// This forms the URL: for example,
-    /// https://www.nationstates.net/page=dispatch/id=1 is the first dispatch ever created
-    /// ("How to Write a Dispatch", Testlandia).
-    pub id: u32,
-    /// The title of the dispatch. This field can be edited.
-    pub title: String,
-    /// The nation that wrote the dispatch.
-    pub author: String,
-    /// The category and subcategory of the dispatch.
-    pub category: DispatchCategory,
-    /// The timestamp when the dispatch was created.
-    pub created: u64,
-    /// The timestamp when the dispatch was last edited.
-    pub edited: Option<NonZeroU64>,
-    /// The number of views the dispatch has.
-    pub views: u32,
-    /// The score of the dispatch
-    pub score: u32,
-}
-
 impl TryFrom<RawDispatch> for Dispatch {
     type Error = IntoNationError;
 
@@ -861,7 +706,7 @@ impl TryFrom<RawDispatch> for Dispatch {
             author: pretty_name(value.author),
             category: try_into_dispatch_category(&value.category, &value.subcategory)?,
             created: value.created,
-            edited: NonZeroU64::try_from(value.edited).ok(),
+            edited: NonZeroU64::try_from(value.edited).ok(), // field is 0 if never edited
             views: value.views,
             score: value.score,
         })
@@ -944,7 +789,8 @@ pub enum WAVote {
     ///
     /// This is the default response that the game provides,
     /// even if the nation is not in the World Assembly.
-    /// See the documentation for [`PublicNationShard::GAVote`] or [`PublicNationShard::SCVote`] for more details.
+    /// See the documentation for [`PublicNationShard::GAVote`] or [`PublicNationShard::SCVote`]
+    /// for more details.
     Undecided,
 }
 
@@ -971,17 +817,15 @@ impl TryFrom<RawNation> for Nation {
     type Error = IntoNationError;
 
     fn try_from(value: RawNation) -> Result<Self, Self::Error> {
-        let name = match value.name {
-            Some(n) => Ok(n),
-            None => match value.id {
-                Some(i) => Ok(i),
-                None => Err(IntoNationError::NoNameError),
-            },
+        let name = match (value.name, value.id) {
+            (Some(n), _) => Ok(n),
+            (None, Some(i)) => Ok(i),
+            (None, None) => Err(IntoNationError::NoNameError),
         }?;
 
         let happenings = value
             .happenings
-            .map(|h| h.events.into_iter().map(Event::from).collect());
+            .map(|h| h.inner.into_iter().map(Event::from).collect());
 
         let capital = value.capital.map(|c| {
             if c.is_empty() {
@@ -991,26 +835,23 @@ impl TryFrom<RawNation> for Nation {
             }
         });
 
-        let wa_status = if let Some(s) = value.unstatus {
-            match s.as_str() {
+        let wa_status = match value.unstatus {
+            Some(s) => match s.as_str() {
                 "WA Delegate" => Ok(Some(WAStatus::Delegate)),
                 "WA Member" => Ok(Some(WAStatus::Member)),
                 "Non-member" => Ok(Some(WAStatus::NonMember)),
                 other => Err(IntoNationError::BadWAStatusError(other.to_string())),
-            }
-        } else {
-            Ok(None)
+            },
+            None => Ok(None),
         }?;
 
-        let ga_vote = if let Some(WAStatus::NonMember) = wa_status {
-            None
-        } else {
-            value.gavote.map(WAVote::try_from).transpose()?
+        let ga_vote = match wa_status {
+            Some(WAStatus::NonMember) => None,
+            _ => value.gavote.map(WAVote::try_from).transpose()?,
         };
-        let sc_vote = if let Some(WAStatus::NonMember) = wa_status {
-            None
-        } else {
-            value.scvote.map(WAVote::try_from).transpose()?
+        let sc_vote = match wa_status {
+            Some(WAStatus::NonMember) => None,
+            _ => value.scvote.map(WAVote::try_from).transpose()?,
         };
 
         Ok(Self {
@@ -1037,16 +878,14 @@ impl TryFrom<RawNation> for Nation {
             major_industry: value.majorindustry,
             government_priority: value.govtpriority,
             government: value.govt,
-            founded: value
-                .founded
-                .map(MaybeRelativeTime::from),
+            founded: value.founded.map(MaybeRelativeTime::from),
             first_login: value.firstlogin,
             last_login: value.lastlogin,
             last_activity: value.lastactivity,
             influence: value.influence,
             freedom_scores: value.freedomscores,
             public_sector: value.publicsector,
-            deaths: value.deaths.map(|d| d.causes),
+            deaths: value.deaths.map(|d| d.inner),
             leader: value.leader.map(|l| {
                 if l.is_empty() {
                     DefaultOrCustom::Default(DEFAULT_LEADER.to_string())
@@ -1066,13 +905,13 @@ impl TryFrom<RawNation> for Nation {
             dispatches: value.dispatches,
             dbid: value.dbid,
             admirable: value.admirable,
-            admirables: value.admirables.map(|a| a.traits),
+            admirables: value.admirables.map(|a| a.inner),
             animal_trait: value.animaltrait,
             banner: value.banner.map(BannerId::try_from).transpose()?,
             banners: value
                 .banners
                 .map(|a| {
-                    a.banners
+                    a.inner
                         .into_iter()
                         .map(BannerId::try_from)
                         .collect::<Result<Vec<BannerId>, IntoNationError>>()
@@ -1080,32 +919,27 @@ impl TryFrom<RawNation> for Nation {
                 .transpose()?,
             census: value
                 .census
-                .map(|c| {
-                    if let Some(f) = c.data.first() {
-                        Ok(match f.timestamp {
-                            Some(_) => CensusData::Historical(
-                                c.data
-                                    .into_iter()
-                                    .map(CensusHistoricalData::from)
-                                    .collect::<Vec<_>>(),
-                            ),
-                            None => CensusData::Current(
-                                c.data
-                                    .into_iter()
-                                    .map(CensusCurrentData::from)
-                                    .collect::<Vec<_>>(),
-                            ),
-                        })
-                    } else {
-                        Err(IntoNationError::NoCensusDataError)
-                    }
+                .map(|c| match c.inner.first() {
+                    Some(f) if f.timestamp.is_some() => Ok(CensusData::Historical(
+                        c.inner
+                            .into_iter()
+                            .map(CensusHistoricalData::from)
+                            .collect::<Vec<_>>(),
+                    )),
+                    Some(_) => Ok(CensusData::Current(
+                        c.inner
+                            .into_iter()
+                            .map(CensusCurrentData::from)
+                            .collect::<Vec<_>>(),
+                    )),
+                    None => Err(IntoNationError::NoCensusDataError),
                 })
                 .transpose()?,
             crime: value.crime,
             dispatch_list: value
                 .dispatchlist
                 .map(|v| {
-                    v.dispatches
+                    v.inner
                         .into_iter()
                         .map(Dispatch::try_from)
                         .collect::<Result<Vec<Dispatch>, IntoNationError>>()
@@ -1114,7 +948,7 @@ impl TryFrom<RawNation> for Nation {
             factbook_list: value
                 .factbooklist
                 .map(|v| {
-                    v.factbooks
+                    v.inner
                         .into_iter()
                         .map(Dispatch::try_from)
                         .collect::<Result<Vec<Dispatch>, IntoNationError>>()
@@ -1127,19 +961,19 @@ impl TryFrom<RawNation> for Nation {
             happenings,
             income: value.income,
             industry_desc: value.industrydesc,
-            legislation: value.legislation.map(|l| l.laws),
-            notable: value.notable, 
+            legislation: value.legislation.map(|l| l.inner),
+            notable: value.notable,
             // .map(|n| {
             //     eprintln!("{n}");
             //     let (first, back) = n.split_once(", ").unwrap();
             //     let (second, third) = back.split_once(" and ").unwrap();
             //     [first.to_string(), second.to_string(), third.to_string()]
             // })
-            notables: value.notables.map(|n| n.notables),
+            notables: value.notables.map(|n| n.inner),
             policies: value
                 .policies
                 .map(|v| {
-                    v.policies
+                    v.inner
                         .into_iter()
                         .map(Policy::try_from)
                         .collect::<Result<Vec<Policy>, IntoNationError>>()

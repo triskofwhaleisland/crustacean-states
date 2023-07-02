@@ -1,6 +1,6 @@
 //! National, regional, and world happenings.
 
-use crate::parsers::nation::RawEvent;
+use crate::parsers::RawEvent;
 use crate::regex;
 use once_cell::sync::Lazy;
 use regex::{Regex, RegexSet};

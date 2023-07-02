@@ -113,7 +113,6 @@ pub enum WorldShard<'a> {
     // TODO implement correctly
     // /// List of regions which do have some tags and don't have others.
     // RegionsByTag(Vec<IncludeOrExcludeTag>),
-
     /// The number of manual, mass, and API telegrams in the queue.
     TGQueue,
 }

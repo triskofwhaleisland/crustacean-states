@@ -4,8 +4,8 @@ use reqwest::header::{HeaderMap, HeaderValue};
 use reqwest::{IntoUrl, Response};
 use std::num::ParseIntError;
 use std::ops::Add;
-use thiserror::Error;
 use std::time::{Duration, Instant};
+use thiserror::Error;
 
 /// A client helper. Uses [`reqwest`] under the surface.
 pub struct Client {
