@@ -1,6 +1,6 @@
 //! For region shard requests.
 
-use crate::shards::public_nation::{CensusModes, CensusScales};
+use crate::shards::nation::{CensusModes, CensusScales};
 use crate::shards::{Params, Shard};
 
 /// A request of a region.

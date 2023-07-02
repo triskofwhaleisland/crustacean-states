@@ -1,6 +1,6 @@
 use crustacean_states::client::Client;
 use crustacean_states::parsers::nation::Nation;
-use crustacean_states::shards::public_nation::PublicNationShard::DispatchList;
+use crustacean_states::shards::nation::PublicNationShard::DispatchList;
 use crustacean_states::shards::NSRequest;
 use std::error::Error;
 use url::Url;

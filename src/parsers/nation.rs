@@ -3,11 +3,11 @@
 use crate::parsers::happenings::Event;
 use crate::pretty_name;
 #[allow(unused_imports)] // needed for docs
-use crate::shards::public_nation::PublicNationShard;
+use crate::shards::nation::PublicNationShard;
 use crate::shards::world::{
     AccountCategory, BannerId, BulletinCategory, DispatchCategory, FactbookCategory, MetaCategory,
 };
-use crate::shards::world_assembly::WACouncil;
+use crate::shards::wa::WACouncil;
 #[allow(unused_imports)] // needed for docs
 use crate::shards::NSRequest;
 use quick_xml::DeError;

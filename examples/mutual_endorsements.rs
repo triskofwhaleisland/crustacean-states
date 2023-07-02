@@ -1,7 +1,7 @@
 use crustacean_states::{
     client::{Client, ClientError},
     parsers::nation::Nation,
-    shards::{public_nation::PublicNationShard::Endorsements, NSRequest},
+    shards::{nation::PublicNationShard::Endorsements, NSRequest},
 };
 use std::error::Error;
 use tokio::time::Instant;

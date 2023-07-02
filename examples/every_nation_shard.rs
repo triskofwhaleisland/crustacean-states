@@ -1,8 +1,8 @@
-use crustacean_states::shards::public_nation::{CensusCurrentModes::*, CensusModes, CensusScales};
+use crustacean_states::shards::nation::{CensusCurrentModes::*, CensusModes, CensusScales};
 use crustacean_states::{
     client::Client,
     parsers::nation::Nation,
-    shards::{public_nation::PublicNationShard::*, NSRequest},
+    shards::{nation::PublicNationShard::*, NSRequest},
 };
 use std::error::Error;
 // use std::fs::{File, OpenOptions};

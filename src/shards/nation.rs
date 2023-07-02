@@ -237,12 +237,12 @@ pub enum PublicNationShard<'a> {
     Sensibilities,
     /// The national tax rate as a percentage.
     Tax,
-    /// Whether a recruitment telegram can be sent to the nation or not.
+    /// Whether a recruitment telegram will be blocked by the nation's telegram settings.
     TGCanRecruit {
         /// Whether the nation will deny a recruitment telegram from this region in particular due to having received one too recently.
         from: Option<&'a str>,
     },
-    /// Whether a campaign telegram can be sent to the nation or not.
+    /// Whether a campaign telegram will be blocked by the nation's telegram settings.
     TGCanCampaign {
         /// Whether the nation will deny a campaign telegram from this region in particular due to having received one too recently.
         from: Option<&'a str>,

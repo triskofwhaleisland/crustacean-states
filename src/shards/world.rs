@@ -1,7 +1,7 @@
 //! For world shard requests.
 
 use crate::impl_display_as_debug;
-use crate::shards::public_nation::{CensusModes, CensusScales};
+use crate::shards::nation::{CensusModes, CensusScales};
 use crate::shards::world::HappeningsViewType::{Nation, Region};
 use crate::shards::{Params, Shard};
 use itertools::Itertools;
