@@ -5,6 +5,7 @@ use std::num::{NonZeroU32, NonZeroU64};
 
 pub mod happenings;
 pub mod nation;
+mod raw_nation;
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
