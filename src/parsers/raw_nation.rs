@@ -470,6 +470,7 @@ fn try_into_dispatch_category(
 }
 
 impl Nation {
+    /// Converts the XML response from NationStates to a [`Nation`].
     pub fn from_xml(xml: &str) -> Result<Self, IntoNationError> {
         Self::try_from(quick_xml::de::from_str::<RawNation>(xml)?)
     }

@@ -77,8 +77,7 @@ impl<'a> Params<'a> {
 }
 
 #[derive(Debug)]
-/// The smallest possible request that can be made to the website.
-pub struct Shard<'a> {
+pub(crate) struct Shard<'a> {
     pub(crate) query: String,
     pub(crate) params: Params<'a>,
 }

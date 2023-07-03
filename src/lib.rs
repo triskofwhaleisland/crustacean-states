@@ -4,7 +4,7 @@
 //!
 //! Using the library usually takes three steps:
 //!
-//! 1. Creating a [`NSRequest`][crate::shard::NSRequest] with the relevant shards.
+//! 1. Creating a [`NSRequest`][crate::shards::NSRequest] with the relevant shards.
 //! 2. Sending the request as a URL through a [`Client`][crate::client::Client].
 //! 3. Parsing the response using a parser in [`parsers`].
 //!
@@ -27,7 +27,7 @@
 //! For a list of examples,
 //! see [the examples folder on GitHub](https://github.com/triskofwhaleisland/crustacean-states/tree/main/examples).
 
-// #![deny(missing_docs)]
+#![deny(missing_docs)]
 
 #[allow(unused_imports)] // it's for the docs :)
 use crate::shards::NSRequest;
