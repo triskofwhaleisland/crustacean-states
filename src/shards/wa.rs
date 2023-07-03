@@ -25,7 +25,7 @@ pub enum WACouncil {
 }
 
 /// A shard for the World Assembly.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum WAShard<'a> {
     /// The number of nations in the World Assembly.
     NumNations,
