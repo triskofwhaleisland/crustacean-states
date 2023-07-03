@@ -1,5 +1,5 @@
 //! Contains the modules that parse responses from the NationStates API.
-use crate::shards::world::DispatchCategory;
+use crate::dispatch::DispatchCategory;
 use serde::Deserialize;
 use std::num::{NonZeroU32, NonZeroU64};
 

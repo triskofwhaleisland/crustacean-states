@@ -9,10 +9,10 @@
 //! 3. Parsing the response using a parser in [`parsers`].
 //!
 //! Currently, the following requests can be formed and sent:
-//! - Nation (public shards only): [`NSRequest::new_nation`], from [`PublicNationShards`][crate::shards::public_nation::PublicNationShard]; also, [`NSRequest::new_nation_standard`]
+//! - Nation (public shards only): [`NSRequest::new_nation`], from [`PublicNationShards`][crate::shards::nation::PublicNationShard]; also, [`NSRequest::new_nation_standard`]
 //! - Region: [`NSRequest::new_region`], from [`RegionShards`][crate::shards::region::RegionShard]; also, [`NSRequest::new_region_standard`]
 //! - World (except for `regionsfromtag`): [`NSRequest::new_world`], from [`WorldShards`][crate::shards::world::WorldShard]
-//! - WA (World Assembly): [`NSRequest::new_wa`], from [`WAShards`][crate::shards::world_assembly::WAShard`]
+//! - WA (World Assembly): [`NSRequest::new_wa`], from [`WAShards`][crate::shards::wa::WAShard`]
 //!
 //! The following requests can be parsed:
 //! - [`Nation`][crate::parsers::nation::Nation] (some fields still being finalized)
@@ -36,6 +36,7 @@ use crate::shards::NSRequest;
 mod macros;
 
 pub mod client;
+pub mod dispatch;
 pub mod parsers;
 pub mod shards;
 

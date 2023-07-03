@@ -17,7 +17,7 @@ pub enum RegionShard {
     /// Can be optionally configured with additional parameters.
     /// [source](https://www.nationstates.net/pages/api.html#nationapi-publicshards)
     ///
-    /// Parallels [`PublicNationShard::Census`][crate::shards::public_nation::PublicNationShard::Census].
+    /// Parallels [`PublicNationShard::Census`][crate::shards::nation::PublicNationShard::Census].
     Census {
         /// Specify the World Census scale(s) to list, using numerical IDs.
         /// For all scales, use `Some(`[`CensusScales::All`]`)`.

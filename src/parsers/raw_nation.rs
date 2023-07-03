@@ -1,3 +1,6 @@
+use crate::dispatch::{
+    AccountCategory, BulletinCategory, DispatchCategory, FactbookCategory, MetaCategory,
+};
 use crate::parsers::happenings::Event;
 use crate::parsers::nation::{
     BannerId, Cause, FreedomScores, Freedoms, Government, IntoNationError, Nation, Policy, Sectors,
@@ -8,9 +11,6 @@ use crate::parsers::{
     MaybeRelativeTime, MaybeSystemTime, RawEvent,
 };
 use crate::pretty_name;
-use crate::shards::world::{
-    AccountCategory, BulletinCategory, DispatchCategory, FactbookCategory, MetaCategory,
-};
 use serde::Deserialize;
 use std::num::{NonZeroU16, NonZeroU32, NonZeroU64};
 
