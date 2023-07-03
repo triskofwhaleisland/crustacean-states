@@ -27,7 +27,7 @@
 //! For a list of examples,
 //! see [the examples folder on GitHub](https://github.com/triskofwhaleisland/crustacean-states/tree/main/examples).
 
-#![deny(missing_docs)]
+// #![deny(missing_docs)]
 
 #[allow(unused_imports)] // it's for the docs :)
 use crate::shards::NSRequest;

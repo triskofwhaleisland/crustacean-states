@@ -1,12 +1,10 @@
 //! For world shard requests.
 
 use crate::impl_display_as_debug;
-use crate::shards::nation::{CensusModes, CensusScales};
-use crate::shards::world::HappeningsViewType::{Nation, Region};
-use crate::shards::{Params, Shard};
-use itertools::Itertools;
-
 use crate::parsers::nation::IntoNationError;
+use crate::shards::world::HappeningsViewType::{Nation, Region};
+use crate::shards::{CensusModes, CensusScales, Params, Shard};
+use itertools::Itertools;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
