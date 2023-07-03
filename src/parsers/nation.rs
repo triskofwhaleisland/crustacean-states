@@ -5,12 +5,12 @@ use crate::parsers::{CensusData, DefaultOrCustom, Dispatch, MaybeRelativeTime, M
 #[allow(unused_imports)] // needed for docs
 use crate::shards::nation::PublicNationShard;
 use crate::shards::wa::WACouncil;
-use crate::shards::world::BannerId;
 #[allow(unused_imports)] // needed for docs
 use crate::shards::NSRequest;
 use quick_xml::DeError;
-use std::fmt::Debug;
+use std::fmt::{Debug, Display, Formatter};
 use std::num::{NonZeroU16, NonZeroU32};
+use std::str::FromStr;
 use thiserror::Error;
 
 /// The status of a nation in the World Assembly.

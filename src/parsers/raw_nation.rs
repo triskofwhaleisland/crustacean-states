@@ -1,7 +1,7 @@
 use crate::parsers::happenings::Event;
 use crate::parsers::nation::{
-    Cause, FreedomScores, Freedoms, Government, IntoNationError, Nation, Policy, Sectors, WAStatus,
-    WAVote,
+    BannerId, Cause, FreedomScores, Freedoms, Government, IntoNationError, Nation, Policy, Sectors,
+    WAStatus, WAVote,
 };
 use crate::parsers::{
     CensusCurrentData, CensusData, CensusHistoricalData, DefaultOrCustom, Dispatch,
@@ -9,7 +9,7 @@ use crate::parsers::{
 };
 use crate::pretty_name;
 use crate::shards::world::{
-    AccountCategory, BannerId, BulletinCategory, DispatchCategory, FactbookCategory, MetaCategory,
+    AccountCategory, BulletinCategory, DispatchCategory, FactbookCategory, MetaCategory,
 };
 use serde::Deserialize;
 use std::num::{NonZeroU16, NonZeroU32, NonZeroU64};
