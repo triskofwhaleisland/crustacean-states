@@ -530,3 +530,39 @@ impl TryFrom<String> for WAVote {
         }
     }
 }
+
+/// The ID of a banner. WIP. TODO make banner id categories
+#[derive(Debug)]
+pub struct BannerId {
+    pub(crate) category: String,
+    pub(crate) number: u16,
+}
+
+impl Display for BannerId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}{}", self.category.to_ascii_lowercase(), self.number)
+    }
+}
+
+impl BannerId {
+    fn new(category: impl ToString, number: u16) -> Self {
+        Self {
+            category: category.to_string(),
+            number,
+        }
+    }
+}
+
+impl TryFrom<String> for BannerId {
+    type Error = IntoNationError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        let split_index = value.chars().position(|c| c.is_ascii_digit());
+        if split_index.is_none() || split_index == Some(0) {
+            return Err(IntoNationError::BadBannerId(value));
+        }
+        let (cat, num) = value.split_at(split_index.unwrap());
+        let num = u16::from_str(num).map_err(|_| IntoNationError::BadBannerId(value.clone()))?;
+        Ok(BannerId::new(cat, num))
+    }
+}
