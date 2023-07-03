@@ -35,7 +35,7 @@ pub enum FactbookCategory {
     /// The type to choose if you are not picking a subcategory.
     /// NOTE:
     /// This is only used in shard queries;
-    /// no [`Dispatch`][crate::parsers::nation::Dispatch] will ever be tagged [`FactbookCategory::Any`].
+    /// no [`Dispatch`][crate::parsers::Dispatch] will ever be tagged [`FactbookCategory::Any`].
     Any,
 }
 
@@ -53,7 +53,7 @@ pub enum BulletinCategory {
     /// The type to choose if you are not picking a subcategory.
     /// NOTE:
     /// This is only used in shard queries;
-    /// no [`Dispatch`][crate::parsers::nation::Dispatch] will ever be tagged [`BulletinCategory::Any`].
+    /// no [`Dispatch`][crate::parsers::Dispatch] will ever be tagged [`BulletinCategory::Any`].
     Any,
 }
 
@@ -75,7 +75,7 @@ pub enum AccountCategory {
     /// The type to choose if you are not picking a subcategory.
     /// NOTE:
     /// This is only used in shard queries;
-    /// no [`Dispatch`][crate::parsers::nation::Dispatch] will ever be tagged [`AccountCategory::Any`].
+    /// no [`Dispatch`][crate::parsers::Dispatch] will ever be tagged [`AccountCategory::Any`].
     Any,
 }
 
@@ -91,7 +91,7 @@ pub enum MetaCategory {
     /// The type to choose if you are not picking a subcategory.
     /// NOTE:
     /// This is only used in shard queries;
-    /// no [`Dispatch`][crate::parsers::nation::Dispatch] will ever be tagged [`MetaCategory::Any`].
+    /// no [`Dispatch`][crate::parsers::Dispatch] will ever be tagged [`MetaCategory::Any`].
     Any,
 }
 

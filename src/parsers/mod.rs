@@ -159,7 +159,7 @@ pub struct CensusHistoricalData {
 pub struct Dispatch {
     /// The numerical ID of the dispatch.
     /// This forms the URL: for example,
-    /// https://www.nationstates.net/page=dispatch/id=1 is the first dispatch ever created
+    /// <https://www.nationstates.net/page=dispatch/id=1> is the first dispatch ever created
     /// ("How to Write a Dispatch", Testlandia).
     pub id: u32,
     /// The title of the dispatch. This field can be edited.

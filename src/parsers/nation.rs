@@ -470,7 +470,7 @@ pub enum IntoNationError {
     /// A `u8` could not be parsed as a `bool` because it was not `0` or `1`.
     #[error("boolean cannot be derived from {0}")]
     BadBooleanError(u8),
-    /// A `String` could not be parsed as a [`DispatchCategory`][crate::shards::world::DispatchCategory].
+    /// A `String` could not be parsed as a [`DispatchCategory`][crate::dispatch::DispatchCategory].
     #[error("malformed dispatch category: {0}")]
     BadDispatchCategory(String),
     /// A `String` could not be parsed as a [`WAStatus`].

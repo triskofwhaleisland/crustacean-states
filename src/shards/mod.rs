@@ -176,7 +176,7 @@ impl<'a> NSRequest<'a> {
     /// `public_sector`, `deaths`, `factbooks`, `dispatches`, `dbid`
     ///
     ///
-    /// The following fields are [`DefaultOrCustom`][crate::parsers::nation::DefaultOrCustom]
+    /// The following fields are [`DefaultOrCustom`][crate::parsers::DefaultOrCustom]
     /// and will only become custom if the nation has reached a certain population
     /// and answered the relevant issue:
     ///
