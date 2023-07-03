@@ -17,14 +17,16 @@ pub mod wa;
 pub mod world;
 
 use crate::safe_name;
-use crate::shards::nation::{CensusModes, CensusScales, PublicNationShard};
+use crate::shards::nation::PublicNationShard;
 use crate::shards::region::RegionShard;
 use crate::shards::wa::{WACouncil, WAShard};
 use crate::shards::world::WorldShard;
 use itertools::Itertools;
 use reqwest::Url;
 use std::collections::HashMap;
+use std::fmt;
 use std::fmt::{Debug, Display, Formatter};
+use std::num::NonZeroU64;
 
 const BASE_URL: &str = "https://www.nationstates.net/cgi-bin/api.cgi?";
 
@@ -77,8 +79,7 @@ impl<'a> Params<'a> {
 }
 
 #[derive(Debug)]
-/// The smallest possible request that can be made to the website.
-pub struct Shard<'a> {
+pub(crate) struct Shard<'a> {
     pub(crate) query: String,
     pub(crate) params: Params<'a>,
 }
@@ -256,7 +257,7 @@ impl<'a> NSRequest<'a> {
 }
 
 impl<'a> Display for NSRequest<'a> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "{BASE_URL}{}{}{}",
@@ -301,5 +302,69 @@ impl<'a> From<NSRequest<'a>> for Url {
         params.push(("q", value.query));
         params.extend(value.params.0.into_iter());
         Url::parse_with_params(BASE_URL, params).unwrap()
+    }
+}
+
+#[derive(Debug)]
+/// World census scales as numerical IDs.
+/// The IDs can be found [here](https://forum.nationstates.net/viewtopic.php?f=15&t=159491)
+/// or in the URL of [World Census](https://www.nationstates.net/page=list_nations?censusid=0)
+/// pages.
+/// [source](https://www.nationstates.net/pages/api.html#nationapi-publicshards)
+pub enum CensusScales {
+    /// Only one scale.
+    One(u8),
+    /// Multiple scales.
+    Many(Vec<u8>),
+    /// All scales.
+    All,
+}
+
+#[derive(Debug)]
+/// Either describes current or historical data.
+pub enum CensusModes {
+    /// This is a special mode that cannot be combined with other modes,
+    /// as only scores are available, not ranks.
+    /// When requesting history, you can optionally specify a time window, using Unix epoch times.
+    /// [source](https://www.nationstates.net/pages/api.html#nationapi-publicshards)
+    History {
+        /// Beginning of the measurement.
+        from: Option<NonZeroU64>,
+        /// End of the measurement.
+        to: Option<NonZeroU64>,
+    },
+    /// Represents current data.
+    Current(Vec<CensusCurrentModes>),
+}
+
+#[derive(Debug)]
+/// Describes data that can currently be found on the World Census.
+pub enum CensusCurrentModes {
+    /// Raw value.
+    Score,
+    /// World rank (e.g. "334" means 334th in the world).
+    Rank,
+    /// Region rank.
+    RegionRank,
+    /// World rank as a percentage (e.g. "15" means "Top 15%").
+    PercentRank,
+    /// Region rank as a percentage.
+    PercentRegionRank,
+}
+
+impl Display for CensusCurrentModes {
+    //noinspection SpellCheckingInspection
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                CensusCurrentModes::Score => "score",
+                CensusCurrentModes::Rank => "rank",
+                CensusCurrentModes::RegionRank => "rrank",
+                CensusCurrentModes::PercentRank => "prank",
+                CensusCurrentModes::PercentRegionRank => "prrank",
+            }
+        )
     }
 }

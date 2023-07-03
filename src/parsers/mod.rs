@@ -5,8 +5,9 @@ use std::num::{NonZeroU32, NonZeroU64};
 
 pub mod happenings;
 pub mod nation;
+mod raw_nation;
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 pub(super) struct RawEvent {
     pub(super) timestamp: u64,
@@ -118,7 +119,7 @@ pub enum CensusData {
 
 /// Current World Census data about the nation.
 //noinspection SpellCheckingInspection
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct CensusCurrentData {
     /// The ID used for the data point. For example,
     pub id: u8,
@@ -141,7 +142,7 @@ pub struct CensusCurrentData {
 /// Historical data from the World Census.
 /// Note that only scores and not rankings are available this way.
 //noinspection SpellCheckingInspection
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct CensusHistoricalData {
     /// The ID used for the data point. For example,
     pub id: u8,
@@ -154,7 +155,7 @@ pub struct CensusHistoricalData {
 }
 
 /// Metadata about a dispatch.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Dispatch {
     /// The numerical ID of the dispatch.
     /// This forms the URL: for example,

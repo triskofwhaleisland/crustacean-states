@@ -1,17 +1,14 @@
 //! For world shard requests.
 
 use crate::impl_display_as_debug;
-use crate::shards::nation::{CensusModes, CensusScales};
+use crate::parsers::nation::{BannerId};
 use crate::shards::world::HappeningsViewType::{Nation, Region};
-use crate::shards::{Params, Shard};
+use crate::shards::{CensusModes, CensusScales, Params, Shard};
 use itertools::Itertools;
-
-use crate::parsers::nation::IntoNationError;
 use std::fmt::{Display, Formatter};
-use std::str::FromStr;
 
 /// A request for the wide world of NationStates.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub enum WorldShard<'a> {
     /// Provides the name of a banner given its ID, as well as the necessary conditions to unlock it.
     Banner(Vec<BannerId>),
@@ -334,44 +331,8 @@ impl HappeningsShardBuilder {
     }
 }
 
-/// The ID of a banner. WIP. TODO make banner ids
-#[derive(Clone, Debug)]
-pub struct BannerId {
-    pub(crate) category: String,
-    pub(crate) number: u16,
-}
-
-impl Display for BannerId {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}{}", self.category.to_ascii_lowercase(), self.number)
-    }
-}
-
-impl BannerId {
-    fn new(category: impl ToString, number: u16) -> Self {
-        Self {
-            category: category.to_string(),
-            number,
-        }
-    }
-}
-
-impl TryFrom<String> for BannerId {
-    type Error = IntoNationError;
-
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        let split_index = value.chars().position(|c| c.is_ascii_digit());
-        if split_index.is_none() || split_index == Some(0) {
-            return Err(IntoNationError::BadBannerId(value));
-        }
-        let (cat, num) = value.split_at(split_index.unwrap());
-        let num = u16::from_str(num).map_err(|_| IntoNationError::BadBannerId(value.clone()))?;
-        Ok(BannerId::new(cat, num))
-    }
-}
-
 /// The ways to sort dispatches.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub enum DispatchSort {
     /// Newest first.
     New,
@@ -382,7 +343,7 @@ pub enum DispatchSort {
 impl_display_as_debug!(DispatchSort);
 
 /// The categories of dispatches.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub enum DispatchCategory {
     /// Factbooks officially describe a nation.
     Factbook(FactbookCategory),
@@ -394,7 +355,7 @@ pub enum DispatchCategory {
     Meta(MetaCategory),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 #[allow(missing_docs)]
 #[non_exhaustive]
 /// The subcategories of factbooks.
@@ -420,7 +381,7 @@ pub enum FactbookCategory {
     Any,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 #[allow(missing_docs)]
 #[non_exhaustive]
 /// The subcategories of bulletins.
@@ -438,7 +399,7 @@ pub enum BulletinCategory {
     Any,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 #[allow(missing_docs)]
 #[non_exhaustive]
 /// The subcategories of accounts.
@@ -460,7 +421,7 @@ pub enum AccountCategory {
     Any,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 #[allow(missing_docs)]
 #[non_exhaustive]
 /// The subcategories of meta-category dispatches.
@@ -571,7 +532,7 @@ impl Display for DispatchCategory {
 }
 
 /// The happenings shard can either target nations or regions.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub enum HappeningsViewType {
     /// Targets one or more nations.
     Nation(Vec<String>),
@@ -580,7 +541,7 @@ pub enum HappeningsViewType {
 }
 
 /// The happenings shard can target multiple kinds of events.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 #[non_exhaustive]
 pub enum HappeningsFilterType {
     /// Triggered by answering an issue (dismissing the issue results in no event).
@@ -656,7 +617,7 @@ impl Display for HappeningsFilterType {
 // ///     "https://www.nationstates.net/cgi-bin/api.cgi?q=regionsbytag&tags=regionalgovernment%2Cfandom%2C-fascist",
 // /// )
 // /// ```
-// #[derive(Clone, Debug)]
+// #[derive(Debug)]
 // pub enum IncludeOrExcludeTag {
 //     /// Include this tag.
 //     Include(Tag),
@@ -680,112 +641,3 @@ impl Display for HappeningsFilterType {
 //         )
 //     }
 // }
-
-//noinspection SpellCheckingInspection
-#[derive(Clone, Debug)]
-#[non_exhaustive]
-#[allow(missing_docs)]
-pub enum Tag {
-    Anarchist,
-    Anime,
-    AntiCapitalist,
-    AntiCommunist,
-    AntiFascist,
-    AntiGeneralAssembly,
-    AntiSecurityCouncil,
-    AntiWorldAssembly,
-    Capitalist,
-    Casual,
-    Catcher,
-    Class,
-    Colony,
-    Commended,
-    Communist,
-    Condemned,
-    Conservative,
-    Cyberpunk,
-    Defender,
-    Democratic,
-    EcoFriendly,
-    Egalitarian,
-    EmbassyCollector,
-    Enormous,
-    ForumSeven,
-    FutureTechFasterThanLight,
-    FutureTechFasterThanLightInhibited,
-    FutureTechSlowerThanLight,
-    Fandom,
-    FantasyTec,
-    // Eww.
-    Fascist,
-    Featured,
-    Feeder,
-    Feminist,
-    Founderless,
-    FreeTrade,
-    Frontier,
-    FutureTech,
-    GamePlayer,
-    Gargantuan,
-    GeneralAssembly,
-    Generalite,
-    Governorless,
-    HumanOnly,
-    Imperialist,
-    Independent,
-    Industrial,
-    Injuncted,
-    InternationalFederalist,
-    Invader,
-    Isolationist,
-    IssuesPlayer,
-    JumpPoint,
-    Lgbt,
-    Large,
-    Liberal,
-    Liberated,
-    Libertarian,
-    Magical,
-    Map,
-    Miniscule,
-    ModernTech,
-    Monarchist,
-    MultiSpecies,
-    NationalSovereigntist,
-    Neutral,
-    New,
-    NonEnglish,
-    OffsiteChat,
-    OffsiteForums,
-    OuterSpace,
-    PortalToTheMultiverse,
-    Pacifist,
-    Parody,
-    Password,
-    PastTech,
-    Patriarchal,
-    PostApocalyptic,
-    PostModernTech,
-    PuppetStorage,
-    RegionalGovernment,
-    Religious,
-    Restorer,
-    RolePlayer,
-    SecurityCouncil,
-    Serious,
-    Silly,
-    Sinker,
-    Small,
-    Snarky,
-    Social,
-    Socialist,
-    Sports,
-    Steampunk,
-    Surreal,
-    Theocratic,
-    Totalitarian,
-    TradingCards,
-    VideoGame,
-    Warzone,
-    WorldAssembly,
-}

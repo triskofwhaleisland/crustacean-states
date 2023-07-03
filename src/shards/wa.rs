@@ -66,7 +66,7 @@ impl<'a> From<WAShard<'a>> for Shard<'a> {
 }
 
 /// Extra information about the current at-vote resolution.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub enum ResolutionShard {
     /// Lists every nation voting for and against the resolution.
     Voters,
