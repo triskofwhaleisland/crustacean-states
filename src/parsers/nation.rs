@@ -55,12 +55,16 @@ pub struct Government {
 #[derive(Debug)]
 #[allow(missing_docs)]
 pub struct Freedoms {
+    // TODO make enum
     pub civil_rights: String,
+    // TODO make enum
     pub economy: String,
+    // TODO make enum
     pub political_freedom: String,
 }
 
 /// Gives a score out of 100 for the three types of national freedom.
+// TODO restrict type from 0 to 100
 #[derive(Debug)]
 #[allow(missing_docs)]
 pub struct FreedomScores {
@@ -74,6 +78,7 @@ pub struct FreedomScores {
 #[derive(Debug)]
 pub struct Cause {
     /// The way in which citizens die.
+    // TODO make enum
     pub kind: String,
     /// How common this cause of death is, to the nearest tenth of a percent.
     pub frequency: f64,
@@ -81,7 +86,7 @@ pub struct Cause {
 
 /// A breakdown of the relative economic power of each economic sector.
 #[derive(Debug)]
-#[allow(missing_docs)] // TODO learn economics so I can explain this
+#[allow(missing_docs)] // TODO learn economics so I can explain this :P
 pub struct Sectors {
     pub black_market: f64,
     pub government: f64,
@@ -455,6 +460,7 @@ pub struct Policy {
     /// The banner that is associated with the policy.
     pub picture: BannerId,
     /// The category the policy belongs to. Note: this field will eventually be converted into an `enum`.
+    // TODO PolicyCategory
     pub category: String,
     /// The description of the policy.
     pub description: String,
