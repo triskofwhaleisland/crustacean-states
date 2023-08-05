@@ -1,37 +1,36 @@
+use crustacean_states::shards::nation::PublicNationRequest;
 use crustacean_states::{
     client::{Client, ClientError},
     parsers::nation::Nation,
-    shards::{nation::PublicNationShard::Endorsements, NSRequest},
+    shards::nation::PublicNationShard::Endorsements,
 };
 use std::error::Error;
 use tokio::time::Instant;
-use url::Url;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     dotenv::dotenv()?;
     let user_agent = std::env::var("USER_AGENT")?;
-    let mut client = Client::new(user_agent)?;
+    let (client, mut client_state) = Client::new(user_agent)?.with_default_state();
     eprintln!("Made client!");
     let target = "Aramos";
-    let request = Url::from(NSRequest::new_nation(
-        target.to_string(),
-        vec![Endorsements],
-    ));
+    let request = PublicNationRequest::new(target, &[Endorsements]);
     eprintln!("{request:?}");
-    let response = client.get(request.as_str()).await?;
+    let response = client.get(request, &mut client_state).await?;
     let text = response.text().await?;
     let target_nation = Nation::from_xml(&text)?;
-    let l = target_nation.endorsements.as_ref().unwrap().len();
+    let endorsements = target_nation.endorsements.unwrap();
+    eprintln!("{endorsements:?}");
+    let l = endorsements.len();
     let mut n = 0;
-    for endorsed_nation in target_nation.endorsements.unwrap() {
-        let request = Url::from(NSRequest::new_nation(endorsed_nation, vec![Endorsements]));
+    for endorsed_nation in endorsements {
+        let request = PublicNationRequest::new(&endorsed_nation, &[Endorsements]);
         eprintln!("{request:?}");
-        let response = match client.get(request.as_str()).await {
+        let response = match client.get(request.clone(), &mut client_state).await {
             Ok(r) => Ok(r),
             Err(ClientError::RateLimitedError(t)) => {
                 tokio::time::sleep_until(Instant::from(t)).await;
-                client.get(request).await
+                client.get(request, &mut client_state).await
             }
             Err(e) => Err(e),
         }?;

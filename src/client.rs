@@ -1,16 +1,18 @@
 //! Additional tools for making requests.
 
+use crate::shards::NSRequest;
 use reqwest::header::{HeaderMap, HeaderValue};
 use reqwest::Response;
 use std::num::ParseIntError;
 use std::ops::Add;
 use std::time::{Duration, Instant};
 use thiserror::Error;
-use crate::shards::NSRequest;
 
 /// A client helper. Uses [`reqwest`] under the surface.
-pub struct Client {
-    inner: reqwest::Client,
+pub struct Client(reqwest::Client);
+
+#[derive(Clone, Debug, Default)]
+pub struct ClientState {
     rate_limiter: Option<RateLimits>,
     last_sent: Option<Instant>,
     send_after: Option<Instant>,
@@ -26,12 +28,13 @@ impl Client {
         V: TryInto<HeaderValue>,
         V::Error: Into<http::Error>,
     {
-        Ok(Self {
-            inner: reqwest::Client::builder().user_agent(user_agent).build()?,
-            rate_limiter: None,
-            last_sent: None,
-            send_after: None,
-        })
+        Ok(Self(
+            reqwest::Client::builder().user_agent(user_agent).build()?,
+        ))
+    }
+
+    pub fn with_default_state(self) -> (Self, ClientState) {
+        (self, ClientState::default())
     }
 
     /// Make a request of the API.
@@ -43,29 +46,39 @@ impl Client {
     ///
     /// If there was an error in the [`reqwest`] crate,
     /// [`ClientError::ReqwestError`] will be returned.
-    pub async fn get<U: NSRequest>(&mut self, request: U) -> Result<Response, ClientError> {
+    pub async fn get<U: NSRequest>(
+        &self,
+        request: U,
+        state: &mut ClientState,
+    ) -> Result<Response, ClientError> {
         // If the client was told that it should not send until some time after now,
-        if self.send_after.is_some_and(|t| t > Instant::now()) {
+        if state.send_after.is_some_and(|t| t > Instant::now()) {
             // Raise an error detailing when the request should have been sent.
-            Err(ClientError::RateLimitedError(self.send_after.unwrap()))
+            Err(ClientError::RateLimitedError(state.send_after.unwrap()))
         } else {
-            match self.inner.get(request.as_url()).send().await {
+            match self.0.get(request.as_url()).send().await {
                 Ok(r) => {
-                    self.rate_limiter = Some(RateLimits::new(r.headers())?);
-                    self.last_sent = Some(Instant::now());
-                    if let Some(ref r) = self.rate_limiter {
-                        self.send_after = if r.remaining == 0 {
+                    state.rate_limiter = Some(RateLimits::new(r.headers())?);
+                    state.last_sent = Some(Instant::now());
+                    if let Some(ref r) = state.rate_limiter {
+                        state.send_after = if r.remaining == 0 {
                             Some(r.reset)
                         } else {
                             r.retry_after
                         }
-                        .map(|t| self.last_sent.unwrap().add(Duration::from_secs(t as u64)))
+                        .map(|t| state.last_sent.unwrap().add(Duration::from_secs(t as u64)))
                     }
                     Ok(r)
                 }
                 Err(e) => Err(ClientError::ReqwestError { source: e }),
             }
         }
+    }
+}
+
+impl ClientState {
+    pub fn new() -> Self {
+        Self::default()
     }
 
     /// A guide on how long to wait between requests.
@@ -128,7 +141,7 @@ pub enum ClientError {
 }
 
 /// A simple tool to help with NationStates rate limits.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct RateLimits {
     // policy and limits are currently disabled
     // because this part of the program is private and implementation will probably change.

@@ -261,6 +261,7 @@ pub enum PublicNationShard<'a> {
     WCensus,
 }
 
+#[derive(Clone, Debug)]
 pub struct PublicNationRequest<'a> {
     pub nation: &'a str,
     pub shards: &'a [PublicNationShard<'a>],
@@ -309,7 +310,7 @@ impl<'a> PublicNationRequestBuilder<'a> {
     pub fn build(&self) -> Result<PublicNationRequest, RequestBuildError> {
         Ok(PublicNationRequest::new(
             self.nation
-                .ok_or_else(|| RequestBuildError::MissingParam("nation"))?,
+                .ok_or(RequestBuildError::MissingParam("nation"))?,
             self.shards.as_slice(),
         ))
     }
@@ -343,9 +344,7 @@ impl<'a> NSRequest for PublicNationRequest<'a> {
         let query = self
             .shards
             .iter()
-            .map(|s| match s {
-                other => other.as_ref(),
-            })
+            .map(|s| s.as_ref())
             .join("+")
             .to_ascii_lowercase();
 

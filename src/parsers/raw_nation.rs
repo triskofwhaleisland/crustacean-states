@@ -524,9 +524,13 @@ impl TryFrom<RawNation> for Nation {
             motto: value.motto,
             category: value.category,
             wa_status,
-            endorsements: value
-                .endorsements
-                .map(|e| e.split(',').map(pretty_name).collect::<Vec<String>>()),
+            endorsements: value.endorsements.as_ref().map(|e| {
+                if !e.is_empty() {
+                    e.split(',').map(pretty_name).collect::<Vec<String>>()
+                } else {
+                    vec![]
+                }
+            }),
             issues_answered: value.issues_answered,
             freedom: value.freedom.map(Freedoms::from),
             region: value.region,
