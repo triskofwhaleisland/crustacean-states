@@ -1,7 +1,7 @@
 use std::fmt::{Display, Formatter};
 
 /// The categories of dispatches.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum DispatchCategory {
     /// Factbooks officially describe a nation.
     Factbook(FactbookCategory),
@@ -13,7 +13,7 @@ pub enum DispatchCategory {
     Meta(MetaCategory),
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 #[allow(missing_docs)]
 #[non_exhaustive]
 /// The subcategories of factbooks.
@@ -39,7 +39,7 @@ pub enum FactbookCategory {
     Any,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 #[allow(missing_docs)]
 #[non_exhaustive]
 /// The subcategories of bulletins.
@@ -57,7 +57,7 @@ pub enum BulletinCategory {
     Any,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 #[allow(missing_docs)]
 #[non_exhaustive]
 /// The subcategories of accounts.
@@ -79,7 +79,7 @@ pub enum AccountCategory {
     Any,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 #[allow(missing_docs)]
 #[non_exhaustive]
 /// The subcategories of meta-category dispatches.

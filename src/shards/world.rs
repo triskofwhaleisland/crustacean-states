@@ -4,12 +4,14 @@ use crate::dispatch::DispatchCategory;
 use crate::impl_display_as_debug;
 use crate::parsers::nation::BannerId;
 use crate::shards::world::HappeningsViewType::{Nation, Region};
-use crate::shards::{CensusModes, CensusScales, Params, Shard};
+use crate::shards::{CensusModes, CensusScales, NSRequest, Params, BASE_URL};
 use itertools::Itertools;
 use std::fmt::{Display, Formatter};
+use strum::AsRefStr;
+use url::Url;
 
 /// A request for the wide world of NationStates.
-#[derive(Debug)]
+#[derive(AsRefStr, Clone, Debug)]
 pub enum WorldShard<'a> {
     /// Provides the name of a banner given its ID, as well as the necessary conditions to unlock it.
     Banner(Vec<BannerId>),
@@ -115,106 +117,127 @@ pub enum WorldShard<'a> {
     TGQueue,
 }
 
-impl<'a> From<WorldShard<'a>> for Shard<'a> {
+#[derive(Default)]
+pub struct WorldRequest<'a> {
+    shards: Vec<WorldShard<'a>>,
+}
+
+impl<'a> WorldRequest<'a> {
+    fn add_shard(&mut self, shard: WorldShard<'a>) -> &mut Self {
+        self.shards.push(shard);
+        self
+    }
+    fn add_shards<I: IntoIterator<Item = WorldShard<'a>>>(&mut self, shards: I) -> &mut Self {
+        self.shards.extend(shards);
+        self
+    }
+}
+
+impl<'a> NSRequest for WorldRequest<'a> {
     //noinspection SpellCheckingInspection
-    fn from(value: WorldShard) -> Self {
-        Self {
-            query: Self::name(&value),
-            params: {
-                let mut param_map = Params::default();
-                match value {
-                    WorldShard::Banner(banners) => {
-                        param_map
-                            .0
-                            .insert("banner", banners.iter().map(BannerId::to_string).join(","));
-                    }
-                    WorldShard::Census { scale, modes } => {
-                        param_map.insert_scale(&scale).insert_modes(&modes);
-                    }
-                    WorldShard::CensusDesc(scale)
-                    | WorldShard::CensusScale(scale)
-                    | WorldShard::CensusName(scale)
-                    | WorldShard::CensusTitle(scale) => {
-                        if let Some(s) = scale {
-                            param_map.0.insert("scale", s.to_string());
-                        }
-                    }
-                    WorldShard::CensusRanks { scale, start } => {
-                        param_map
-                            .insert_scale(&scale.map(CensusScales::One))
-                            .insert_start(&start);
-                    }
-                    WorldShard::Dispatch(id) => {
-                        param_map.0.insert("dispatchid", id.to_string());
-                    }
-                    WorldShard::DispatchList {
-                        author,
-                        category,
-                        sort,
-                    } => {
-                        if let Some(a) = author {
-                            param_map.0.insert("dispatchauthor", a.to_string());
-                        }
-                        if let Some(c) = category {
-                            param_map.0.insert("dispatchcategory", c.to_string());
-                        }
-                        if let Some(s) = sort {
-                            param_map.0.insert("dispatchsort", s.to_string());
-                        }
-                    }
-                    WorldShard::Happenings {
-                        view,
-                        filter,
-                        limit,
-                        since_id,
-                        before_id,
-                        since_time,
-                        before_time,
-                    } => {
-                        if let Some(v) = view {
-                            param_map.0.insert(
-                                "view",
-                                format!(
-                                    "{}.{}",
-                                    match v {
-                                        Nation(..) => "nation",
-                                        Region(..) => "region",
-                                    },
-                                    match v {
-                                        Nation(entities) | Region(entities) => {
-                                            entities.iter().join(",")
-                                        }
-                                    }
-                                ),
-                            );
-                        }
-                        if let Some(filters) = filter {
-                            param_map.0.insert("filter", filters.iter().join("+"));
-                        }
-                        if let Some(x) = limit {
-                            param_map.0.insert("limit", x.to_string());
-                        }
-                        if let Some(x) = since_id {
-                            param_map.0.insert("sinceid", x.to_string());
-                        }
-                        if let Some(x) = before_id {
-                            param_map.0.insert("beforeid", x.to_string());
-                        }
-                        if let Some(x) = since_time {
-                            param_map.0.insert("sincetime", x.to_string());
-                        }
-                        if let Some(x) = before_time {
-                            param_map.0.insert("beforetime", x.to_string());
-                        }
-                    }
-                    // WorldShard::RegionsByTag(complex_tags) => {
-                    //     param_map.0.insert("tags", complex_tags.iter().join(","));
-                    // }
-                    _ => {}
+    fn as_url(&self) -> Url {
+        let query = self
+            .shards
+            .iter()
+            .map(|s| s.as_ref())
+            .join("+")
+            .to_ascii_lowercase();
+
+        let mut params = Params::default();
+        self.shards.iter().for_each(|s| match s {
+            WorldShard::Banner(banners) => {
+                params.insert("banner", banners.iter().map(BannerId::to_string).join(","));
+            }
+            WorldShard::Census { scale, modes } => {
+                params.insert_scale(&scale).insert_modes(&modes);
+            }
+            WorldShard::CensusDesc(scale)
+            | WorldShard::CensusScale(scale)
+            | WorldShard::CensusName(scale)
+            | WorldShard::CensusTitle(scale) => {
+                if let Some(s) = scale {
+                    params.insert("scale", s.to_string());
                 }
-                param_map
-            },
-        }
+            }
+            WorldShard::CensusRanks { scale, start } => {
+                params
+                    .insert_scale(&scale.map(CensusScales::One))
+                    .insert_start(&start);
+            }
+            WorldShard::Dispatch(id) => {
+                params.insert("dispatchid", id.to_string());
+            }
+            WorldShard::DispatchList {
+                author,
+                category,
+                sort,
+            } => {
+                if let Some(a) = author {
+                    params.insert("dispatchauthor", a.to_string());
+                }
+                if let Some(c) = category {
+                    params.insert("dispatchcategory", c.to_string());
+                }
+                if let Some(s) = sort {
+                    params.insert("dispatchsort", s.to_string());
+                }
+            }
+            WorldShard::Happenings {
+                view,
+                filter,
+                limit,
+                since_id,
+                before_id,
+                since_time,
+                before_time,
+            } => {
+                if let Some(v) = view {
+                    params.insert(
+                        "view",
+                        format!(
+                            "{}.{}",
+                            match v {
+                                Nation(..) => "nation",
+                                Region(..) => "region",
+                            },
+                            match v {
+                                Nation(entities) | Region(entities) => {
+                                    entities.iter().join(",")
+                                }
+                            }
+                        ),
+                    );
+                }
+                if let Some(filters) = filter {
+                    params.insert("filter", filters.iter().join("+"));
+                }
+                if let Some(x) = limit {
+                    params.insert("limit", x.to_string());
+                }
+                if let Some(x) = since_id {
+                    params.insert("sinceid", x.to_string());
+                }
+                if let Some(x) = before_id {
+                    params.insert("beforeid", x.to_string());
+                }
+                if let Some(x) = since_time {
+                    params.insert("sincetime", x.to_string());
+                }
+                if let Some(x) = before_time {
+                    params.insert("beforetime", x.to_string());
+                }
+            }
+            // WorldShard::RegionsByTag(complex_tags) => {
+            //     params.insert("tags", complex_tags.iter().join(","));
+            // }
+            _ => {}
+        });
+        Url::parse_with_params(BASE_URL, {
+            let mut p = vec![("q", query)];
+            p.extend(params.drain());
+            p
+        })
+        .unwrap()
     }
 }
 
@@ -333,7 +356,7 @@ impl HappeningsShardBuilder {
 }
 
 /// The ways to sort dispatches.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum DispatchSort {
     /// Newest first.
     New,
@@ -344,7 +367,7 @@ pub enum DispatchSort {
 impl_display_as_debug!(DispatchSort);
 
 /// The happenings shard can either target nations or regions.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum HappeningsViewType {
     /// Targets one or more nations.
     Nation(Vec<String>),
@@ -353,7 +376,7 @@ pub enum HappeningsViewType {
 }
 
 /// The happenings shard can target multiple kinds of events.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 #[non_exhaustive]
 pub enum HappeningsFilterType {
     /// Triggered by answering an issue (dismissing the issue results in no event).

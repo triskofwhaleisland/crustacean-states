@@ -1,7 +1,7 @@
 use crustacean_states::client::Client;
 use crustacean_states::parsers::nation::Nation;
+use crustacean_states::shards::nation::PublicNationRequest;
 use crustacean_states::shards::nation::PublicNationShard::DispatchList;
-use crustacean_states::shards::NSRequest;
 use std::error::Error;
 use url::Url;
 
@@ -13,7 +13,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     eprintln!("Made client!");
 
     let target_nation = "Testlandia";
-    let request = Url::from(NSRequest::new_nation(target_nation, vec![DispatchList]));
+    let request = PublicNationRequest::new(target_nation, &[DispatchList]);
     // eprintln!("{request}");
     let raw_response = client.get(request).await?;
     let text = raw_response.text().await?;
