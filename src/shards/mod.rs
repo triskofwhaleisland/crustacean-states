@@ -138,14 +138,14 @@ pub struct CensusHistoryParams {
 }
 
 impl CensusHistoryParams {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self::default()
     }
-    fn after(&mut self, timestamp: NonZeroU64) -> &mut Self {
+    pub fn after(&mut self, timestamp: NonZeroU64) -> &mut Self {
         self.from = Some(timestamp);
         self
     }
-    fn before(&mut self, timestamp: NonZeroU64) -> &mut Self {
+    pub fn before(&mut self, timestamp: NonZeroU64) -> &mut Self {
         self.to = Some(timestamp);
         self
     }
