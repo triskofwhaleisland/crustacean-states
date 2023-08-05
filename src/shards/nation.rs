@@ -1,9 +1,13 @@
 //! For public nation shard requests.
 
-use crate::shards::{CensusModes, CensusScales, Params, Shard};
+use crate::shards::{CensusModes, CensusScales, NSRequest, Params, RequestBuildError, BASE_URL};
+use itertools::Itertools;
+use strum::AsRefStr;
+use url::Url;
 
 /// A nation request available to anyone.
-#[derive(Debug)]
+//noinspection SpellCheckingInspection
+#[derive(AsRefStr, Clone, Debug)]
 pub enum PublicNationShard<'a> {
     /// A randomly-selected compliment for the nation.
     Admirable,
@@ -30,6 +34,7 @@ pub enum PublicNationShard<'a> {
     /// appended at the end if one has not been chosen yet.
     ///
     // /// See also: [`PublicNationShard::CustomCapital`]
+    #[strum(serialize = "customcapital")]
     Capital,
     /// One of the 27 national classifications that the game assigns based on personal,
     /// economic, and political freedom.
@@ -174,6 +179,7 @@ pub enum PublicNationShard<'a> {
     /// if one has not been chosen yet.
     ///
     // /// See also: [`PublicNationShard::CustomLeader`]
+    #[strum(serialize = "customleader")]
     Leader,
     /// The list of descriptions of laws in the nation found on its nation page.
     Legislation,
@@ -214,6 +220,7 @@ pub enum PublicNationShard<'a> {
     /// or "a major religion" if one has not been chosen yet.
     ///
     // /// See also: [`PublicNationShard::CustomReligion`]
+    #[strum(serialize = "customreligion")]
     Religion,
     /// The average income of the richest 10% in the nation.
     Richest,
@@ -254,32 +261,113 @@ pub enum PublicNationShard<'a> {
     WCensus,
 }
 
-impl<'a> From<PublicNationShard<'a>> for Shard<'a> {
-    //noinspection SpellCheckingInspection
-    fn from(value: PublicNationShard<'a>) -> Self {
+pub struct PublicNationRequest<'a> {
+    pub nation: &'a str,
+    pub shards: &'a [PublicNationShard<'a>],
+}
+
+#[derive(Default)]
+pub struct PublicNationRequestBuilder<'a> {
+    pub nation: Option<&'a str>,
+    pub shards: Vec<PublicNationShard<'a>>,
+}
+
+impl<'a> PublicNationRequestBuilder<'a> {
+    pub fn new(nation: &'a str) -> Self {
         Self {
-            query: match &value {
-                PublicNationShard::Capital => "customcapital".to_string(),
-                PublicNationShard::Leader => "customleader".to_string(),
-                PublicNationShard::Religion => "customreligion".to_string(),
-                other => Self::name(&other),
-            },
-            params: {
-                let mut param_map = Params::default();
-                match &value {
-                    PublicNationShard::Census { scale, modes } => {
-                        param_map.insert_scale(scale).insert_modes(modes);
-                    }
-                    PublicNationShard::TGCanCampaign { from }
-                    | PublicNationShard::TGCanRecruit { from } => {
-                        if let Some(f) = from {
-                            param_map.0.insert("from", f.to_string());
-                        }
-                    }
-                    _ => {} // no other public nation shards require parameters
-                };
-                param_map
-            },
+            nation: Some(nation),
+            shards: vec![],
         }
+    }
+    pub fn with_shards(shards: Vec<PublicNationShard<'a>>) -> Self {
+        Self {
+            nation: None,
+            shards,
+        }
+    }
+
+    pub fn nation(&mut self, nation: &'a str) -> &mut Self {
+        self.nation = Some(nation);
+        self
+    }
+    pub fn add_shard(&mut self, shard: PublicNationShard<'a>) -> &mut Self {
+        self.shards.push(shard);
+        self
+    }
+    pub fn add_shards<T>(&mut self, shards: T) -> &mut Self
+    where
+        T: IntoIterator<Item = PublicNationShard<'a>>,
+    {
+        self.shards.extend(shards.into_iter());
+        self
+    }
+    pub fn set_shards(&mut self, shards: Vec<PublicNationShard<'a>>) -> &mut Self {
+        self.shards = shards;
+        self
+    }
+
+    pub fn build(&self) -> Result<PublicNationRequest, RequestBuildError> {
+        Ok(PublicNationRequest::new(
+            self.nation
+                .ok_or_else(|| RequestBuildError::MissingParam("nation"))?,
+            self.shards.as_slice(),
+        ))
+    }
+}
+
+impl<'a> From<PublicNationRequest<'a>> for PublicNationRequestBuilder<'a> {
+    fn from(value: PublicNationRequest<'a>) -> Self {
+        Self {
+            nation: Some(value.nation),
+            shards: Vec::from(value.shards),
+        }
+    }
+}
+
+impl<'a> PublicNationRequest<'a> {
+    pub fn new(nation: &'a str, shards: &'a [PublicNationShard<'a>]) -> Self {
+        Self { nation, shards }
+    }
+
+    pub fn new_standard(nation: &'a str) -> Self {
+        Self {
+            nation,
+            shards: &[],
+        }
+    }
+}
+
+impl<'a> NSRequest for PublicNationRequest<'a> {
+    //noinspection SpellCheckingInspection
+    fn as_url(&self) -> Url {
+        let query = self
+            .shards
+            .iter()
+            .map(|s| match s {
+                other => other.as_ref(),
+            })
+            .join("+")
+            .to_ascii_lowercase();
+
+        let mut params = Params::default();
+        self.shards.iter().for_each(|s| match s {
+            PublicNationShard::Census { scale, modes } => {
+                params.insert_scale(scale).insert_modes(modes);
+            }
+            PublicNationShard::TGCanCampaign { from }
+            | PublicNationShard::TGCanRecruit { from } => {
+                if let Some(f) = from {
+                    params.insert("from", f.to_string());
+                }
+            }
+            _ => {} // no other public nation shards require parameters
+        });
+
+        Url::parse_with_params(BASE_URL, {
+            let mut p = vec![("nation", self.nation.to_string()), ("q", query)];
+            p.extend(params.drain());
+            p
+        })
+        .unwrap()
     }
 }

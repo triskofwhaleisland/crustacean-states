@@ -1,11 +1,12 @@
 //! Additional tools for making requests.
 
 use reqwest::header::{HeaderMap, HeaderValue};
-use reqwest::{IntoUrl, Response};
+use reqwest::Response;
 use std::num::ParseIntError;
 use std::ops::Add;
 use std::time::{Duration, Instant};
 use thiserror::Error;
+use crate::shards::NSRequest;
 
 /// A client helper. Uses [`reqwest`] under the surface.
 pub struct Client {
@@ -42,13 +43,13 @@ impl Client {
     ///
     /// If there was an error in the [`reqwest`] crate,
     /// [`ClientError::ReqwestError`] will be returned.
-    pub async fn get<U: IntoUrl>(&mut self, request: U) -> Result<Response, ClientError> {
+    pub async fn get<U: NSRequest>(&mut self, request: U) -> Result<Response, ClientError> {
         // If the client was told that it should not send until some time after now,
         if self.send_after.is_some_and(|t| t > Instant::now()) {
             // Raise an error detailing when the request should have been sent.
             Err(ClientError::RateLimitedError(self.send_after.unwrap()))
         } else {
-            match self.inner.get(request).send().await {
+            match self.inner.get(request.as_url()).send().await {
                 Ok(r) => {
                     self.rate_limiter = Some(RateLimits::new(r.headers())?);
                     self.last_sent = Some(Instant::now());

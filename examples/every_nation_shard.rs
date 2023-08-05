@@ -1,4 +1,4 @@
-use crustacean_states::shards::{CensusCurrentModes::*, CensusModes, CensusScales};
+use crustacean_states::shards::{CensusCurrentMode::*, CensusModes, CensusScales};
 use crustacean_states::{
     client::Client,
     parsers::nation::Nation,

@@ -1,9 +1,11 @@
 //! For region shard requests.
-
-use crate::shards::{CensusModes, CensusScales, Params, Shard};
+use crate::shards::{CensusModes, CensusScales, NSRequest, Params, RequestBuildError, BASE_URL};
+use itertools::Itertools;
+use strum::AsRefStr;
+use url::Url;
 
 /// A request of a region.
-#[derive(Debug)]
+#[derive(AsRefStr, Clone, Debug)]
 pub enum RegionShard {
     /// The list of all nations banned from the region.
     BanList,
@@ -114,42 +116,138 @@ pub enum RegionShard {
     WANations,
 }
 
-impl<'a> From<RegionShard> for Shard<'a> {
-    //noinspection SpellCheckingInspection
-    fn from(value: RegionShard) -> Self {
+pub struct RegionRequest<'a> {
+    region: &'a str,
+    shards: Vec<RegionShard>,
+}
+
+#[derive(Default)]
+pub struct RegionRequestBuilder<'a> {
+    region: Option<&'a str>,
+    shards: Vec<RegionShard>,
+}
+
+impl<'a> RegionRequest<'a> {
+    fn new(region: &'a str, shards: Vec<RegionShard>) -> Self {
+        Self { region, shards }
+    }
+    fn new_standard(region: &'a str) -> Self {
         Self {
-            query: Self::name(&value),
-            params: {
-                let mut param_map = Params::default();
-                match value {
-                    RegionShard::Census { scale, modes } => {
-                        param_map.insert_scale(&scale).insert_modes(&modes);
-                    }
-                    RegionShard::CensusRanks { scale, start } => {
-                        param_map
-                            .insert_scale(&scale.map(CensusScales::One))
-                            .insert_start(&start);
-                    }
-                    RegionShard::Messages {
-                        limit,
-                        offset,
-                        from_id,
-                    } => {
-                        if let Some(l) = limit {
-                            param_map.0.insert("limit", l.to_string());
-                        }
-                        if let Some(o) = offset {
-                            param_map.0.insert("offset", o.to_string());
-                        }
-                        if let Some(f) = from_id {
-                            param_map.0.insert("fromid", f.to_string());
-                        }
-                    }
-                    _ => {}
-                };
-                param_map
-            },
+            region,
+            shards: vec![],
         }
+    }
+
+    fn build() -> RegionRequestBuilder<'a> {
+        RegionRequestBuilder {
+            region: None,
+            shards: vec![],
+        }
+    }
+}
+
+impl<'a> RegionRequestBuilder<'a> {
+    fn new(region: &'a str) -> Self {
+        Self {
+            region: Some(region),
+            shards: vec![],
+        }
+    }
+    fn with_shards(shards: Vec<RegionShard>) -> Self {
+        Self {
+            region: None,
+            shards,
+        }
+    }
+
+    fn region(&mut self, region: &'a str) -> &mut Self {
+        self.region = Some(region);
+        self
+    }
+    fn shards<F>(&mut self, f: F) -> &mut Self
+    where
+        F: FnOnce(&mut Vec<RegionShard>) -> Vec<RegionShard>,
+    {
+        f(&mut self.shards);
+        self
+    }
+    fn add_shard(&mut self, shard: RegionShard) -> &mut Self {
+        self.shards.push(shard);
+        self
+    }
+    fn add_shards<T>(&mut self, shards: T) -> &mut Self
+    where
+        T: IntoIterator<Item = RegionShard>,
+    {
+        self.shards.extend(shards.into_iter());
+        self
+    }
+    fn set_shards(&mut self, shards: Vec<RegionShard>) -> &mut Self {
+        self.shards = shards;
+        self
+    }
+
+    fn build(&self) -> Result<RegionRequest, RequestBuildError> {
+        Ok(RegionRequest::new(
+            self.region
+                .ok_or_else(|| RequestBuildError::MissingParam("region"))?,
+            self.shards.clone(),
+        ))
+    }
+}
+
+impl<'a> From<RegionRequest<'a>> for RegionRequestBuilder<'a> {
+    fn from(value: RegionRequest<'a>) -> Self {
+        Self {
+            region: Some(value.region),
+            shards: value.shards,
+        }
+    }
+}
+
+impl<'a> NSRequest for RegionRequest<'a> {
+    //noinspection SpellCheckingInspection
+    fn as_url(&self) -> Url {
+        let query = self
+            .shards
+            .iter()
+            .map(|s| s.as_ref())
+            .join("+")
+            .to_ascii_lowercase();
+        let mut params = Params::default();
+        self.shards.iter().for_each(|s| match s {
+            RegionShard::Census { scale, modes } => {
+                params.insert_scale(&scale).insert_modes(&modes);
+            }
+            RegionShard::CensusRanks { scale, start } => {
+                params
+                    .insert_scale(&scale.map(CensusScales::One))
+                    .insert_start(&start);
+            }
+            RegionShard::Messages {
+                limit,
+                offset,
+                from_id,
+            } => {
+                if let Some(l) = limit {
+                    params.insert("limit", l.to_string());
+                }
+                if let Some(o) = offset {
+                    params.insert("offset", o.to_string());
+                }
+                if let Some(f) = from_id {
+                    params.insert("fromid", f.to_string());
+                }
+            }
+            _ => {}
+        });
+
+        Url::parse_with_params(BASE_URL, {
+            let mut p = vec![("region", self.region.to_string()), ("q", query)];
+            p.extend(params.drain());
+            p
+        })
+        .unwrap()
     }
 }
 

@@ -1,6 +1,8 @@
 //! For World Assembly shard requests.
 
-use crate::shards::Shard;
+use crate::shards::{NSRequest, BASE_URL};
+use strum::AsRefStr;
+use url::Url;
 
 /// One of the two World Assembly chambers (or "councils").
 #[repr(u8)]
@@ -25,7 +27,7 @@ pub enum WACouncil {
 }
 
 /// A shard for the World Assembly.
-#[derive(Clone, Debug)]
+#[derive(AsRefStr, Clone, Debug)]
 pub enum WAShard<'a> {
     /// The number of nations in the World Assembly.
     NumNations,
@@ -40,28 +42,42 @@ pub enum WAShard<'a> {
     /// [Event]: crate::parsers::happenings::Event
     Happenings,
     /// All the currently proposed resolutions in a World Assembly council.
-    Proposals(WACouncil),
+    Proposals,
     /// Information about a resolution in a World Assembly council.
     /// Request more information with [`ResolutionShard`]s.
-    CurrentResolution(WACouncil, &'a [ResolutionShard]),
+    CurrentResolution(&'a [ResolutionShard]),
     /// The most recent resolution in a World Assembly council.
-    LastResolution(WACouncil),
+    LastResolution,
     /// Information about a previous resolution.
-    PreviousResolution(WACouncil, u16),
+    PreviousResolution(u16),
 }
 
-impl<'a> From<WAShard<'a>> for Shard<'a> {
-    fn from(value: WAShard) -> Self {
-        Self {
-            query: match value {
-                WAShard::CurrentResolution(_, additional_shards) => additional_shards
-                    .iter()
-                    .fold(String::from("resolution"), |acc, s| format!("{acc}+{s:?}"))
-                    .to_ascii_lowercase(),
-                other => Self::name(&other),
-            },
-            params: Default::default(),
-        }
+#[derive(Default)]
+pub struct WARequest<'a> {
+    council: WACouncil,
+    shards: Vec<WAShard<'a>>,
+}
+
+impl<'a> NSRequest for WARequest<'a> {
+    fn as_url(&self) -> Url {
+        let mut query = vec![];
+        self.shards.iter().for_each(|s| {
+            if let WAShard::PreviousResolution(id) = s {
+                query.push(("id", id.to_string()));
+            };
+            query.push((
+                "q",
+                if let WAShard::CurrentResolution(other_shards) = s {
+                    other_shards
+                        .iter()
+                        .fold(String::from("resolution"), |acc, s| format!("{acc}+{s:?}"))
+                        .to_ascii_lowercase()
+                } else {
+                    s.as_ref().to_string()
+                },
+            ))
+        });
+        Url::parse_with_params(BASE_URL, query).unwrap()
     }
 }
 
