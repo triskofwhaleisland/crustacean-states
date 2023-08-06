@@ -3,16 +3,16 @@
 use crate::shards::NSRequest;
 use reqwest::header::{HeaderMap, HeaderValue};
 use reqwest::Response;
-use std::cell::RefCell;
 use std::num::ParseIntError;
 use std::ops::Add;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use thiserror::Error;
 
 /// A client helper. Uses [`reqwest`] under the surface.
 pub struct Client {
     client: reqwest::Client,
-    state: RefCell<ClientState>,
+    state: Arc<Mutex<ClientState>>,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -34,7 +34,7 @@ impl Client {
     {
         Self {
             client: reqwest::Client::builder().user_agent(user_agent).build().unwrap(),
-            state: RefCell::new(ClientState::default()),
+            state: Arc::new(Mutex::new(ClientState::default())),
         }
     }
 
@@ -49,14 +49,14 @@ impl Client {
     /// [`ClientError::ReqwestError`] will be returned.
     pub async fn get<U: NSRequest>(&self, request: U) -> Result<Response, ClientError> {
         // If the client was told that it should not send until some time after now,
-        if let Some(t) = self.state.borrow().send_after.filter(|t| t > &Instant::now()) {
+        if let Some(t) = self.state.lock().unwrap().send_after.filter(|t| t > &Instant::now()) {
             // Raise an error detailing when the request should have been sent.
             return Err(ClientError::RateLimitedError(t));
         }
 
         match self.client.get(request.as_url()).send().await {
             Ok(r) => {
-                let mut state = self.state.borrow_mut();
+                let mut state = self.state.lock().unwrap();
                 state.rate_limiter = Some(RateLimits::new(r.headers())?);
                 state.last_sent = Some(Instant::now());
                 if let Some(ref r) = state.rate_limiter {
