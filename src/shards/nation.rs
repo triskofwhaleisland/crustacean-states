@@ -316,7 +316,7 @@ impl<'a> PublicNationRequestBuilder<'a> {
         Ok(PublicNationRequest::new(
             self.nation
                 .ok_or(RequestBuildError::MissingParam("nation"))?,
-            self.shards.as_slice(),
+            &self.shards,
         ))
     }
 }
@@ -331,8 +331,11 @@ impl<'a> From<PublicNationRequest<'a>> for PublicNationRequestBuilder<'a> {
 }
 
 impl<'a> PublicNationRequest<'a> {
-    pub fn new(nation: &'a str, shards: &'a [PublicNationShard<'a>]) -> Self {
-        Self { nation, shards }
+    pub fn new<T>(nation: &'a str, shards: &'a T) -> Self
+    where
+        T: AsRef<[PublicNationShard<'a>]>,
+    {
+        Self { nation, shards: shards.as_ref() }
     }
 
     pub fn new_standard(nation: &'a str) -> Self {

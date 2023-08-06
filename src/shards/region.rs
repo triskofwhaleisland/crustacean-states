@@ -4,7 +4,6 @@ use crate::shards::{
 };
 use itertools::Itertools;
 use std::num::{NonZeroU32, NonZeroU8};
-use std::ops::Deref;
 use strum::AsRefStr;
 use url::Url;
 
@@ -148,29 +147,6 @@ pub struct RegionRequestBuilder<'a> {
     shards: Vec<RegionShard<'a>>,
 }
 
-impl<'a> RegionRequest<'a> {
-    pub fn new<T>(region: &'a str, shards: &'a T) -> Self
-    where
-        T: Deref<Target = [RegionShard<'a>]>,
-    {
-        Self { region, shards }
-    }
-
-    pub fn new_standard(region: &'a str) -> Self {
-        Self {
-            region,
-            shards: &[],
-        }
-    }
-
-    pub fn builder() -> RegionRequestBuilder<'a> {
-        RegionRequestBuilder {
-            region: None,
-            shards: vec![],
-        }
-    }
-}
-
 impl<'a> RegionRequestBuilder<'a> {
     pub fn new(region: &'a str) -> Self {
         Self {
@@ -223,6 +199,29 @@ impl<'a> RegionRequestBuilder<'a> {
                 .ok_or(RequestBuildError::MissingParam("region"))?,
             &self.shards,
         ))
+    }
+}
+
+impl<'a> RegionRequest<'a> {
+    pub fn new<T>(region: &'a str, shards: &'a T) -> Self
+        where
+            T: AsRef<[RegionShard<'a>]>,
+    {
+        Self { region, shards: shards.as_ref() }
+    }
+
+    pub fn new_standard(region: &'a str) -> Self {
+        Self {
+            region,
+            shards: &[],
+        }
+    }
+
+    pub fn builder() -> RegionRequestBuilder<'a> {
+        RegionRequestBuilder {
+            region: None,
+            shards: vec![],
+        }
     }
 }
 

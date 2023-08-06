@@ -105,26 +105,46 @@ pub enum WorldShard<'a> {
 }
 
 #[derive(Default)]
-pub struct WorldRequest<'a> {
-    shards: Vec<WorldShard<'a>>,
-}
+pub struct WorldRequest<'a>(&'a [WorldShard<'a>]);
 
-impl<'a> WorldRequest<'a> {
+#[derive(Default)]
+pub struct WorldRequestBuilder<'a>(Vec<WorldShard<'a>>);
+
+impl<'a> WorldRequestBuilder<'a> {
     pub fn shards<F>(&mut self, f: F) -> &mut Self
     where
         F: FnOnce(&mut Vec<WorldShard<'a>>) -> Vec<WorldShard<'a>>,
     {
-        f(&mut self.shards);
+        f(&mut self.0);
         self
     }
 
     pub fn add_shard(&mut self, shard: WorldShard<'a>) -> &mut Self {
-        self.shards.push(shard);
+        self.0.push(shard);
         self
     }
     pub fn add_shards<I: IntoIterator<Item = WorldShard<'a>>>(&mut self, shards: I) -> &mut Self {
-        self.shards.extend(shards);
+        self.0.extend(shards);
         self
+    }
+
+    pub fn build(&self) -> WorldRequest {
+        WorldRequest(&self.0)
+    }
+}
+
+impl<'a> WorldRequest<'a> {
+    pub fn new<T>(shards: &'a T) -> Self
+    where
+        T: AsRef<[WorldShard<'a>]>,
+    {
+        Self(shards.as_ref())
+    }
+}
+
+impl<'a> From<WorldRequest<'a>> for WorldRequestBuilder<'a> {
+    fn from(value: WorldRequest<'a>) -> Self {
+        Self(Vec::from(value.0))
     }
 }
 
@@ -132,14 +152,14 @@ impl<'a> NSRequest for WorldRequest<'a> {
     //noinspection SpellCheckingInspection
     fn as_url(&self) -> Url {
         let query = self
-            .shards
+            .0
             .iter()
             .map(|s| s.as_ref())
             .join("+")
             .to_ascii_lowercase();
 
         let mut params = Params::default();
-        self.shards.iter().for_each(|s| match s {
+        self.0.iter().for_each(|s| match s {
             WorldShard::Banner(banners) => {
                 params.insert("banner", banners.iter().map(BannerId::to_string).join(","));
             }
