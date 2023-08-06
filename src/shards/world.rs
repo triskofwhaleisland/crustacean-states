@@ -123,11 +123,11 @@ pub struct WorldRequest<'a> {
 }
 
 impl<'a> WorldRequest<'a> {
-    fn add_shard(&mut self, shard: WorldShard<'a>) -> &mut Self {
+    pub fn add_shard(&mut self, shard: WorldShard<'a>) -> &mut Self {
         self.shards.push(shard);
         self
     }
-    fn add_shards<I: IntoIterator<Item = WorldShard<'a>>>(&mut self, shards: I) -> &mut Self {
+    pub fn add_shards<I: IntoIterator<Item = WorldShard<'a>>>(&mut self, shards: I) -> &mut Self {
         self.shards.extend(shards);
         self
     }
@@ -149,7 +149,7 @@ impl<'a> NSRequest for WorldRequest<'a> {
                 params.insert("banner", banners.iter().map(BannerId::to_string).join(","));
             }
             WorldShard::Census { scale, modes } => {
-                params.insert_scale(&scale).insert_modes(&modes);
+                params.insert_scale(scale).insert_modes(modes);
             }
             WorldShard::CensusDesc(scale)
             | WorldShard::CensusScale(scale)
@@ -162,7 +162,7 @@ impl<'a> NSRequest for WorldRequest<'a> {
             WorldShard::CensusRanks { scale, start } => {
                 params
                     .insert_scale(&scale.map(CensusScales::One))
-                    .insert_start(&start);
+                    .insert_start(start);
             }
             WorldShard::Dispatch(id) => {
                 params.insert("dispatchid", id.to_string());

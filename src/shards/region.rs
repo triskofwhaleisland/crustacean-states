@@ -128,17 +128,17 @@ pub struct RegionRequestBuilder<'a> {
 }
 
 impl<'a> RegionRequest<'a> {
-    fn new(region: &'a str, shards: Vec<RegionShard>) -> Self {
+    pub fn new(region: &'a str, shards: Vec<RegionShard>) -> Self {
         Self { region, shards }
     }
-    fn new_standard(region: &'a str) -> Self {
+    pub fn new_standard(region: &'a str) -> Self {
         Self {
             region,
             shards: vec![],
         }
     }
 
-    fn build() -> RegionRequestBuilder<'a> {
+    pub fn builder() -> RegionRequestBuilder<'a> {
         RegionRequestBuilder {
             region: None,
             shards: vec![],
@@ -147,50 +147,50 @@ impl<'a> RegionRequest<'a> {
 }
 
 impl<'a> RegionRequestBuilder<'a> {
-    fn new(region: &'a str) -> Self {
+    pub fn new(region: &'a str) -> Self {
         Self {
             region: Some(region),
             shards: vec![],
         }
     }
-    fn with_shards(shards: Vec<RegionShard>) -> Self {
+    pub fn with_shards(shards: Vec<RegionShard>) -> Self {
         Self {
             region: None,
             shards,
         }
     }
 
-    fn region(&mut self, region: &'a str) -> &mut Self {
+    pub fn region(&mut self, region: &'a str) -> &mut Self {
         self.region = Some(region);
         self
     }
-    fn shards<F>(&mut self, f: F) -> &mut Self
+    pub fn shards<F>(&mut self, f: F) -> &mut Self
     where
         F: FnOnce(&mut Vec<RegionShard>) -> Vec<RegionShard>,
     {
         f(&mut self.shards);
         self
     }
-    fn add_shard(&mut self, shard: RegionShard) -> &mut Self {
+    pub fn add_shard(&mut self, shard: RegionShard) -> &mut Self {
         self.shards.push(shard);
         self
     }
-    fn add_shards<T>(&mut self, shards: T) -> &mut Self
+    pub fn add_shards<T>(&mut self, shards: T) -> &mut Self
     where
         T: IntoIterator<Item = RegionShard>,
     {
         self.shards.extend(shards.into_iter());
         self
     }
-    fn set_shards(&mut self, shards: Vec<RegionShard>) -> &mut Self {
+    pub fn set_shards(&mut self, shards: Vec<RegionShard>) -> &mut Self {
         self.shards = shards;
         self
     }
 
-    fn build(&self) -> Result<RegionRequest, RequestBuildError> {
+    pub fn build(&self) -> Result<RegionRequest, RequestBuildError> {
         Ok(RegionRequest::new(
             self.region
-                .ok_or_else(|| RequestBuildError::MissingParam("region"))?,
+                .ok_or(RequestBuildError::MissingParam("region"))?,
             self.shards.clone(),
         ))
     }
@@ -217,12 +217,12 @@ impl<'a> NSRequest for RegionRequest<'a> {
         let mut params = Params::default();
         self.shards.iter().for_each(|s| match s {
             RegionShard::Census { scale, modes } => {
-                params.insert_scale(&scale).insert_modes(&modes);
+                params.insert_scale(scale).insert_modes(modes);
             }
             RegionShard::CensusRanks { scale, start } => {
                 params
                     .insert_scale(&scale.map(CensusScales::One))
-                    .insert_start(&start);
+                    .insert_start(start);
             }
             RegionShard::Messages {
                 limit,
