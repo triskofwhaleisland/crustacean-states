@@ -16,7 +16,7 @@ pub struct Client {
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct ClientState {
+struct ClientState {
     rate_limiter: Option<RateLimits>,
     last_sent: Option<Instant>,
     send_after: Option<Instant>,
@@ -81,12 +81,12 @@ impl Client {
             Err(e) => Err(ClientError::ReqwestError { source: e }),
         }
     }
-}
 
-impl ClientState {
-    /// A guide on how long to wait between requests.
     pub fn wait_duration(&self) -> Option<Duration> {
-        self.rate_limiter
+        self.state
+            .lock()
+            .unwrap()
+            .rate_limiter
             .as_ref()
             .map(|r| Duration::from_secs_f64(r.remaining as f64 / r.reset as f64))
     }
