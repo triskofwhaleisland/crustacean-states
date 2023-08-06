@@ -11,7 +11,7 @@ use std::error::Error;
 async fn main() -> Result<(), Box<dyn Error>> {
     dotenv::dotenv()?;
     let user_agent = std::env::var("USER_AGENT")?;
-    let (client, mut client_state) = Client::new(user_agent)?.with_default_state();
+    let client = Client::new(user_agent);
     let target_name = "Aramos";
     let shards = vec![
         Admirable,
@@ -91,7 +91,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     ];
 
     let request = PublicNationRequest::new(target_name, &shards);
-    let raw_response = client.get(request, &mut client_state).await?.text().await?;
+    let raw_response = client.get(request).await?.text().await?;
     // if !Path::exists("response.xml".as_ref()) {
     //     File::create("response.xml")?;
     // }

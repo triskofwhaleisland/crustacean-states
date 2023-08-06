@@ -11,12 +11,12 @@ use tokio::time::Instant;
 async fn main() -> Result<(), Box<dyn Error>> {
     dotenv::dotenv()?;
     let user_agent = std::env::var("USER_AGENT")?;
-    let (client, mut client_state) = Client::new(user_agent)?.with_default_state();
+    let client = Client::new(user_agent);
     eprintln!("Made client!");
     let target = "Aramos";
     let request = PublicNationRequest::new(target, &[Endorsements]);
     eprintln!("{request:?}");
-    let response = client.get(request, &mut client_state).await?;
+    let response = client.get(request).await?;
     let text = response.text().await?;
     let target_nation = Nation::from_xml(&text)?;
     let endorsements = target_nation.endorsements.unwrap();
@@ -26,11 +26,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
     for endorsed_nation in endorsements {
         let request = PublicNationRequest::new(&endorsed_nation, &[Endorsements]);
         eprintln!("{request:?}");
-        let response = match client.get(request.clone(), &mut client_state).await {
+        let response = match client.get(request.clone()).await {
             Ok(r) => Ok(r),
             Err(ClientError::RateLimitedError(t)) => {
                 tokio::time::sleep_until(Instant::from(t)).await;
-                client.get(request, &mut client_state).await
+                client.get(request).await
             }
             Err(e) => Err(e),
         }?;

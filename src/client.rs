@@ -3,13 +3,17 @@
 use crate::shards::NSRequest;
 use reqwest::header::{HeaderMap, HeaderValue};
 use reqwest::Response;
+use std::cell::RefCell;
 use std::num::ParseIntError;
 use std::ops::Add;
 use std::time::{Duration, Instant};
 use thiserror::Error;
 
 /// A client helper. Uses [`reqwest`] under the surface.
-pub struct Client(reqwest::Client);
+pub struct Client {
+    client: reqwest::Client,
+    state: RefCell<ClientState>,
+}
 
 #[derive(Clone, Debug, Default)]
 pub struct ClientState {
@@ -23,18 +27,15 @@ impl Client {
     /// `user_agent` needs to be [`TryInto`]<[`HeaderValue`]>,
     /// which, as of [`reqwest`] 0.11.18, is implemented for `&[u8]`, `&String`, `&str`,
     /// `String`, and `Vec<u8>`.
-    pub fn new<V>(user_agent: V) -> Result<Self, ClientError>
+    pub fn new<V>(user_agent: V) -> Self
     where
         V: TryInto<HeaderValue>,
         V::Error: Into<http::Error>,
     {
-        Ok(Self(
-            reqwest::Client::builder().user_agent(user_agent).build()?,
-        ))
-    }
-
-    pub fn with_default_state(self) -> (Self, ClientState) {
-        (self, ClientState::default())
+        Self {
+            client: reqwest::Client::builder().user_agent(user_agent).build().unwrap(),
+            state: RefCell::new(ClientState::default()),
+        }
     }
 
     /// Make a request of the API.
@@ -46,41 +47,34 @@ impl Client {
     ///
     /// If there was an error in the [`reqwest`] crate,
     /// [`ClientError::ReqwestError`] will be returned.
-    pub async fn get<U: NSRequest>(
-        &self,
-        request: U,
-        state: &mut ClientState,
-    ) -> Result<Response, ClientError> {
+    pub async fn get<U: NSRequest>(&self, request: U) -> Result<Response, ClientError> {
         // If the client was told that it should not send until some time after now,
-        if state.send_after.is_some_and(|t| t > Instant::now()) {
+        if let Some(t) = self.state.borrow().send_after.filter(|t| t > &Instant::now()) {
             // Raise an error detailing when the request should have been sent.
-            Err(ClientError::RateLimitedError(state.send_after.unwrap()))
-        } else {
-            match self.0.get(request.as_url()).send().await {
-                Ok(r) => {
-                    state.rate_limiter = Some(RateLimits::new(r.headers())?);
-                    state.last_sent = Some(Instant::now());
-                    if let Some(ref r) = state.rate_limiter {
-                        state.send_after = if r.remaining == 0 {
-                            Some(r.reset)
-                        } else {
-                            r.retry_after
-                        }
-                        .map(|t| state.last_sent.unwrap().add(Duration::from_secs(t as u64)))
+            return Err(ClientError::RateLimitedError(t));
+        }
+
+        match self.client.get(request.as_url()).send().await {
+            Ok(r) => {
+                let mut state = self.state.borrow_mut();
+                state.rate_limiter = Some(RateLimits::new(r.headers())?);
+                state.last_sent = Some(Instant::now());
+                if let Some(ref r) = state.rate_limiter {
+                    state.send_after = if r.remaining == 0 {
+                        Some(r.reset)
+                    } else {
+                        r.retry_after
                     }
-                    Ok(r)
+                    .map(|t| state.last_sent.unwrap().add(Duration::from_secs(t as u64)))
                 }
-                Err(e) => Err(ClientError::ReqwestError { source: e }),
+                Ok(r)
             }
+            Err(e) => Err(ClientError::ReqwestError { source: e }),
         }
     }
 }
 
 impl ClientState {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
     /// A guide on how long to wait between requests.
     pub fn wait_duration(&self) -> Option<Duration> {
         self.rate_limiter

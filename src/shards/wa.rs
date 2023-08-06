@@ -73,7 +73,8 @@ impl<'a> NSRequest for WARequest<'a> {
                         .fold(String::from("resolution"), |acc, s| format!("{acc}+{s:?}"))
                 } else {
                     s.as_ref().to_string()
-                }.to_ascii_lowercase(),
+                }
+                .to_ascii_lowercase(),
             ))
         });
         Url::parse_with_params(BASE_URL, query).unwrap()
