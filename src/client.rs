@@ -33,7 +33,10 @@ impl Client {
         V::Error: Into<http::Error>,
     {
         Self {
-            client: reqwest::Client::builder().user_agent(user_agent).build().unwrap(),
+            client: reqwest::Client::builder()
+                .user_agent(user_agent)
+                .build()
+                .unwrap(),
             state: Arc::new(Mutex::new(ClientState::default())),
         }
     }
@@ -49,7 +52,13 @@ impl Client {
     /// [`ClientError::ReqwestError`] will be returned.
     pub async fn get<U: NSRequest>(&self, request: U) -> Result<Response, ClientError> {
         // If the client was told that it should not send until some time after now,
-        if let Some(t) = self.state.lock().unwrap().send_after.filter(|t| t > &Instant::now()) {
+        if let Some(t) = self
+            .state
+            .lock()
+            .unwrap()
+            .send_after
+            .filter(|t| t > &Instant::now())
+        {
             // Raise an error detailing when the request should have been sent.
             return Err(ClientError::RateLimitedError(t));
         }

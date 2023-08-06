@@ -20,10 +20,8 @@ use itertools::Itertools;
 use reqwest::Url;
 use std::collections::hash_map::Drain;
 use std::collections::HashMap;
-
-use either::Either;
 use std::fmt::Debug;
-use std::num::NonZeroU64;
+use std::num::{NonZeroU8, NonZeroU32, NonZeroU64};
 use strum::Display;
 use thiserror::Error;
 
@@ -40,43 +38,48 @@ impl<'a> Params<'a> {
     }
 
     #[doc(hidden)]
-    pub(crate) fn insert_scale(&mut self, scale: &Option<CensusScales>) -> &mut Self {
-        if let Some(ref s) = scale {
-            self.insert("scale", {
-                let p = match s {
-                    CensusScales::One(scale) => scale.to_string(),
-                    CensusScales::Many(scales) => scales.iter().join("+"),
-                    CensusScales::All => "all".to_string(),
-                };
-                p
-            });
+    pub(crate) fn insert_scale(&mut self, scale: &CensusScales) -> &mut Self {
+        if let Some(v) = match scale {
+            CensusScales::One(scale) => Some(scale.to_string()),
+            CensusScales::Many(scales) => Some(scales.iter().join("+")),
+            CensusScales::All => Some("all".to_string()),
+            CensusScales::Today => None,
+        } {
+            self.insert("scale", v)
         }
         self
     }
+
     #[doc(hidden)]
-    pub(crate) fn insert_modes(&mut self, modes: &Option<CensusModes>) -> &mut Self {
-        if let Some(ref m) = modes {
-            match m {
-                CensusModes::History(CensusHistoryParams { from, to }) => {
-                    self.insert("mode", String::from("history"));
-                    if let Some(x) = from {
-                        self.insert("from", x.to_string());
-                    }
-                    if let Some(x) = to {
-                        self.insert("to", x.to_string());
-                    }
+    pub(crate) fn insert_rank_scale(&mut self, scale: &Option<NonZeroU8>) -> &mut Self {
+        self.insert_scale(&scale.map_or(CensusScales::Today, |x| CensusScales::One(x.get() - 1)))
+    }
+
+    #[doc(hidden)]
+    pub(crate) fn insert_modes(&mut self, modes: &CensusModes) -> &mut Self {
+        match modes {
+            CensusModes::History(CensusHistoryParams { from, to }) => {
+                self.insert("mode", String::from("history"));
+                if let Some(x) = from {
+                    self.insert("from", x.to_string());
                 }
-                CensusModes::Current(current_modes) => {
-                    self.insert("mode", current_modes.iter().join("+"));
+                if let Some(x) = to {
+                    self.insert("to", x.to_string());
                 }
+            }
+            CensusModes::Current(current_modes) => {
+                self.insert("mode", current_modes.iter().join("+"));
             }
         }
         self
     }
+
     #[doc(hidden)]
-    pub(crate) fn insert_start(&mut self, start: &Option<u32>) -> &mut Self {
+    pub(crate) fn insert_start(&mut self, start: &Option<NonZeroU32>) -> &mut Self {
         if let Some(s) = start {
-            self.insert("start", s.to_string());
+            if s.get() > 1 {
+                self.insert("start", s.to_string());
+            }
         }
         self
     }
@@ -97,9 +100,20 @@ pub trait NSRequest {
     fn as_url(&self) -> Url;
 }
 
-pub struct CensusShard {
-    pub scale: CensusScales,
-    pub modes: Either<CensusCurrentMode, CensusHistoryParams>,
+#[derive(Clone, Debug)]
+pub struct CensusShard<'a> {
+    /// Specify the World Census scale(s) to list, using numerical IDs.
+    /// For all scales, use [`CensusScales::All`].
+    /// For Today's World Census Report, use [`CensusScales::Today`].
+    pub scale: CensusScales<'a>,
+    /// Specify what population the scale should be compared against.
+    /// For the default behavior without any modes listed:
+    /// ```
+    /// use crustacean_states::shards::CensusModes;
+    /// use crustacean_states::shards::CensusCurrentMode::{PercentRank, Rank, Score};
+    /// let modes = CensusModes::Current(&[Score, Rank, PercentRank]);
+    /// ```
+    pub modes: CensusModes<'a>,
 }
 
 /// World census scales as numerical IDs.
@@ -107,26 +121,28 @@ pub struct CensusShard {
 /// or in the URL of [World Census](https://www.nationstates.net/page=list_nations?censusid=0)
 /// pages.
 /// [source](https://www.nationstates.net/pages/api.html#nationapi-publicshards)
-#[derive(Clone, Debug)]
-pub enum CensusScales {
+#[derive(Clone, Debug, Default)]
+pub enum CensusScales<'a> {
+    #[default]
+    Today,
     /// Only one scale.
     One(u8),
     /// Multiple scales.
-    Many(Vec<u8>),
+    Many(&'a [u8]),
     /// All scales.
     All,
 }
 
 /// Either describes current or historical data.
 #[derive(Clone, Debug)]
-pub enum CensusModes {
+pub enum CensusModes<'a> {
     /// This is a special mode that cannot be combined with other modes,
     /// as only scores are available, not ranks.
     /// When requesting history, you can optionally specify a time window, using Unix epoch times.
     /// [source](https://www.nationstates.net/pages/api.html#nationapi-publicshards)
     History(CensusHistoryParams),
     /// Represents current data.
-    Current(Vec<CensusCurrentMode>),
+    Current(&'a [CensusCurrentMode]),
 }
 
 #[derive(Clone, Debug, Default)]
@@ -168,4 +184,29 @@ pub enum CensusCurrentMode {
     /// Region rank as a percentage.
     #[strum(serialize = "prrank")]
     PercentRegionRank,
+}
+
+/// Information on how nations in the region rank according to the World Census.
+#[derive(Clone, Debug, Default)]
+pub struct CensusRanksShard {
+    /// The World Census ranking to use. If `None`, returns the day's featured World Census ranking.
+    scale: Option<NonZeroU8>,
+    /// The rank at which to start listing (e.g. `Some(1000)` would start at the 1000th nation).
+    start: Option<NonZeroU32>,
+}
+
+impl CensusRanksShard {
+    pub fn new(scale: u8, start: NonZeroU32) -> Self {
+        Self::default().scale(scale).start(start).to_owned()
+    }
+
+    pub fn scale(&mut self, x: u8) -> &mut Self {
+        self.scale = NonZeroU8::try_from(x + 1).ok();
+        self
+    }
+
+    pub fn start(&mut self, x: NonZeroU32) -> &mut Self {
+        self.start = Some(x);
+        self
+    }
 }
