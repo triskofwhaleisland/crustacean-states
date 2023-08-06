@@ -60,7 +60,7 @@ pub struct WARequest<'a> {
 
 impl<'a> NSRequest for WARequest<'a> {
     fn as_url(&self) -> Url {
-        let mut query = vec![];
+        let mut query = vec![("wa", (self.council.clone() as u8).to_string())];
         self.shards.iter().for_each(|s| {
             if let WAShard::PreviousResolution(id) = s {
                 query.push(("id", id.to_string()));
@@ -71,10 +71,9 @@ impl<'a> NSRequest for WARequest<'a> {
                     other_shards
                         .iter()
                         .fold(String::from("resolution"), |acc, s| format!("{acc}+{s:?}"))
-                        .to_ascii_lowercase()
                 } else {
                     s.as_ref().to_string()
-                },
+                }.to_ascii_lowercase(),
             ))
         });
         Url::parse_with_params(BASE_URL, query).unwrap()
