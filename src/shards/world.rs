@@ -110,6 +110,14 @@ pub struct WorldRequest<'a> {
 }
 
 impl<'a> WorldRequest<'a> {
+    pub fn shards<F>(&mut self, f: F) -> &mut Self
+    where
+        F: FnOnce(&mut Vec<WorldShard<'a>>) -> Vec<WorldShard<'a>>,
+    {
+        f(&mut self.shards);
+        self
+    }
+
     pub fn add_shard(&mut self, shard: WorldShard<'a>) -> &mut Self {
         self.shards.push(shard);
         self
