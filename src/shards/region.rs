@@ -1,12 +1,15 @@
 //! For region shard requests.
-use crate::shards::{CensusModes, CensusScales, NSRequest, Params, RequestBuildError, BASE_URL};
+use crate::shards::{
+    CensusRanksShard, CensusShard, NSRequest, Params, RequestBuildError, BASE_URL,
+};
 use itertools::Itertools;
+use std::ops::Deref;
 use strum::AsRefStr;
 use url::Url;
 
 /// A request of a region.
 #[derive(AsRefStr, Clone, Debug)]
-pub enum RegionShard {
+pub enum RegionShard<'a> {
     /// The list of all nations banned from the region.
     BanList,
     /// The region's banner's ID.
@@ -20,22 +23,11 @@ pub enum RegionShard {
     /// [source](https://www.nationstates.net/pages/api.html#nationapi-publicshards)
     ///
     /// Parallels [`PublicNationShard::Census`][crate::shards::nation::PublicNationShard::Census].
-    Census {
-        /// Specify the World Census scale(s) to list, using numerical IDs.
-        /// For all scales, use `Some(`[`CensusScales::All`]`)`.
-        scale: Option<CensusScales>,
-        /// Specify what population the scale should be compared against.
-        modes: Option<CensusModes>,
-    },
+    Census(CensusShard<'a>),
     /// Information on how nations in the region rank according to the World Census.
     ///
     /// Parallels [`WorldShard::CensusRanks`][crate::shards::world::WorldShard::CensusRanks].
-    CensusRanks {
-        /// The World Census ranking to use. If `None`, returns the day's featured World Census ranking.
-        scale: Option<u8>,
-        /// The rank at which to start listing (e.g. `Some(1000)` would start at the 1000th nation).
-        start: Option<u32>,
-    },
+    CensusRanks(CensusRanksShard),
     /// The database ID of the region.
     DbId,
     /// The delegate of the region.
@@ -118,23 +110,26 @@ pub enum RegionShard {
 
 pub struct RegionRequest<'a> {
     region: &'a str,
-    shards: Vec<RegionShard>,
+    shards: &'a [RegionShard<'a>],
 }
 
 #[derive(Default)]
 pub struct RegionRequestBuilder<'a> {
     region: Option<&'a str>,
-    shards: Vec<RegionShard>,
+    shards: Vec<RegionShard<'a>>,
 }
 
 impl<'a> RegionRequest<'a> {
-    pub fn new(region: &'a str, shards: Vec<RegionShard>) -> Self {
+    pub fn new<T>(region: &'a str, shards: &'a T) -> Self
+    where
+        T: Deref<Target = [RegionShard<'a>]>,
+    {
         Self { region, shards }
     }
     pub fn new_standard(region: &'a str) -> Self {
         Self {
             region,
-            shards: vec![],
+            shards: &[],
         }
     }
 
@@ -153,7 +148,7 @@ impl<'a> RegionRequestBuilder<'a> {
             shards: vec![],
         }
     }
-    pub fn with_shards(shards: Vec<RegionShard>) -> Self {
+    pub fn with_shards(shards: Vec<RegionShard<'a>>) -> Self {
         Self {
             region: None,
             shards,
@@ -166,23 +161,23 @@ impl<'a> RegionRequestBuilder<'a> {
     }
     pub fn shards<F>(&mut self, f: F) -> &mut Self
     where
-        F: FnOnce(&mut Vec<RegionShard>) -> Vec<RegionShard>,
+        F: FnOnce(&mut Vec<RegionShard<'a>>) -> Vec<RegionShard<'a>>,
     {
         f(&mut self.shards);
         self
     }
-    pub fn add_shard(&mut self, shard: RegionShard) -> &mut Self {
+    pub fn add_shard(&mut self, shard: RegionShard<'a>) -> &mut Self {
         self.shards.push(shard);
         self
     }
     pub fn add_shards<T>(&mut self, shards: T) -> &mut Self
     where
-        T: IntoIterator<Item = RegionShard>,
+        T: IntoIterator<Item = RegionShard<'a>>,
     {
         self.shards.extend(shards.into_iter());
         self
     }
-    pub fn set_shards(&mut self, shards: Vec<RegionShard>) -> &mut Self {
+    pub fn set_shards(&mut self, shards: Vec<RegionShard<'a>>) -> &mut Self {
         self.shards = shards;
         self
     }
@@ -191,7 +186,7 @@ impl<'a> RegionRequestBuilder<'a> {
         Ok(RegionRequest::new(
             self.region
                 .ok_or(RequestBuildError::MissingParam("region"))?,
-            self.shards.clone(),
+            &self.shards,
         ))
     }
 }
@@ -200,7 +195,7 @@ impl<'a> From<RegionRequest<'a>> for RegionRequestBuilder<'a> {
     fn from(value: RegionRequest<'a>) -> Self {
         Self {
             region: Some(value.region),
-            shards: value.shards,
+            shards: Vec::from(value.shards),
         }
     }
 }
@@ -216,13 +211,11 @@ impl<'a> NSRequest for RegionRequest<'a> {
             .to_ascii_lowercase();
         let mut params = Params::default();
         self.shards.iter().for_each(|s| match s {
-            RegionShard::Census { scale, modes } => {
+            RegionShard::Census(CensusShard { scale, modes }) => {
                 params.insert_scale(scale).insert_modes(modes);
             }
-            RegionShard::CensusRanks { scale, start } => {
-                params
-                    .insert_scale(&scale.map(CensusScales::One))
-                    .insert_start(start);
+            RegionShard::CensusRanks(CensusRanksShard { scale, start }) => {
+                params.insert_rank_scale(scale).insert_start(start);
             }
             RegionShard::Messages {
                 limit,

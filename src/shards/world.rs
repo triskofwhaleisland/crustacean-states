@@ -4,7 +4,7 @@ use crate::dispatch::DispatchCategory;
 use crate::impl_display_as_debug;
 use crate::parsers::nation::BannerId;
 use crate::shards::world::HappeningsViewType::{Nation, Region};
-use crate::shards::{CensusModes, CensusScales, NSRequest, Params, BASE_URL};
+use crate::shards::{CensusRanksShard, CensusShard, NSRequest, Params, BASE_URL};
 use itertools::Itertools;
 use std::fmt::{Display, Formatter};
 use strum::AsRefStr;
@@ -20,13 +20,7 @@ pub enum WorldShard<'a> {
     /// [source](https://www.nationstates.net/pages/api.html#nationapi-publicshards)
     ///
     /// Parallels [`PublicNationShard::Census`][crate::shards::nation::PublicNationShard::Census].
-    Census {
-        /// Specify the World Census scale(s) to list, using numerical IDs.
-        /// For all scales, use `Some(`[`CensusScales::All`]`)`.
-        scale: Option<CensusScales>,
-        /// Specify what population the scale should be compared against.
-        modes: Option<CensusModes>,
-    },
+    Census(CensusShard<'a>),
     /// Today's featured census scale.
     CensusId,
     /// Provides the description of a given census scale if `Some(id)`
@@ -36,14 +30,7 @@ pub enum WorldShard<'a> {
     /// or of today's featured census scale if `None`.
     CensusName(Option<u8>),
     /// Provides 20 nations and their world census scale ranking.
-    CensusRanks {
-        /// If `Some(id)`, a given census scale; if `None`, today's featured census scale.
-        scale: Option<u8>,
-        /// If `Some(x)`, the ranking place to start at (e.g. `Some(1000)`
-        /// means to start at the 1000th-place nation and descend to the 1019th);
-        /// if `None`, start at the nation ranked first and descend to the 20th.
-        start: Option<u32>,
-    },
+    CensusRanks(CensusRanksShard),
     /// Provides the units of a given census scale if `Some(id)`
     /// or of today's featured census scale if `None`.
     CensusScale(Option<u8>),
@@ -148,7 +135,7 @@ impl<'a> NSRequest for WorldRequest<'a> {
             WorldShard::Banner(banners) => {
                 params.insert("banner", banners.iter().map(BannerId::to_string).join(","));
             }
-            WorldShard::Census { scale, modes } => {
+            WorldShard::Census(CensusShard { scale, modes }) => {
                 params.insert_scale(scale).insert_modes(modes);
             }
             WorldShard::CensusDesc(scale)
@@ -159,10 +146,8 @@ impl<'a> NSRequest for WorldRequest<'a> {
                     params.insert("scale", s.to_string());
                 }
             }
-            WorldShard::CensusRanks { scale, start } => {
-                params
-                    .insert_scale(&scale.map(CensusScales::One))
-                    .insert_start(start);
+            WorldShard::CensusRanks(CensusRanksShard { scale, start }) => {
+                params.insert_rank_scale(scale).insert_start(start);
             }
             WorldShard::Dispatch(id) => {
                 params.insert("dispatchid", id.to_string());

@@ -1,6 +1,6 @@
 //! For public nation shard requests.
 
-use crate::shards::{CensusModes, CensusScales, NSRequest, Params, RequestBuildError, BASE_URL};
+use crate::shards::{CensusShard, NSRequest, Params, RequestBuildError, BASE_URL};
 use itertools::Itertools;
 use strum::AsRefStr;
 use url::Url;
@@ -42,13 +42,7 @@ pub enum PublicNationShard<'a> {
     /// By default, returns the score, rank, and region rank on today's featured World Census scale.
     /// Can be optionally configured with additional parameters.
     /// [source](https://www.nationstates.net/pages/api.html#nationapi-publicshards)
-    Census {
-        /// Specify the World Census scale(s) to list, using numerical IDs.
-        /// For all scales, use `Some(`[`CensusScales::All`]`)`.
-        scale: Option<CensusScales>,
-        /// Specify what population the scale should be compared against.
-        modes: Option<CensusModes>,
-    },
+    Census(CensusShard<'a>),
     /// Describes crime in the nation on its nation page.
     Crime,
     /// Name of the national currency.
@@ -350,7 +344,7 @@ impl<'a> NSRequest for PublicNationRequest<'a> {
 
         let mut params = Params::default();
         self.shards.iter().for_each(|s| match s {
-            PublicNationShard::Census { scale, modes } => {
+            PublicNationShard::Census(CensusShard { scale, modes }) => {
                 params.insert_scale(scale).insert_modes(modes);
             }
             PublicNationShard::TGCanCampaign { from }
