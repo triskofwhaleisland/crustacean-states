@@ -285,21 +285,32 @@ impl<'a> PublicNationRequestBuilder<'a> {
         self.nation = Some(nation);
         self
     }
+
+    pub fn shards<F>(&mut self, f: F) -> &mut Self
+    where
+        F: FnOnce(&mut Vec<PublicNationShard<'a>>) -> Vec<PublicNationShard<'a>>,
+    {
+        f(&mut self.shards);
+        self
+    }
+
     pub fn add_shard(&mut self, shard: PublicNationShard<'a>) -> &mut Self {
         self.shards.push(shard);
         self
     }
-    pub fn add_shards<T>(&mut self, shards: T) -> &mut Self
+
+    pub fn add_shards<I>(&mut self, shards: I) -> &mut Self
     where
-        T: IntoIterator<Item = PublicNationShard<'a>>,
+        I: IntoIterator<Item = PublicNationShard<'a>>,
     {
         self.shards.extend(shards.into_iter());
         self
     }
-    pub fn set_shards(&mut self, shards: Vec<PublicNationShard<'a>>) -> &mut Self {
-        self.shards = shards;
-        self
-    }
+
+    // pub fn set_shards(&mut self, shards: Vec<PublicNationShard<'a>>) -> &mut Self {
+    //     self.shards = shards;
+    //     self
+    // }
 
     pub fn build(&self) -> Result<PublicNationRequest, RequestBuildError> {
         Ok(PublicNationRequest::new(

@@ -21,7 +21,7 @@ use reqwest::Url;
 use std::collections::hash_map::Drain;
 use std::collections::HashMap;
 use std::fmt::Debug;
-use std::num::{NonZeroU8, NonZeroU32, NonZeroU64};
+use std::num::{NonZeroU32, NonZeroU64, NonZeroU8};
 use strum::Display;
 use thiserror::Error;
 
@@ -154,13 +154,15 @@ pub struct CensusHistoryParams {
 }
 
 impl CensusHistoryParams {
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new(before: NonZeroU64, after: NonZeroU64) -> Self {
+        Self::default().before(before).after(after).to_owned()
     }
+
     pub fn after(&mut self, timestamp: NonZeroU64) -> &mut Self {
         self.from = Some(timestamp);
         self
     }
+
     pub fn before(&mut self, timestamp: NonZeroU64) -> &mut Self {
         self.to = Some(timestamp);
         self

@@ -58,6 +58,29 @@ pub struct WARequest<'a> {
     shards: Vec<WAShard<'a>>,
 }
 
+impl<'a> WARequest<'a> {
+    pub fn shards<F>(&mut self, f: F) -> &mut Self
+    where
+        F: FnOnce(&mut Vec<WAShard<'a>>) -> Vec<WAShard<'a>>,
+    {
+        f(&mut self.shards);
+        self
+    }
+
+    pub fn add_shard(&mut self, shard: WAShard<'a>) -> &mut Self {
+        self.shards.push(shard);
+        self
+    }
+
+    pub fn add_shards<I>(&mut self, shards: I) -> &mut Self
+    where
+        I: IntoIterator<Item = WAShard<'a>>,
+    {
+        self.shards.extend(shards.into_iter());
+        self
+    }
+}
+
 impl<'a> NSRequest for WARequest<'a> {
     fn as_url(&self) -> Url {
         let mut query = vec![("wa", (self.council.clone() as u8).to_string())];

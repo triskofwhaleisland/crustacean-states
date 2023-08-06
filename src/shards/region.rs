@@ -3,6 +3,7 @@ use crate::shards::{
     CensusRanksShard, CensusShard, NSRequest, Params, RequestBuildError, BASE_URL,
 };
 use itertools::Itertools;
+use std::num::{NonZeroU32, NonZeroU8};
 use std::ops::Deref;
 use strum::AsRefStr;
 use url::Url;
@@ -76,14 +77,7 @@ pub enum RegionShard<'a> {
     LastMinorUpdate,
     /// Returns messages posted on a regional message board.
     /// By default, returns the 10 most recent messages, sorted from oldest to newest.
-    Messages {
-        /// Return this many messages. Must be in the range 1-100.
-        limit: Option<u8>,
-        /// Skip the most recent (number) messages.
-        offset: Option<u32>,
-        /// Instead of returning the most recent messages, return messages starting from this post ID.
-        from_id: Option<u32>,
-    },
+    Messages(RmbShard),
     /// The name of the region.
     Name,
     /// The list of all nations in the region.
@@ -108,6 +102,41 @@ pub enum RegionShard<'a> {
     WANations,
 }
 
+#[derive(Clone, Debug, Default)]
+pub struct RmbShard {
+    /// Return this many messages. Must be in the range 1-100.
+    limit: Option<NonZeroU8>,
+    /// Skip the most recent (number) messages. Begin back farther.
+    offset: Option<NonZeroU32>,
+    /// Instead of returning the most recent messages, return messages starting from this post ID.
+    starting_post: Option<NonZeroU32>,
+}
+
+impl RmbShard {
+    pub fn new(limit: u8, offset: u32, starting_post: u32) -> Self {
+        Self::default()
+            .limit(limit)
+            .offset(offset)
+            .starting_post(starting_post)
+            .to_owned()
+    }
+
+    pub fn limit(&mut self, x: u8) -> &mut Self {
+        self.limit = NonZeroU8::new(x);
+        self
+    }
+
+    pub fn offset(&mut self, x: u32) -> &mut Self {
+        self.offset = NonZeroU32::new(x);
+        self
+    }
+
+    pub fn starting_post(&mut self, x: u32) -> &mut Self {
+        self.starting_post = NonZeroU32::new(x);
+        self
+    }
+}
+
 pub struct RegionRequest<'a> {
     region: &'a str,
     shards: &'a [RegionShard<'a>],
@@ -126,6 +155,7 @@ impl<'a> RegionRequest<'a> {
     {
         Self { region, shards }
     }
+
     pub fn new_standard(region: &'a str) -> Self {
         Self {
             region,
@@ -148,6 +178,7 @@ impl<'a> RegionRequestBuilder<'a> {
             shards: vec![],
         }
     }
+
     pub fn with_shards(shards: Vec<RegionShard<'a>>) -> Self {
         Self {
             region: None,
@@ -159,6 +190,7 @@ impl<'a> RegionRequestBuilder<'a> {
         self.region = Some(region);
         self
     }
+
     pub fn shards<F>(&mut self, f: F) -> &mut Self
     where
         F: FnOnce(&mut Vec<RegionShard<'a>>) -> Vec<RegionShard<'a>>,
@@ -166,21 +198,24 @@ impl<'a> RegionRequestBuilder<'a> {
         f(&mut self.shards);
         self
     }
+
     pub fn add_shard(&mut self, shard: RegionShard<'a>) -> &mut Self {
         self.shards.push(shard);
         self
     }
-    pub fn add_shards<T>(&mut self, shards: T) -> &mut Self
+
+    pub fn add_shards<I>(&mut self, shards: I) -> &mut Self
     where
-        T: IntoIterator<Item = RegionShard<'a>>,
+        I: IntoIterator<Item = RegionShard<'a>>,
     {
         self.shards.extend(shards.into_iter());
         self
     }
-    pub fn set_shards(&mut self, shards: Vec<RegionShard<'a>>) -> &mut Self {
-        self.shards = shards;
-        self
-    }
+
+    // pub fn set_shards(&mut self, shards: Vec<RegionShard<'a>>) -> &mut Self {
+    //     self.shards = shards;
+    //     self
+    // }
 
     pub fn build(&self) -> Result<RegionRequest, RequestBuildError> {
         Ok(RegionRequest::new(
@@ -217,19 +252,19 @@ impl<'a> NSRequest for RegionRequest<'a> {
             RegionShard::CensusRanks(CensusRanksShard { scale, start }) => {
                 params.insert_rank_scale(scale).insert_start(start);
             }
-            RegionShard::Messages {
+            RegionShard::Messages(RmbShard {
                 limit,
                 offset,
-                from_id,
-            } => {
+                starting_post,
+            }) => {
                 if let Some(l) = limit {
                     params.insert("limit", l.to_string());
                 }
                 if let Some(o) = offset {
                     params.insert("offset", o.to_string());
                 }
-                if let Some(f) = from_id {
-                    params.insert("fromid", f.to_string());
+                if let Some(p) = starting_post {
+                    params.insert("fromid", p.to_string());
                 }
             }
             _ => {}
