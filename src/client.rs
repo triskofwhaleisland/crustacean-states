@@ -43,14 +43,13 @@ impl Client {
 
     /// Make a request of the API.
     ///
-    /// Note that this method requires the [`Client`] to be `mut`.
-    /// This is because `Client`s store important information about the previous request in them.
-    /// For example, it allows this function to return a [`ClientError::RateLimitedError`]
-    /// if it knows the last request was too recent.
+    /// If the last request was too recent, returns [`ClientError::RateLimitedError`].
     ///
-    /// If there was an error in the [`reqwest`] crate,
-    /// [`ClientError::ReqwestError`] will be returned.
-    pub async fn get<U: NSRequest>(&self, request: U) -> Result<Response, ClientError> {
+    /// If there was an error in the [`reqwest`] crate, returns [`ClientError::ReqwestError`].
+    pub async fn get<U>(&self, request: U) -> Result<Response, ClientError>
+    where
+        U: NSRequest,
+    {
         // If the client was told that it should not send until some time after now,
         if let Some(t) = self
             .state
@@ -138,7 +137,7 @@ pub enum ClientError {
         source: ParseIntError,
     },
     /// If you shouldn't send a request until later, you will be rate-limited by this error.
-    /// Your request is perfectly fine,
+    /// Your request is perfectly fine, just wait until your timeout is over.
     #[error("rate limited until {0:?}")]
     RateLimitedError(Instant),
 }
@@ -148,7 +147,6 @@ pub enum ClientError {
 pub struct RateLimits {
     // policy and limits are currently disabled
     // because this part of the program is private and implementation will probably change.
-
     // ---
     // /// The number of requests that can be sent within a timeframe,
     // /// and how long that timeframe is in seconds.
@@ -157,12 +155,8 @@ pub struct RateLimits {
     // /// Always equal to `policy.0`.
     // limit: u8,
     // ---
-    /// The number of requests that can still be sent in this timeframe.
     remaining: u8,
-    /// The number of seconds until the timeframe resets.
     reset: u8,
-    /// The number of seconds until a request can be sent.
-    /// (If a RateLimit-Retry-After header was not sent, `retry_after` will store `None`.)
     retry_after: Option<u8>,
 }
 
@@ -212,5 +206,21 @@ impl RateLimits {
             reset,
             retry_after,
         })
+    }
+
+    /// The number of requests that can still be sent in this timeframe.
+    pub fn remaining(&self) -> u8 {
+        self.remaining
+    }
+
+    /// The number of seconds until the timeframe resets.
+    pub fn reset(&self) -> u8 {
+        self.reset
+    }
+
+    /// The number of seconds until a request can be sent.
+    /// If a RateLimit-Retry-After header was not sent, returns `None`.
+    pub fn retry_after(&self) -> Option<u8> {
+        self.retry_after
     }
 }
