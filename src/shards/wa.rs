@@ -1,7 +1,11 @@
 //! For World Assembly shard requests.
 
 use crate::shards::{NSRequest, BASE_URL};
+use itertools::Itertools;
+use std::fmt::{Display, Formatter};
+use std::string::ToString;
 use strum::AsRefStr;
+use strum::Display;
 use url::Url;
 
 /// One of the two World Assembly chambers (or "councils").
@@ -29,6 +33,35 @@ pub enum WACouncil {
 /// A shard for the World Assembly.
 #[derive(AsRefStr, Clone, Debug)]
 pub enum WAShard<'a> {
+    GlobalInfo(WAGlobalShard),
+    CouncilInfo(WACouncilShard),
+    /// Information about a resolution in a World Assembly council.
+    /// Request more information with [`ResolutionShard`]s.
+    CurrentResolution(&'a [ResolutionShard]),
+    /// Information about a previous resolution.
+    PreviousResolution(u16),
+}
+
+impl<'a> Display for WAShard<'a> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                WAShard::GlobalInfo(g) => g.to_string(),
+                WAShard::CouncilInfo(c) => c.to_string(),
+                WAShard::CurrentResolution(a) => a
+                    .iter()
+                    .fold(String::from("resolution"), |acc, s| format!("{acc}+{s:?}")),
+                WAShard::PreviousResolution(_) => String::from("resolution"),
+            }
+            .to_ascii_lowercase()
+        )
+    }
+}
+
+#[derive(Clone, Debug, Display)]
+pub enum WAGlobalShard {
     /// The number of nations in the World Assembly.
     NumNations,
     /// The number of delegates in the World Assembly.
@@ -37,75 +70,22 @@ pub enum WAShard<'a> {
     Delegates,
     /// The list of all members of the World Assembly.
     Members,
+}
+
+#[derive(Clone, Debug, Display)]
+pub enum WACouncilShard {
     /// A shard that returns `[Event]`s in the World Assembly.
     ///
     /// [Event]: crate::parsers::happenings::Event
     Happenings,
     /// All the currently proposed resolutions in a World Assembly council.
     Proposals,
-    /// Information about a resolution in a World Assembly council.
-    /// Request more information with [`ResolutionShard`]s.
-    CurrentResolution(&'a [ResolutionShard]),
     /// The most recent resolution in a World Assembly council.
     LastResolution,
-    /// Information about a previous resolution.
-    PreviousResolution(u16),
-}
-
-#[derive(Default)]
-pub struct WARequest<'a> {
-    council: WACouncil,
-    shards: Vec<WAShard<'a>>,
-}
-
-impl<'a> WARequest<'a> {
-    pub fn shards<F>(&mut self, f: F) -> &mut Self
-    where
-        F: FnOnce(&mut Vec<WAShard<'a>>) -> Vec<WAShard<'a>>,
-    {
-        f(&mut self.shards);
-        self
-    }
-
-    pub fn add_shard(&mut self, shard: WAShard<'a>) -> &mut Self {
-        self.shards.push(shard);
-        self
-    }
-
-    pub fn add_shards<I>(&mut self, shards: I) -> &mut Self
-    where
-        I: IntoIterator<Item = WAShard<'a>>,
-    {
-        self.shards.extend(shards.into_iter());
-        self
-    }
-}
-
-impl<'a> NSRequest for WARequest<'a> {
-    fn as_url(&self) -> Url {
-        let mut query = vec![("wa", (self.council.clone() as u8).to_string())];
-        self.shards.iter().for_each(|s| {
-            if let WAShard::PreviousResolution(id) = s {
-                query.push(("id", id.to_string()));
-            };
-            query.push((
-                "q",
-                if let WAShard::CurrentResolution(other_shards) = s {
-                    other_shards
-                        .iter()
-                        .fold(String::from("resolution"), |acc, s| format!("{acc}+{s:?}"))
-                } else {
-                    s.as_ref().to_string()
-                }
-                .to_ascii_lowercase(),
-            ))
-        });
-        Url::parse_with_params(BASE_URL, query).unwrap()
-    }
 }
 
 /// Extra information about the current at-vote resolution.
-#[derive(Debug)]
+#[derive(Clone, Debug, Display)]
 pub enum ResolutionShard {
     /// Lists every nation voting for and against the resolution.
     Voters,
@@ -118,4 +98,99 @@ pub enum ResolutionShard {
     /// List every delegate's vote, including voting power.
     /// NOTE: Votes are grouped into yes and no votes.
     DelVotes,
+}
+
+#[derive(Clone, Debug)]
+pub enum WARequest<'a> {
+    Global(GlobalRequest<'a>),
+    Council(CouncilRequest<'a>),
+    AtVoteResolution(ResolutionRequest<'a>),
+    PastResolution(ResolutionArchiveRequest),
+}
+
+#[derive(Clone, Debug)]
+pub struct GlobalRequest<'a> {
+    shards: &'a [WAGlobalShard],
+}
+
+impl<'a> GlobalRequest<'a> {
+    pub fn new(shards: &'a [WAGlobalShard]) -> Self {
+        Self { shards }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct CouncilRequest<'a> {
+    council: WACouncil,
+    shards: &'a [WAShard<'a>],
+}
+
+impl<'a> CouncilRequest<'a> {
+    pub fn new(council: WACouncil, shards: &'a [WAShard<'a>]) -> Self {
+        Self { council, shards }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct ResolutionRequest<'a> {
+    council: WACouncil,
+    shards: &'a [ResolutionShard],
+}
+
+impl<'a> ResolutionRequest<'a> {
+    pub fn new(council: WACouncil, shards: &'a [ResolutionShard]) -> Self {
+        Self { council, shards }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct ResolutionArchiveRequest {
+    council: WACouncil,
+    id: u16,
+}
+
+impl ResolutionArchiveRequest {
+    pub fn new(council: WACouncil, id: u16) -> Self {
+        Self { council, id }
+    }
+}
+
+impl<'a> NSRequest for WARequest<'a> {
+    fn as_url(&self) -> Url {
+        let mut query = vec![];
+
+        query.push((
+            "wa",
+            (match self {
+                WARequest::Global(_) => None,
+                WARequest::Council(CouncilRequest { council, .. }) => Some(council.clone()),
+                WARequest::AtVoteResolution(ResolutionRequest { council, .. }) => {
+                    Some(council.clone())
+                }
+                WARequest::PastResolution(ResolutionArchiveRequest { council, .. }) => {
+                    Some(council.clone())
+                }
+            }
+            .unwrap_or_default() as u8)
+                .to_string(),
+        ));
+
+        if let WARequest::PastResolution(ResolutionArchiveRequest { id, .. }) = self {
+            query.push(("id", id.to_string()));
+            query.push(("q", String::from("resolution")))
+        }
+
+        if let Some(t) = match self {
+            WARequest::Global(GlobalRequest { shards }) => Some(shards.iter().join("+")),
+            WARequest::Council(CouncilRequest { shards, .. }) => Some(shards.iter().join("+")),
+            WARequest::AtVoteResolution(ResolutionRequest { shards, .. }) => {
+                Some(format!("resolution+{}", shards.iter().join("+")))
+            }
+            WARequest::PastResolution(_) => None,
+        } {
+            query.push(("q", t.to_ascii_lowercase()))
+        }
+
+        Url::parse_with_params(BASE_URL, query).unwrap()
+    }
 }

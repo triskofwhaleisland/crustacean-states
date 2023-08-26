@@ -303,7 +303,7 @@ impl<'a> PublicNationRequestBuilder<'a> {
     where
         I: IntoIterator<Item = PublicNationShard<'a>>,
     {
-        self.shards.extend(shards.into_iter());
+        self.shards.extend(shards);
         self
     }
 
@@ -335,7 +335,10 @@ impl<'a> PublicNationRequest<'a> {
     where
         T: AsRef<[PublicNationShard<'a>]>,
     {
-        Self { nation, shards: shards.as_ref() }
+        Self {
+            nation,
+            shards: shards.as_ref(),
+        }
     }
 
     pub fn new_standard(nation: &'a str) -> Self {

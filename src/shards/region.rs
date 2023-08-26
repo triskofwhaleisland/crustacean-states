@@ -184,7 +184,7 @@ impl<'a> RegionRequestBuilder<'a> {
     where
         I: IntoIterator<Item = RegionShard<'a>>,
     {
-        self.shards.extend(shards.into_iter());
+        self.shards.extend(shards);
         self
     }
 
@@ -204,10 +204,13 @@ impl<'a> RegionRequestBuilder<'a> {
 
 impl<'a> RegionRequest<'a> {
     pub fn new<T>(region: &'a str, shards: &'a T) -> Self
-        where
-            T: AsRef<[RegionShard<'a>]>,
+    where
+        T: AsRef<[RegionShard<'a>]>,
     {
-        Self { region, shards: shards.as_ref() }
+        Self {
+            region,
+            shards: shards.as_ref(),
+        }
     }
 
     pub fn new_standard(region: &'a str) -> Self {
