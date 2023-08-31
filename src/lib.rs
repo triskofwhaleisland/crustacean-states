@@ -60,11 +60,53 @@ pub fn pretty_name(safe_name: impl ToString) -> String {
         .fold(String::new(), |s, c| {
             format!(
                 "{s}{}",
-                if s.is_empty() || s.ends_with(' ') {
+                if s.ends_with(' ') || s.is_empty() {
                     c.to_ascii_uppercase()
                 } else {
                     c
                 }
             )
         })
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn safe_name_unchanged() {
+        assert_eq!(super::safe_name("wow1"), String::from("wow1"));
+    }
+
+    #[test]
+    fn safe_name_lowercase() {
+        assert_eq!(super::safe_name("Exciting"), String::from("exciting"));
+    }
+
+    #[test]
+    fn safe_name_underscore() {
+        assert_eq!(
+            super::safe_name("wow1 exciting"),
+            String::from("wow1_exciting")
+        );
+    }
+
+    #[test]
+    fn safe_name_underscore_and_lowercase() {
+        assert_eq!(
+            super::safe_name("Wow1 Exciting"),
+            String::from("wow1_exciting")
+        );
+    }
+
+    #[test]
+    fn pretty_name_uppercase() {
+        assert_eq!(super::pretty_name("aramos"), String::from("Aramos"))
+    }
+
+    #[test]
+    fn pretty_name_multiword() {
+        assert_eq!(
+            super::pretty_name("the_greater_low_countries"),
+            String::from("The Greater Low Countries")
+        )
+    }
 }
