@@ -1,4 +1,4 @@
-use crate::dispatch::{
+use crate::models::dispatch::{
     AccountCategory, BulletinCategory, DispatchCategory, FactbookCategory, MetaCategory,
 };
 use crate::parsers::happenings::Event;

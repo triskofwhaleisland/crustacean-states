@@ -1,3 +1,5 @@
+//! Contains information about the Dispatch
+
 use std::fmt::{Display, Formatter};
 
 /// The categories of dispatches.

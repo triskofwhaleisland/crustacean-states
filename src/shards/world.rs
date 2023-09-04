@@ -1,6 +1,6 @@
 //! For world shard requests.
 
-use crate::dispatch::DispatchCategory;
+use crate::models::dispatch::DispatchCategory;
 use crate::impl_display_as_debug;
 use crate::parsers::nation::BannerId;
 use crate::shards::world::HappeningsViewType::{Nation, Region};
