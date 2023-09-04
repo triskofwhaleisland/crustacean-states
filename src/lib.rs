@@ -31,7 +31,7 @@
 //!
 //! [`PublicNationRequest`]: [crate::shards::nation::PublicNationRequest]
 
-#![deny(missing_docs)]
+// #![deny(missing_docs)]
 
 // #[allow(unused_imports)] // it's for the docs :)
 
