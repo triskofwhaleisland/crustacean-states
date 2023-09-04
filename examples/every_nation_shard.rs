@@ -15,7 +15,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let user_agent = std::env::var("USER_AGENT")?;
     let client = Client::new(user_agent);
     let target_name = "Aramos";
-    let shards = vec![
+    let shards = &[
         Admirable,
         Admirables,
         Animal,
@@ -27,7 +27,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         Category,
         Census(CensusShard::new(
             CensusScales::All,
-            CensusModes::from(&[Score, Rank, PercentRank, RegionRank, PercentRegionRank]),
+            CensusModes::from([Score, Rank, PercentRank, RegionRank, PercentRegionRank]),
         )),
         Crime,
         Currency,

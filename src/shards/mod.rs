@@ -35,8 +35,8 @@ pub(crate) struct Params<'a>(HashMap<&'a str, String>, Vec<&'a str>);
 
 impl<'a> Params<'a> {
     pub(crate) fn insert_on<T>(&mut self, k: &'a str, v: &Option<T>) -> &mut Self
-        where
-            T: ToString,
+    where
+        T: ToString,
     {
         if let Some(s) = v {
             self.0.insert(k, s.to_string());
@@ -45,14 +45,16 @@ impl<'a> Params<'a> {
         self
     }
     pub(crate) fn insert<T>(&mut self, k: &'a str, v: T) -> &mut Self
-        where
-            T: ToString,
+    where
+        T: ToString,
     {
         Self::insert_on(self, k, &Some(v))
     }
 
-    pub(crate) fn insert_front<T>(&mut self, k: &'a str, v: T) -> &mut Self where
-    T: ToString, {
+    pub(crate) fn insert_front<T>(&mut self, k: &'a str, v: T) -> &mut Self
+    where
+        T: ToString,
+    {
         self.0.insert(k, v.to_string());
         self.1.insert(0, k);
         self
@@ -298,10 +300,7 @@ mod tests {
     #[test]
     fn insert_param() {
         assert_eq!(
-            Params::default()
-                .insert("this", "that")
-                .0
-                .get("this"),
+            Params::default().insert("this", "that").0.get("this"),
             Some(&String::from("that"))
         );
     }
@@ -390,9 +389,7 @@ mod tests {
     #[test]
     fn param_iter_easy() {
         assert_eq!(
-            Params::default()
-                .insert("this", "that")
-                .next(),
+            Params::default().insert("this", "that").next(),
             Some(("this", String::from("that")))
         );
     }
@@ -400,19 +397,13 @@ mod tests {
     #[test]
     fn param_iter_complex() {
         let mut params = Params::default();
-        params.insert("this", "that").insert("thing1", "thing2").insert("wow", "yikes");
-        assert_eq!(
-            params.next(),
-            Some(("this", String::from("that")))
-        );
-        assert_eq!(
-            params.next(),
-            Some(("thing1", String::from("thing2")))
-        );
-        assert_eq!(
-            params.next(),
-            Some(("wow", String::from("yikes")))
-        );
+        params
+            .insert("this", "that")
+            .insert("thing1", "thing2")
+            .insert("wow", "yikes");
+        assert_eq!(params.next(), Some(("this", String::from("that"))));
+        assert_eq!(params.next(), Some(("thing1", String::from("thing2"))));
+        assert_eq!(params.next(), Some(("wow", String::from("yikes"))));
         assert_eq!(params.next(), None);
     }
 }

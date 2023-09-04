@@ -161,10 +161,7 @@ impl<'a> NSRequest for WorldRequest<'a> {
         let mut params = Params::default();
         self.0.iter().for_each(|s| match s {
             WorldShard::Banner(banners) => {
-                params.insert(
-                    "banner",
-                    banners.iter().map(BannerId::to_string).join(",")
-                );
+                params.insert("banner", banners.iter().map(BannerId::to_string).join(","));
             }
             WorldShard::Census(CensusShard { scale, modes }) => {
                 params.insert_scale(scale).insert_modes(modes);

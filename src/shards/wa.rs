@@ -162,20 +162,17 @@ impl<'a> NSRequest for WARequest<'a> {
             Params::default()
                 .insert(
                     "wa",
-
-                        match self {
-                            WARequest::Global(_) => None,
-                            WARequest::Council(CouncilRequest { council, .. }) => {
-                                Some(council.clone())
-                            }
-                            WARequest::AtVoteResolution(ResolutionRequest { council, .. }) => {
-                                Some(council.clone())
-                            }
-                            WARequest::PastResolution(ResolutionArchiveRequest {
-                                council, ..
-                            }) => Some(council.clone()),
+                    match self {
+                        WARequest::Global(_) => None,
+                        WARequest::Council(CouncilRequest { council, .. }) => Some(council.clone()),
+                        WARequest::AtVoteResolution(ResolutionRequest { council, .. }) => {
+                            Some(council.clone())
                         }
-                        .unwrap_or_default() as u8,
+                        WARequest::PastResolution(ResolutionArchiveRequest { council, .. }) => {
+                            Some(council.clone())
+                        }
+                    }
+                    .unwrap_or_default() as u8,
                 )
                 .insert_on(
                     "id",
@@ -186,19 +183,17 @@ impl<'a> NSRequest for WARequest<'a> {
                 )
                 .insert(
                     "q",
-
-                        match self {
-                            WARequest::Global(GlobalRequest { shards }) => shards.iter().join("+"),
-                            WARequest::Council(CouncilRequest { shards, .. }) => {
-                                shards.iter().join("+")
-                            }
-                            WARequest::AtVoteResolution(ResolutionRequest { shards, .. }) => {
-                                format!("resolution+{}", shards.iter().join("+"))
-                            }
-                            WARequest::PastResolution(_) => String::from("resolution"),
+                    match self {
+                        WARequest::Global(GlobalRequest { shards }) => shards.iter().join("+"),
+                        WARequest::Council(CouncilRequest { shards, .. }) => {
+                            shards.iter().join("+")
                         }
-                        .to_ascii_lowercase(),
-
+                        WARequest::AtVoteResolution(ResolutionRequest { shards, .. }) => {
+                            format!("resolution+{}", shards.iter().join("+"))
+                        }
+                        WARequest::PastResolution(_) => String::from("resolution"),
+                    }
+                    .to_ascii_lowercase(),
                 ),
         )
         .unwrap()
