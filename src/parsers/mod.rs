@@ -118,7 +118,6 @@ pub enum CensusData {
 }
 
 /// Current World Census data about the nation.
-//noinspection SpellCheckingInspection
 #[derive(Debug)]
 pub struct CensusCurrentData {
     /// The ID used for the data point. For example,
@@ -141,7 +140,6 @@ pub struct CensusCurrentData {
 
 /// Historical data from the World Census.
 /// Note that only scores and not rankings are available this way.
-//noinspection SpellCheckingInspection
 #[derive(Debug)]
 pub struct CensusHistoricalData {
     /// The ID used for the data point. For example,

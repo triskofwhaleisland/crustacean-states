@@ -7,7 +7,7 @@ use url::Url;
 
 /// A nation request available to anyone.
 //noinspection SpellCheckingInspection
-#[derive(AsRefStr, Clone, Debug)]
+#[derive(AsRefStr, Clone, Debug, PartialEq)]
 pub enum PublicNationShard<'a> {
     /// A randomly-selected compliment for the nation.
     Admirable,
@@ -21,14 +21,12 @@ pub enum PublicNationShard<'a> {
     Answered,
     /// Returns one Rift banner code that should be displayed for this nation:
     /// the nation's primary banner, if one is set; otherwise, a randomly chosen eligible banner.
-    /// [source](https://www.nationstates.net/pages/api.html#nationapi-publicshards)
     Banner,
     /// Returns a list of Rift banners that should be displayed:
     /// the nation's primary banner (if any) is always listed first,
     /// with the remainder in random order.
     /// Banner codes can be converted into image URLs by prepending `/images/banners/`
     /// and appending `.jpg`.
-    /// [source](https://www.nationstates.net/pages/api.html#nationapi-publicshards)
     Banners,
     /// The capital if a custom capital was chosen, or the nation name with "City"
     /// appended at the end if one has not been chosen yet.
@@ -41,7 +39,6 @@ pub enum PublicNationShard<'a> {
     Category,
     /// By default, returns the score, rank, and region rank on today's featured World Census scale.
     /// Can be optionally configured with additional parameters.
-    /// [source](https://www.nationstates.net/pages/api.html#nationapi-publicshards)
     Census(CensusShard<'a>),
     /// Describes crime in the nation on its nation page.
     Crime,
@@ -255,25 +252,49 @@ pub enum PublicNationShard<'a> {
     WCensus,
 }
 
-#[derive(Clone, Debug)]
+/// A request of the public nation API.
+/// If you're going to make a request, start here!
+/// ## Example
+/// ```
+/// # use crustacean_states::shards::nation::{PublicNationRequest, PublicNationShard};
+/// let request = PublicNationRequest::new("Aramos", vec![PublicNationShard::Capital]);
+/// ```
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct PublicNationRequest<'a> {
-    nation: &'a str,
-    shards: &'a [PublicNationShard<'a>],
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct PublicNationRequestBuilder<'a> {
     nation: Option<&'a str>,
     shards: Vec<PublicNationShard<'a>>,
 }
 
-impl<'a> PublicNationRequestBuilder<'a> {
-    pub fn new(nation: &'a str) -> Self {
+impl<'a> PublicNationRequest<'a> {
+    /// Creates a new builder given a nation name.
+    pub fn new_empty(nation: &'a str) -> Self {
         Self {
             nation: Some(nation),
             shards: vec![],
         }
     }
+
+    /// Create a new request.
+    pub fn new(nation: &'a str, shards: Vec<PublicNationShard<'a>>) -> Self {
+        Self {
+            nation: Some(nation),
+            shards,
+        }
+    }
+
+    /// Create a new request without any shards.
+    /// The website will respond with "default" information.
+    ///
+    /// This is the equivalent of requesting the following shards: [`PublicNationShard::Animal`]
+    pub fn new_standard(nation: &'a str) -> Self {
+        Self {
+            nation: Some(nation),
+            shards: vec![],
+        }
+    }
+
+    /// Creates a new builder given shards but no nation name.
+    /// Warning: a nation name must be provided before building!
     pub fn with_shards(shards: Vec<PublicNationShard<'a>>) -> Self {
         Self {
             nation: None,
@@ -281,24 +302,67 @@ impl<'a> PublicNationRequestBuilder<'a> {
         }
     }
 
+    /// Sets the nation for the request.
     pub fn nation(&mut self, nation: &'a str) -> &mut Self {
         self.nation = Some(nation);
         self
     }
 
+    /// Modify shards using a function.
+    ///
+    /// ## Example
+    /// ```
+    /// use crustacean_states::shards::nation::{PublicNationRequest, PublicNationShard};
+    /// let mut request_builder = PublicNationRequest::new_empty("Aramos");
+    /// request_builder.shards(|s| {
+    ///     s.push(PublicNationShard::Capital);
+    /// });
+    /// assert_eq!(request_builder, PublicNationRequest::new("Aramos", vec![PublicNationShard::Capital]));
+    /// ```
     pub fn shards<F>(&mut self, f: F) -> &mut Self
     where
-        F: FnOnce(&mut Vec<PublicNationShard<'a>>) -> Vec<PublicNationShard<'a>>,
+        F: FnOnce(&mut Vec<PublicNationShard<'a>>),
     {
         f(&mut self.shards);
         self
     }
 
+    /// Add a shard.
+    ///
+    /// ## Example
+    /// ```
+    /// # use crustacean_states::shards::nation::{
+    /// #   PublicNationRequest, PublicNationShard
+    /// # };
+    /// let mut request_builder = PublicNationRequest::new_empty("Aramos");
+    /// request_builder.add_shard(PublicNationShard::Capital);
+    /// assert_eq!(
+    ///     request_builder,
+    ///     PublicNationRequest::new("Aramos", vec![PublicNationShard::Capital])
+    /// );
+    /// ```
     pub fn add_shard(&mut self, shard: PublicNationShard<'a>) -> &mut Self {
         self.shards.push(shard);
         self
     }
 
+    /// Add multiple shards.
+    /// Note that the shards can be in any form of iterator, not just a `Vec`.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use crustacean_states::shards::RequestBuildError;
+    /// # use crustacean_states::shards::nation::{
+    /// #    PublicNationRequest,
+    /// #    PublicNationShard,
+    /// # };
+    /// # fn main() -> Result<(), RequestBuildError> {
+    /// let mut request_builder = PublicNationRequest::new_empty("Aramos");
+    /// request_builder.add_shards(vec![PublicNationShard::Capital, PublicNationShard::Animal]);
+    /// assert_eq!(request_builder, PublicNationRequest::new("Aramos", vec![PublicNationShard::Capital, PublicNationShard::Animal]));
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn add_shards<I>(&mut self, shards: I) -> &mut Self
     where
         I: IntoIterator<Item = PublicNationShard<'a>>,
@@ -306,52 +370,11 @@ impl<'a> PublicNationRequestBuilder<'a> {
         self.shards.extend(shards);
         self
     }
-
-    // pub fn set_shards(&mut self, shards: Vec<PublicNationShard<'a>>) -> &mut Self {
-    //     self.shards = shards;
-    //     self
-    // }
-
-    pub fn build(&self) -> Result<PublicNationRequest, RequestBuildError> {
-        Ok(PublicNationRequest::new(
-            self.nation
-                .ok_or(RequestBuildError::MissingParam("nation"))?,
-            &self.shards,
-        ))
-    }
-}
-
-impl<'a> From<PublicNationRequest<'a>> for PublicNationRequestBuilder<'a> {
-    fn from(value: PublicNationRequest<'a>) -> Self {
-        Self {
-            nation: Some(value.nation),
-            shards: Vec::from(value.shards),
-        }
-    }
-}
-
-impl<'a> PublicNationRequest<'a> {
-    pub fn new<T>(nation: &'a str, shards: &'a T) -> Self
-    where
-        T: AsRef<[PublicNationShard<'a>]>,
-    {
-        Self {
-            nation,
-            shards: shards.as_ref(),
-        }
-    }
-
-    pub fn new_standard(nation: &'a str) -> Self {
-        Self {
-            nation,
-            shards: &[],
-        }
-    }
 }
 
 impl<'a> NSRequest for PublicNationRequest<'a> {
     //noinspection SpellCheckingInspection
-    fn as_url(&self) -> Url {
+    fn as_url(&self) -> Result<Url, RequestBuildError> {
         let query = self
             .shards
             .iter()
@@ -373,11 +396,13 @@ impl<'a> NSRequest for PublicNationRequest<'a> {
 
         Url::parse_with_params(
             BASE_URL,
-            params
-                .insert_front("q", query)
-                .insert_front("nation", self.nation),
+            params.insert_front("q", query).insert_front(
+                "nation",
+                self.nation
+                    .ok_or(RequestBuildError::MissingParam("nation"))?,
+            ),
         )
-        .unwrap()
+        .map_err(|e| RequestBuildError::UrlParse { source: e })
     }
 }
 
@@ -396,8 +421,20 @@ mod tests {
     fn pns_complex_as_str() {
         let shard = PublicNationShard::Census(CensusShard::new(
             CensusScales::Today,
-            CensusModes::from([CensusCurrentMode::Score]),
+            CensusModes::from([CensusCurrentMode::Score].as_ref()),
         ));
         assert_eq!(shard.as_ref(), "Census")
+    }
+
+    #[test]
+    fn add_shards() -> Result<(), crate::shards::RequestBuildError> {
+        let mut request_builder = crate::shards::nation::PublicNationRequest::new_empty("Aramos");
+        request_builder.add_shards([PublicNationShard::Capital, PublicNationShard::Animal]);
+        assert_eq!(request_builder.nation, Some("Aramos"));
+        assert_eq!(
+            request_builder.shards,
+            vec![PublicNationShard::Capital, PublicNationShard::Animal]
+        );
+        Ok(())
     }
 }

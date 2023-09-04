@@ -1,6 +1,6 @@
 //! For World Assembly shard requests.
 
-use crate::shards::{NSRequest, Params, BASE_URL};
+use crate::shards::{NSRequest, Params, RequestBuildError, BASE_URL};
 use itertools::Itertools;
 use std::fmt::{Display, Formatter};
 use std::string::ToString;
@@ -156,7 +156,7 @@ impl ResolutionArchiveRequest {
 }
 
 impl<'a> NSRequest for WARequest<'a> {
-    fn as_url(&self) -> Url {
+    fn as_url(&self) -> Result<Url, RequestBuildError> {
         Url::parse_with_params(
             BASE_URL,
             Params::default()
@@ -196,6 +196,6 @@ impl<'a> NSRequest for WARequest<'a> {
                     .to_ascii_lowercase(),
                 ),
         )
-        .unwrap()
+        .map_err(|e| RequestBuildError::UrlParse { source: e })
     }
 }

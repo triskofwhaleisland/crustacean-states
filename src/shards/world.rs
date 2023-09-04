@@ -1,10 +1,12 @@
 //! For world shard requests.
 
-use crate::models::dispatch::DispatchCategory;
 use crate::impl_display_as_debug;
+use crate::models::dispatch::DispatchCategory;
 use crate::parsers::nation::BannerId;
 use crate::shards::world::HappeningsViewType::{Nation, Region};
-use crate::shards::{CensusRanksShard, CensusShard, NSRequest, Params, BASE_URL};
+use crate::shards::{
+    CensusRanksShard, CensusShard, NSRequest, Params, RequestBuildError, BASE_URL,
+};
 use itertools::Itertools;
 use std::fmt::{Display, Formatter};
 use strum::AsRefStr;
@@ -17,7 +19,6 @@ pub enum WorldShard<'a> {
     Banner(Vec<BannerId>),
     /// By default, returns the score, rank, and region rank on today's featured World Census scale.
     /// Can be optionally configured with additional parameters.
-    /// [source](https://www.nationstates.net/pages/api.html#nationapi-publicshards)
     ///
     /// Parallels [`PublicNationShard::Census`][crate::shards::nation::PublicNationShard::Census].
     Census(CensusShard<'a>),
@@ -105,15 +106,22 @@ pub enum WorldShard<'a> {
 }
 
 #[derive(Default)]
-pub struct WorldRequest<'a>(&'a [WorldShard<'a>]);
+pub struct WorldRequest<'a>(Vec<WorldShard<'a>>);
 
-#[derive(Default)]
-pub struct WorldRequestBuilder<'a>(Vec<WorldShard<'a>>);
+impl<'a> WorldRequest<'a> {
+    pub fn new<T>(shards: &'a T) -> Self
+    where
+        T: AsRef<[WorldShard<'a>]>,
+    {
+        Self(shards.as_ref().to_vec())
+    }
+    pub fn new_empty() -> Self {
+        Self(vec![])
+    }
 
-impl<'a> WorldRequestBuilder<'a> {
     pub fn shards<F>(&mut self, f: F) -> &mut Self
     where
-        F: FnOnce(&mut Vec<WorldShard<'a>>) -> Vec<WorldShard<'a>>,
+        F: FnOnce(&mut Vec<WorldShard<'a>>),
     {
         f(&mut self.0);
         self
@@ -127,30 +135,11 @@ impl<'a> WorldRequestBuilder<'a> {
         self.0.extend(shards);
         self
     }
-
-    pub fn build(&self) -> WorldRequest {
-        WorldRequest(&self.0)
-    }
-}
-
-impl<'a> WorldRequest<'a> {
-    pub fn new<T>(shards: &'a T) -> Self
-    where
-        T: AsRef<[WorldShard<'a>]>,
-    {
-        Self(shards.as_ref())
-    }
-}
-
-impl<'a> From<WorldRequest<'a>> for WorldRequestBuilder<'a> {
-    fn from(value: WorldRequest<'a>) -> Self {
-        Self(Vec::from(value.0))
-    }
 }
 
 impl<'a> NSRequest for WorldRequest<'a> {
     //noinspection SpellCheckingInspection
-    fn as_url(&self) -> Url {
+    fn as_url(&self) -> Result<Url, RequestBuildError> {
         let query = self
             .0
             .iter()
@@ -226,7 +215,8 @@ impl<'a> NSRequest for WorldRequest<'a> {
             _ => {}
         });
 
-        Url::parse_with_params(BASE_URL, params.insert_front("q", query)).unwrap()
+        Url::parse_with_params(BASE_URL, params.insert_front("q", query))
+            .map_err(|e| RequestBuildError::UrlParse { source: e })
     }
 }
 

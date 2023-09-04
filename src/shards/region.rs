@@ -20,7 +20,6 @@ pub enum RegionShard<'a> {
     BannerUrl,
     /// By default, returns the score, rank, and region rank on today's featured World Census scale.
     /// Can be optionally configured with additional parameters.
-    /// [source](https://www.nationstates.net/pages/api.html#nationapi-publicshards)
     ///
     /// Parallels [`PublicNationShard::Census`][crate::shards::nation::PublicNationShard::Census].
     Census(CensusShard<'a>),
@@ -136,19 +135,31 @@ impl RmbShard {
     }
 }
 
+#[derive(Clone, Debug, Default)]
 pub struct RegionRequest<'a> {
-    region: &'a str,
-    shards: &'a [RegionShard<'a>],
-}
-
-#[derive(Default)]
-pub struct RegionRequestBuilder<'a> {
     region: Option<&'a str>,
     shards: Vec<RegionShard<'a>>,
 }
 
-impl<'a> RegionRequestBuilder<'a> {
-    pub fn new(region: &'a str) -> Self {
+impl<'a> RegionRequest<'a> {
+    pub fn new_empty(region: &'a str) -> Self {
+        Self {
+            region: Some(region),
+            shards: vec![],
+        }
+    }
+
+    pub fn new<T>(region: &'a str, shards: &'a T) -> Self
+    where
+        T: AsRef<[RegionShard<'a>]>,
+    {
+        Self {
+            region: Some(region),
+            shards: shards.as_ref().to_vec(),
+        }
+    }
+
+    pub fn new_standard(region: &'a str) -> Self {
         Self {
             region: Some(region),
             shards: vec![],
@@ -169,7 +180,7 @@ impl<'a> RegionRequestBuilder<'a> {
 
     pub fn shards<F>(&mut self, f: F) -> &mut Self
     where
-        F: FnOnce(&mut Vec<RegionShard<'a>>) -> Vec<RegionShard<'a>>,
+        F: FnOnce(&mut Vec<RegionShard>),
     {
         f(&mut self.shards);
         self
@@ -188,11 +199,6 @@ impl<'a> RegionRequestBuilder<'a> {
         self
     }
 
-    // pub fn set_shards(&mut self, shards: Vec<RegionShard<'a>>) -> &mut Self {
-    //     self.shards = shards;
-    //     self
-    // }
-
     pub fn build(&self) -> Result<RegionRequest, RequestBuildError> {
         Ok(RegionRequest::new(
             self.region
@@ -202,44 +208,9 @@ impl<'a> RegionRequestBuilder<'a> {
     }
 }
 
-impl<'a> RegionRequest<'a> {
-    pub fn new<T>(region: &'a str, shards: &'a T) -> Self
-    where
-        T: AsRef<[RegionShard<'a>]>,
-    {
-        Self {
-            region,
-            shards: shards.as_ref(),
-        }
-    }
-
-    pub fn new_standard(region: &'a str) -> Self {
-        Self {
-            region,
-            shards: &[],
-        }
-    }
-
-    pub fn builder() -> RegionRequestBuilder<'a> {
-        RegionRequestBuilder {
-            region: None,
-            shards: vec![],
-        }
-    }
-}
-
-impl<'a> From<RegionRequest<'a>> for RegionRequestBuilder<'a> {
-    fn from(value: RegionRequest<'a>) -> Self {
-        Self {
-            region: Some(value.region),
-            shards: Vec::from(value.shards),
-        }
-    }
-}
-
 impl<'a> NSRequest for RegionRequest<'a> {
     //noinspection SpellCheckingInspection
-    fn as_url(&self) -> Url {
+    fn as_url(&self) -> Result<Url, RequestBuildError> {
         let query = self
             .shards
             .iter()
@@ -269,11 +240,13 @@ impl<'a> NSRequest for RegionRequest<'a> {
 
         Url::parse_with_params(
             BASE_URL,
-            params
-                .insert_front("q", query)
-                .insert_front("region", self.region),
+            params.insert_front("q", query).insert_front(
+                "region",
+                self.region
+                    .ok_or(RequestBuildError::MissingParam("region"))?,
+            ),
         )
-        .unwrap()
+        .map_err(|e| RequestBuildError::UrlParse { source: e })
     }
 }
 
