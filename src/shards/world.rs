@@ -161,7 +161,10 @@ impl<'a> NSRequest for WorldRequest<'a> {
         let mut params = Params::default();
         self.0.iter().for_each(|s| match s {
             WorldShard::Banner(banners) => {
-                params.insert("banner", banners.iter().map(BannerId::to_string).join(","));
+                params.insert(
+                    "banner",
+                    banners.iter().map(BannerId::to_string).join(",")
+                );
             }
             WorldShard::Census(CensusShard { scale, modes }) => {
                 params.insert_scale(scale).insert_modes(modes);
@@ -170,30 +173,23 @@ impl<'a> NSRequest for WorldRequest<'a> {
             | WorldShard::CensusScale(scale)
             | WorldShard::CensusName(scale)
             | WorldShard::CensusTitle(scale) => {
-                if let Some(s) = scale {
-                    params.insert("scale", s.to_string());
-                }
+                params.insert_on("scale", scale);
             }
             WorldShard::CensusRanks(CensusRanksShard { scale, start }) => {
                 params.insert_rank_scale(scale).insert_start(start);
             }
             WorldShard::Dispatch(id) => {
-                params.insert("dispatchid", id.to_string());
+                params.insert("dispatchid", id);
             }
             WorldShard::DispatchList {
                 author,
                 category,
                 sort,
             } => {
-                if let Some(a) = author {
-                    params.insert("dispatchauthor", a.to_string());
-                }
-                if let Some(c) = category {
-                    params.insert("dispatchcategory", c.to_string());
-                }
-                if let Some(s) = sort {
-                    params.insert("dispatchsort", s.to_string());
-                }
+                params
+                    .insert_on("dispatchauthor", author)
+                    .insert_on("dispatchcategory", category)
+                    .insert_on("dispatchsort", sort);
             }
             WorldShard::Happenings {
                 view,
@@ -204,53 +200,36 @@ impl<'a> NSRequest for WorldRequest<'a> {
                 since_time,
                 before_time,
             } => {
-                if let Some(v) = view {
-                    params.insert(
+                params
+                    .insert_on(
                         "view",
-                        format!(
-                            "{}.{}",
-                            match v {
-                                Nation(..) => "nation",
-                                Region(..) => "region",
-                            },
-                            match v {
-                                Nation(entities) | Region(entities) => {
-                                    entities.iter().join(",")
+                        &view.as_ref().map(|v| {
+                            format!(
+                                "{}.{}",
+                                v.as_ref(),
+                                match v {
+                                    Nation(entities) | Region(entities) => {
+                                        entities.iter().join(",")
+                                    }
                                 }
-                            }
-                        ),
-                    );
-                }
-                if let Some(filters) = filter {
-                    params.insert("filter", filters.iter().join("+"));
-                }
-                if let Some(x) = limit {
-                    params.insert("limit", x.to_string());
-                }
-                if let Some(x) = since_id {
-                    params.insert("sinceid", x.to_string());
-                }
-                if let Some(x) = before_id {
-                    params.insert("beforeid", x.to_string());
-                }
-                if let Some(x) = since_time {
-                    params.insert("sincetime", x.to_string());
-                }
-                if let Some(x) = before_time {
-                    params.insert("beforetime", x.to_string());
-                }
+                            )
+                            .to_ascii_lowercase()
+                        }),
+                    )
+                    .insert_on("filter", &filter.as_ref().map(|f| f.iter().join("+")))
+                    .insert_on("limit", limit)
+                    .insert_on("sinceid", since_id)
+                    .insert_on("beforeid", before_id)
+                    .insert_on("sincetime", since_time)
+                    .insert_on("beforetime", before_time);
             }
             // WorldShard::RegionsByTag(complex_tags) => {
             //     params.insert("tags", complex_tags.iter().join(","));
             // }
             _ => {}
         });
-        Url::parse_with_params(BASE_URL, {
-            let mut p = vec![("q", query)];
-            p.extend(params.drain());
-            p
-        })
-        .unwrap()
+
+        Url::parse_with_params(BASE_URL, params.insert_front("q", query)).unwrap()
     }
 }
 
@@ -380,7 +359,7 @@ pub enum DispatchSort {
 impl_display_as_debug!(DispatchSort);
 
 /// The happenings shard can either target nations or regions.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, AsRefStr)]
 pub enum HappeningsViewType {
     /// Targets one or more nations.
     Nation(Vec<String>),

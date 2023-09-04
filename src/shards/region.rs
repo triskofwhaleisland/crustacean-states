@@ -259,24 +259,20 @@ impl<'a> NSRequest for RegionRequest<'a> {
                 offset,
                 starting_post,
             }) => {
-                if let Some(l) = limit {
-                    params.insert("limit", l.to_string());
-                }
-                if let Some(o) = offset {
-                    params.insert("offset", o.to_string());
-                }
-                if let Some(p) = starting_post {
-                    params.insert("fromid", p.to_string());
-                }
+                params
+                    .insert_on("limit", limit)
+                    .insert_on("offset", offset)
+                    .insert_on("fromid", starting_post);
             }
             _ => {}
         });
 
-        Url::parse_with_params(BASE_URL, {
-            let mut p = vec![("region", self.region.to_string()), ("q", query)];
-            p.extend(params.drain());
-            p
-        })
+        Url::parse_with_params(
+            BASE_URL,
+            params
+                .insert_front("q", query)
+                .insert_front("region", self.region),
+        )
         .unwrap()
     }
 }

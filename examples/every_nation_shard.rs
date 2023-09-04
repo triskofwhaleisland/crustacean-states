@@ -25,10 +25,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
         Banners,
         Capital,
         Category,
-        Census(CensusShard {
-            scale: CensusScales::All,
-            modes: CensusModes::Current(&[Score, Rank, PercentRank, RegionRank, PercentRegionRank]),
-        }),
+        Census(CensusShard::new(
+            CensusScales::All,
+            CensusModes::from(&[Score, Rank, PercentRank, RegionRank, PercentRegionRank]),
+        )),
         Crime,
         Currency,
         DbId,
