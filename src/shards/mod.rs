@@ -32,12 +32,10 @@ pub(crate) const BASE_URL: &str = "https://www.nationstates.net/cgi-bin/api.cgi?
 pub(crate) struct Params<'a>(HashMap<&'a str, String>);
 
 impl<'a> Params<'a> {
-    #[doc(hidden)]
     pub(crate) fn insert(&mut self, k: &'a str, v: String) {
         self.0.insert(k, v);
     }
 
-    #[doc(hidden)]
     pub(crate) fn insert_scale(&mut self, scale: &CensusScales) -> &mut Self {
         if let Some(v) = match scale {
             CensusScales::One(scale) => Some(scale.to_string()),
@@ -50,12 +48,10 @@ impl<'a> Params<'a> {
         self
     }
 
-    #[doc(hidden)]
     pub(crate) fn insert_rank_scale(&mut self, scale: &Option<NonZeroU8>) -> &mut Self {
         self.insert_scale(&scale.map_or(CensusScales::Today, |x| CensusScales::One(x.get() - 1)))
     }
 
-    #[doc(hidden)]
     pub(crate) fn insert_modes(&mut self, modes: &CensusModes) -> &mut Self {
         match modes {
             CensusModes::History(CensusHistoryParams { from, to }) => {
@@ -74,7 +70,6 @@ impl<'a> Params<'a> {
         self
     }
 
-    #[doc(hidden)]
     pub(crate) fn insert_start(&mut self, start: &Option<NonZeroU32>) -> &mut Self {
         if let Some(s) = start {
             if s.get() > 1 {
@@ -84,7 +79,6 @@ impl<'a> Params<'a> {
         self
     }
 
-    #[doc(hidden)]
     pub(crate) fn drain(&mut self) -> Drain<'_, &'a str, String> {
         self.0.drain()
     }
@@ -110,8 +104,8 @@ pub struct CensusShard<'a> {
     /// For the default behavior without any modes listed:
     /// ```
     /// use crustacean_states::shards::CensusModes;
-    /// use crustacean_states::shards::CensusCurrentMode::{PercentRank, Rank, Score};
-    /// let modes = CensusModes::Current(&[Score, Rank, PercentRank]);
+    /// use crustacean_states::shards::CensusCurrentMode as CCM;
+    /// let modes = CensusModes::Current(&[CCM::Score, CCM::Rank, CCM::PercentRank]);
     /// ```
     pub modes: CensusModes<'a>,
 }
@@ -154,7 +148,7 @@ pub struct CensusHistoryParams {
 }
 
 impl CensusHistoryParams {
-    pub fn new(before: NonZeroU64, after: NonZeroU64) -> Self {
+    pub fn new(after: NonZeroU64, before: NonZeroU64) -> Self {
         Self::default().before(before).after(after).to_owned()
     }
 
@@ -210,5 +204,81 @@ impl CensusRanksShard {
     pub fn start(&mut self, x: NonZeroU32) -> &mut Self {
         self.start = Some(x);
         self
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::shards::{
+        CensusCurrentMode, CensusHistoryParams, CensusModes, CensusScales, Params,
+    };
+    use std::num::{NonZeroU64, NonZeroU8};
+
+    // test Params
+    #[test]
+    fn new_params() {
+        assert!(Params::default().0.is_empty());
+    }
+
+    #[test]
+    fn insert_param() {
+        let mut params = Params::default();
+        params.insert("this", String::from("that"));
+        assert_eq!(params.0.get("this"), Some(&String::from("that")));
+    }
+
+    #[test]
+    fn insert_one_scale() {
+        let mut params = Params::default();
+        params.insert_scale(&CensusScales::One(3));
+        assert_eq!(params.0.get("scale"), Some(&3.to_string()));
+    }
+
+    #[test]
+    fn insert_many_scales() {
+        let mut params = Params::default();
+        params.insert_scale(&CensusScales::Many(&[3, 4, 5]));
+        assert_eq!(params.0.get("scale"), Some(&String::from("3+4+5")));
+    }
+
+    #[test]
+    fn insert_all_scales() {
+        let mut params = Params::default();
+        params.insert_scale(&CensusScales::All);
+        assert_eq!(params.0.get("scale"), Some(&String::from("all")));
+    }
+
+    #[test]
+    fn insert_today_scale() {
+        let mut params = Params::default();
+        params.insert_scale(&CensusScales::Today);
+        assert_eq!(params.0.get("scale"), None);
+    }
+
+    #[test]
+    fn insert_rank_scale() {
+        let mut params = Params::default();
+        // note: we do a little trolling, Some(x) = actual ID and None = not using any IDs
+        params.insert_rank_scale(&Some(NonZeroU8::new(10).unwrap()));
+        assert_eq!(params.0.get("scale"), Some(&9.to_string()));
+    }
+
+    #[test]
+    fn insert_mode_history_from_and_to() {
+        let mut params = Params::default();
+        params.insert_modes(&CensusModes::History(CensusHistoryParams::new(
+            NonZeroU64::new(6900).unwrap(),
+            NonZeroU64::new(42000).unwrap(),
+        )));
+        assert_eq!(params.0.get("mode"), Some(&String::from("history")));
+        assert_eq!(params.0.get("from"), Some(&6900.to_string()));
+        assert_eq!(params.0.get("to"), Some(&42000.to_string()));
+    }
+
+    #[test]
+    fn insert_mode_current_one() {
+        let mut params = Params::default();
+        params.insert_modes(&CensusModes::Current(&[CensusCurrentMode::PercentRank]));
+        assert_eq!(params.0.get("mode"), Some(&String::from("prank")));
     }
 }

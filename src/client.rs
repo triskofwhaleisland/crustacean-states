@@ -43,13 +43,11 @@ impl Client {
 
     /// Make a request of the API.
     ///
-    /// If the last request was too recent, returns [`ClientError::RateLimitedError`].
+    /// If the last request was too recent, early-returns [`ClientError::RateLimitedError`].
     ///
     /// If there was an error in the [`reqwest`] crate, returns [`ClientError::ReqwestError`].
-    pub async fn get<U>(&self, request: U) -> Result<Response, ClientError>
-    where
-        U: NSRequest,
-    {
+    // Note: this function cannot be tested because it is `async`.
+    pub async fn get<U: NSRequest>(&self, request: U) -> Result<Response, ClientError> {
         // If the client was told that it should not send until some time after now,
         if let Some(t) = self
             .state
@@ -222,5 +220,39 @@ impl RateLimits {
     /// If a RateLimit-Retry-After header was not sent, returns `None`.
     pub fn retry_after(&self) -> Option<u8> {
         self.retry_after
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn new_rate_limits() {
+        use crate::client::RateLimits;
+        use reqwest::header::{HeaderMap, HeaderValue};
+
+        let mut headers = HeaderMap::new();
+        headers.insert("RateLimit-Remaining", HeaderValue::from(11));
+        headers.insert("RateLimit-Reset", HeaderValue::from(25));
+
+        let limits = RateLimits::new(&headers).unwrap();
+        assert_eq!(limits.remaining(), 11);
+        assert_eq!(limits.reset(), 25);
+        assert_eq!(limits.retry_after(), None);
+    }
+
+    #[test]
+    fn rate_limits_with_retry_after() {
+        use crate::client::RateLimits;
+        use reqwest::header::{HeaderMap, HeaderValue};
+
+        let mut headers = HeaderMap::new();
+        headers.insert("RateLimit-Remaining", HeaderValue::from(11));
+        headers.insert("RateLimit-Reset", HeaderValue::from(25));
+        headers.insert("Retry-After", HeaderValue::from(7));
+
+        let limits = RateLimits::new(&headers).unwrap();
+        assert_eq!(limits.remaining(), 11);
+        assert_eq!(limits.reset(), 25);
+        assert_eq!(limits.retry_after(), Some(7));
     }
 }
