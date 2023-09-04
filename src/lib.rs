@@ -29,14 +29,13 @@
 
 // #![deny(missing_docs)]
 
-#[allow(unused_imports)] // it's for the docs :)
-use crate::shards::NSRequest;
+// #[allow(unused_imports)] // it's for the docs :)
 
 #[doc(hidden)]
 mod macros;
 
 pub mod client;
-pub mod dispatch;
+pub mod models;
 pub mod parsers;
 pub mod shards;
 
