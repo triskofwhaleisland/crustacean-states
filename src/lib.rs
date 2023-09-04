@@ -52,7 +52,7 @@ pub fn safe_name(unsafe_name: impl ToString) -> String {
 /// Takes a lowercase, web-safe name and replaces it with a name that should match the real name on NationStates.
 ///
 /// Note: this will not always result in a name that is capitalized the same way as it is on NationStates.
-pub fn pretty_name(safe_name: impl ToString) -> String {
+pub fn pretty_name<T: ToString>(safe_name: T) -> String {
     safe_name
         .to_string()
         .replace('_', " ")

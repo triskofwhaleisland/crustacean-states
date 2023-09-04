@@ -381,3 +381,21 @@ impl<'a> NSRequest for PublicNationRequest<'a> {
         .unwrap()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::shards::{CensusCurrentMode, CensusModes, CensusScales, CensusShard};
+    use crate::shards::nation::PublicNationShard;
+
+    #[test]
+    fn pns_normal_as_str() {
+        let shard = PublicNationShard::Happenings;
+        assert_eq!(shard.as_ref(), "Happenings");
+    }
+
+    #[test]
+    fn pns_complex_as_str() {
+        let shard = PublicNationShard::Census(CensusShard { scale: CensusScales::Today, modes: CensusModes::Current(&[CensusCurrentMode::Score])});
+        assert_eq!(shard.as_ref(), "Census")
+    }
+}
