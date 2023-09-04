@@ -257,14 +257,14 @@ pub enum PublicNationShard<'a> {
 
 #[derive(Clone, Debug)]
 pub struct PublicNationRequest<'a> {
-    pub nation: &'a str,
-    pub shards: &'a [PublicNationShard<'a>],
+    nation: &'a str,
+    shards: &'a [PublicNationShard<'a>],
 }
 
-#[derive(Default)]
+#[derive(Clone, Debug, Default)]
 pub struct PublicNationRequestBuilder<'a> {
-    pub nation: Option<&'a str>,
-    pub shards: Vec<PublicNationShard<'a>>,
+    nation: Option<&'a str>,
+    shards: Vec<PublicNationShard<'a>>,
 }
 
 impl<'a> PublicNationRequestBuilder<'a> {
@@ -366,26 +366,25 @@ impl<'a> NSRequest for PublicNationRequest<'a> {
             }
             PublicNationShard::TGCanCampaign { from }
             | PublicNationShard::TGCanRecruit { from } => {
-                if let Some(f) = from {
-                    params.insert("from", f.to_string());
-                }
+                params.insert_on("from", from);
             }
             _ => {} // no other public nation shards require parameters
         });
 
-        Url::parse_with_params(BASE_URL, {
-            let mut p = vec![("nation", self.nation.to_string()), ("q", query)];
-            p.extend(params.drain());
-            p
-        })
+        Url::parse_with_params(
+            BASE_URL,
+            params
+                .insert_front("q", query)
+                .insert_front("nation", self.nation),
+        )
         .unwrap()
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::shards::{CensusCurrentMode, CensusModes, CensusScales, CensusShard};
     use crate::shards::nation::PublicNationShard;
+    use crate::shards::{CensusCurrentMode, CensusModes, CensusScales, CensusShard};
 
     #[test]
     fn pns_normal_as_str() {
@@ -395,7 +394,10 @@ mod tests {
 
     #[test]
     fn pns_complex_as_str() {
-        let shard = PublicNationShard::Census(CensusShard { scale: CensusScales::Today, modes: CensusModes::Current(&[CensusCurrentMode::Score])});
+        let shard = PublicNationShard::Census(CensusShard::new(
+            CensusScales::Today,
+            CensusModes::from([CensusCurrentMode::Score]),
+        ));
         assert_eq!(shard.as_ref(), "Census")
     }
 }

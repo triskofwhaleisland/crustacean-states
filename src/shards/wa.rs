@@ -1,6 +1,6 @@
 //! For World Assembly shard requests.
 
-use crate::shards::{NSRequest, BASE_URL};
+use crate::shards::{NSRequest, Params, BASE_URL};
 use itertools::Itertools;
 use std::fmt::{Display, Formatter};
 use std::string::ToString;
@@ -157,40 +157,50 @@ impl ResolutionArchiveRequest {
 
 impl<'a> NSRequest for WARequest<'a> {
     fn as_url(&self) -> Url {
-        let mut query = vec![];
+        Url::parse_with_params(
+            BASE_URL,
+            Params::default()
+                .insert(
+                    "wa",
 
-        query.push((
-            "wa",
-            (match self {
-                WARequest::Global(_) => None,
-                WARequest::Council(CouncilRequest { council, .. }) => Some(council.clone()),
-                WARequest::AtVoteResolution(ResolutionRequest { council, .. }) => {
-                    Some(council.clone())
-                }
-                WARequest::PastResolution(ResolutionArchiveRequest { council, .. }) => {
-                    Some(council.clone())
-                }
-            }
-            .unwrap_or_default() as u8)
-                .to_string(),
-        ));
+                        match self {
+                            WARequest::Global(_) => None,
+                            WARequest::Council(CouncilRequest { council, .. }) => {
+                                Some(council.clone())
+                            }
+                            WARequest::AtVoteResolution(ResolutionRequest { council, .. }) => {
+                                Some(council.clone())
+                            }
+                            WARequest::PastResolution(ResolutionArchiveRequest {
+                                council, ..
+                            }) => Some(council.clone()),
+                        }
+                        .unwrap_or_default() as u8,
+                )
+                .insert_on(
+                    "id",
+                    &match self {
+                        WARequest::PastResolution(ResolutionArchiveRequest { id, .. }) => Some(id),
+                        _ => None,
+                    },
+                )
+                .insert(
+                    "q",
 
-        if let WARequest::PastResolution(ResolutionArchiveRequest { id, .. }) = self {
-            query.push(("id", id.to_string()));
-            query.push(("q", String::from("resolution")))
-        }
+                        match self {
+                            WARequest::Global(GlobalRequest { shards }) => shards.iter().join("+"),
+                            WARequest::Council(CouncilRequest { shards, .. }) => {
+                                shards.iter().join("+")
+                            }
+                            WARequest::AtVoteResolution(ResolutionRequest { shards, .. }) => {
+                                format!("resolution+{}", shards.iter().join("+"))
+                            }
+                            WARequest::PastResolution(_) => String::from("resolution"),
+                        }
+                        .to_ascii_lowercase(),
 
-        if let Some(t) = match self {
-            WARequest::Global(GlobalRequest { shards }) => Some(shards.iter().join("+")),
-            WARequest::Council(CouncilRequest { shards, .. }) => Some(shards.iter().join("+")),
-            WARequest::AtVoteResolution(ResolutionRequest { shards, .. }) => {
-                Some(format!("resolution+{}", shards.iter().join("+")))
-            }
-            WARequest::PastResolution(_) => None,
-        } {
-            query.push(("q", t.to_ascii_lowercase()))
-        }
-
-        Url::parse_with_params(BASE_URL, query).unwrap()
+                ),
+        )
+        .unwrap()
     }
 }

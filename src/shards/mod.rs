@@ -18,9 +18,9 @@ pub mod world;
 
 use itertools::Itertools;
 use reqwest::Url;
-use std::collections::hash_map::Drain;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
+use std::hash::Hash;
 use std::num::{NonZeroU32, NonZeroU64, NonZeroU8};
 use strum::Display;
 use thiserror::Error;
@@ -28,24 +28,46 @@ use thiserror::Error;
 pub(crate) const BASE_URL: &str = "https://www.nationstates.net/cgi-bin/api.cgi?";
 
 /// Type that maps extra parameters in the query to their values.
+/// The HashMap is from parameter keys to values.
+/// The Vec is the order of keys.
 #[derive(Debug, Default)]
-pub(crate) struct Params<'a>(HashMap<&'a str, String>);
+pub(crate) struct Params<'a>(HashMap<&'a str, String>, Vec<&'a str>);
 
 impl<'a> Params<'a> {
-    pub(crate) fn insert(&mut self, k: &'a str, v: String) {
-        self.0.insert(k, v);
+    pub(crate) fn insert_on<T>(&mut self, k: &'a str, v: &Option<T>) -> &mut Self
+        where
+            T: ToString,
+    {
+        if let Some(s) = v {
+            self.0.insert(k, s.to_string());
+            self.1.push(k);
+        }
+        self
+    }
+    pub(crate) fn insert<T>(&mut self, k: &'a str, v: T) -> &mut Self
+        where
+            T: ToString,
+    {
+        Self::insert_on(self, k, &Some(v))
+    }
+
+    pub(crate) fn insert_front<T>(&mut self, k: &'a str, v: T) -> &mut Self where
+    T: ToString, {
+        self.0.insert(k, v.to_string());
+        self.1.insert(0, k);
+        self
     }
 
     pub(crate) fn insert_scale(&mut self, scale: &CensusScales) -> &mut Self {
-        if let Some(v) = match scale {
-            CensusScales::One(scale) => Some(scale.to_string()),
-            CensusScales::Many(scales) => Some(scales.iter().join("+")),
-            CensusScales::All => Some("all".to_string()),
-            CensusScales::Today => None,
-        } {
-            self.insert("scale", v)
-        }
-        self
+        self.insert_on(
+            "scale",
+            &match scale {
+                CensusScales::One(scale) => Some(scale.to_string()),
+                CensusScales::Many(scales) => Some(scales.iter().join("+")),
+                CensusScales::All => Some(String::from("all")),
+                CensusScales::Today => None,
+            },
+        )
     }
 
     pub(crate) fn insert_rank_scale(&mut self, scale: &Option<NonZeroU8>) -> &mut Self {
@@ -53,19 +75,15 @@ impl<'a> Params<'a> {
     }
 
     pub(crate) fn insert_modes(&mut self, modes: &CensusModes) -> &mut Self {
-        match modes {
-            CensusModes::History(CensusHistoryParams { from, to }) => {
-                self.insert("mode", String::from("history"));
-                if let Some(x) = from {
-                    self.insert("from", x.to_string());
-                }
-                if let Some(x) = to {
-                    self.insert("to", x.to_string());
-                }
-            }
-            CensusModes::Current(current_modes) => {
-                self.insert("mode", current_modes.iter().join("+"));
-            }
+        self.insert_on(
+            "mode",
+            &match modes {
+                CensusModes::History(..) => Some(String::from("history")),
+                CensusModes::Current(current_modes) => Some(current_modes.0.iter().join("+")),
+            },
+        );
+        if let CensusModes::History(CensusHistoryParams { from, to }) = modes {
+            self.insert_on("from", from).insert_on("to", to);
         }
         self
     }
@@ -73,14 +91,22 @@ impl<'a> Params<'a> {
     pub(crate) fn insert_start(&mut self, start: &Option<NonZeroU32>) -> &mut Self {
         if let Some(s) = start {
             if s.get() > 1 {
-                self.insert("start", s.to_string());
+                self.insert("start", s);
             }
         }
         self
     }
+}
 
-    pub(crate) fn drain(&mut self) -> Drain<'_, &'a str, String> {
-        self.0.drain()
+impl<'a> Iterator for Params<'a> {
+    type Item = (&'a str, String);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if !self.1.is_empty() {
+            Some(self.0.remove_entry(self.1.remove(0)).unwrap())
+        } else {
+            None
+        }
     }
 }
 
@@ -94,20 +120,37 @@ pub trait NSRequest {
     fn as_url(&self) -> Url;
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct CensusShard<'a> {
+    scale: CensusScales<'a>,
+    modes: CensusModes,
+}
+
+impl<'a> CensusShard<'a> {
+    pub fn new(scale: CensusScales<'a>, modes: CensusModes) -> CensusShard<'a> {
+        CensusShard { scale, modes }
+    }
+
     /// Specify the World Census scale(s) to list, using numerical IDs.
     /// For all scales, use [`CensusScales::All`].
     /// For Today's World Census Report, use [`CensusScales::Today`].
-    pub scale: CensusScales<'a>,
+    pub fn scale(&mut self, scale: CensusScales<'a>) -> &mut Self {
+        self.scale = scale;
+        self
+    }
+
     /// Specify what population the scale should be compared against.
     /// For the default behavior without any modes listed:
     /// ```
+    /// use std::collections::HashSet;
     /// use crustacean_states::shards::CensusModes;
     /// use crustacean_states::shards::CensusCurrentMode as CCM;
-    /// let modes = CensusModes::Current(&[CCM::Score, CCM::Rank, CCM::PercentRank]);
+    /// let modes = CensusModes::from(&[CCM::Score, CCM::Rank, CCM::PercentRank]);
     /// ```
-    pub modes: CensusModes<'a>,
+    pub fn modes(&mut self, modes: CensusModes) -> &mut Self {
+        self.modes = modes;
+        self
+    }
 }
 
 /// World census scales as numerical IDs.
@@ -129,14 +172,33 @@ pub enum CensusScales<'a> {
 
 /// Either describes current or historical data.
 #[derive(Clone, Debug)]
-pub enum CensusModes<'a> {
+pub enum CensusModes {
     /// This is a special mode that cannot be combined with other modes,
     /// as only scores are available, not ranks.
     /// When requesting history, you can optionally specify a time window, using Unix epoch times.
     /// [source](https://www.nationstates.net/pages/api.html#nationapi-publicshards)
     History(CensusHistoryParams),
     /// Represents current data.
-    Current(&'a [CensusCurrentMode]),
+    Current(CensusCurrentModes),
+}
+
+impl Default for CensusModes {
+    fn default() -> Self {
+        Self::Current(CensusCurrentModes::new([
+            CensusCurrentMode::Score,
+            CensusCurrentMode::Rank,
+            CensusCurrentMode::RegionRank,
+        ]))
+    }
+}
+
+impl<T> From<T> for CensusModes
+where
+    T: AsRef<[CensusCurrentMode]>,
+{
+    fn from(value: T) -> Self {
+        Self::Current(CensusCurrentModes::new(value.as_ref().iter().cloned()))
+    }
 }
 
 #[derive(Clone, Debug, Default)]
@@ -165,7 +227,7 @@ impl CensusHistoryParams {
 
 //noinspection SpellCheckingInspection
 /// Describes data that can currently be found on the World Census.
-#[derive(Clone, Debug, Display)]
+#[derive(Clone, Debug, Display, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub enum CensusCurrentMode {
     /// Raw value.
     Score,
@@ -180,6 +242,18 @@ pub enum CensusCurrentMode {
     /// Region rank as a percentage.
     #[strum(serialize = "prrank")]
     PercentRegionRank,
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct CensusCurrentModes(HashSet<CensusCurrentMode>);
+
+impl CensusCurrentModes {
+    pub fn new<I>(modes: I) -> CensusCurrentModes
+    where
+        I: IntoIterator<Item = CensusCurrentMode>,
+    {
+        CensusCurrentModes(HashSet::from_iter(modes))
+    }
 }
 
 /// Information on how nations in the region rank according to the World Census.
@@ -210,7 +284,8 @@ impl CensusRanksShard {
 #[cfg(test)]
 mod tests {
     use crate::shards::{
-        CensusCurrentMode, CensusHistoryParams, CensusModes, CensusScales, Params,
+        CensusCurrentMode, CensusCurrentModes, CensusHistoryParams, CensusModes, CensusScales,
+        Params,
     };
     use std::num::{NonZeroU64, NonZeroU8};
 
@@ -222,45 +297,69 @@ mod tests {
 
     #[test]
     fn insert_param() {
-        let mut params = Params::default();
-        params.insert("this", String::from("that"));
-        assert_eq!(params.0.get("this"), Some(&String::from("that")));
+        assert_eq!(
+            Params::default()
+                .insert("this", "that")
+                .0
+                .get("this"),
+            Some(&String::from("that"))
+        );
     }
 
     #[test]
     fn insert_one_scale() {
-        let mut params = Params::default();
-        params.insert_scale(&CensusScales::One(3));
-        assert_eq!(params.0.get("scale"), Some(&3.to_string()));
+        assert_eq!(
+            Params::default()
+                .insert_scale(&CensusScales::One(3))
+                .0
+                .get("scale"),
+            Some(&3.to_string())
+        );
     }
 
     #[test]
     fn insert_many_scales() {
-        let mut params = Params::default();
-        params.insert_scale(&CensusScales::Many(&[3, 4, 5]));
-        assert_eq!(params.0.get("scale"), Some(&String::from("3+4+5")));
+        assert_eq!(
+            Params::default()
+                .insert_scale(&CensusScales::Many(&[3, 4, 5]))
+                .0
+                .get("scale"),
+            Some(&String::from("3+4+5"))
+        );
     }
 
     #[test]
     fn insert_all_scales() {
-        let mut params = Params::default();
-        params.insert_scale(&CensusScales::All);
-        assert_eq!(params.0.get("scale"), Some(&String::from("all")));
+        assert_eq!(
+            Params::default()
+                .insert_scale(&CensusScales::All)
+                .0
+                .get("scale"),
+            Some(&String::from("all"))
+        );
     }
 
     #[test]
     fn insert_today_scale() {
-        let mut params = Params::default();
-        params.insert_scale(&CensusScales::Today);
-        assert_eq!(params.0.get("scale"), None);
+        assert_eq!(
+            Params::default()
+                .insert_scale(&CensusScales::Today)
+                .0
+                .get("scale"),
+            None
+        );
     }
 
     #[test]
     fn insert_rank_scale() {
-        let mut params = Params::default();
         // note: we do a little trolling, Some(x) = actual ID and None = not using any IDs
-        params.insert_rank_scale(&Some(NonZeroU8::new(10).unwrap()));
-        assert_eq!(params.0.get("scale"), Some(&9.to_string()));
+        assert_eq!(
+            Params::default()
+                .insert_rank_scale(&Some(NonZeroU8::new(10).unwrap()))
+                .0
+                .get("scale"),
+            Some(&9.to_string())
+        );
     }
 
     #[test]
@@ -277,8 +376,43 @@ mod tests {
 
     #[test]
     fn insert_mode_current_one() {
+        assert_eq!(
+            Params::default()
+                .insert_modes(&CensusModes::Current(CensusCurrentModes::new([
+                    CensusCurrentMode::PercentRank
+                ])))
+                .0
+                .get("mode"),
+            Some(&String::from("prank"))
+        );
+    }
+
+    #[test]
+    fn param_iter_easy() {
+        assert_eq!(
+            Params::default()
+                .insert("this", "that")
+                .next(),
+            Some(("this", String::from("that")))
+        );
+    }
+
+    #[test]
+    fn param_iter_complex() {
         let mut params = Params::default();
-        params.insert_modes(&CensusModes::Current(&[CensusCurrentMode::PercentRank]));
-        assert_eq!(params.0.get("mode"), Some(&String::from("prank")));
+        params.insert("this", "that").insert("thing1", "thing2").insert("wow", "yikes");
+        assert_eq!(
+            params.next(),
+            Some(("this", String::from("that")))
+        );
+        assert_eq!(
+            params.next(),
+            Some(("thing1", String::from("thing2")))
+        );
+        assert_eq!(
+            params.next(),
+            Some(("wow", String::from("yikes")))
+        );
+        assert_eq!(params.next(), None);
     }
 }
