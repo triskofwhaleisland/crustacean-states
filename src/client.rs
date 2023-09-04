@@ -1,6 +1,6 @@
 //! Additional tools for making requests.
 
-use crate::shards::NSRequest;
+use crate::shards::{NSRequest, RequestBuildError};
 use reqwest::header::{HeaderMap, HeaderValue};
 use reqwest::Response;
 use std::num::ParseIntError;
@@ -60,22 +60,25 @@ impl Client {
             return Err(ClientError::RateLimitedError(t));
         }
 
-        match self.client.get(request.as_url()).send().await {
-            Ok(r) => {
-                let mut state = self.state.lock().unwrap();
-                state.rate_limiter = Some(RateLimits::new(r.headers())?);
-                state.last_sent = Some(Instant::now());
-                if let Some(ref r) = state.rate_limiter {
-                    state.send_after = if r.remaining == 0 {
-                        Some(r.reset)
-                    } else {
-                        r.retry_after
+        match request.as_url() {
+            Ok(rq) => match self.client.get(rq).send().await {
+                Ok(r) => {
+                    let mut state = self.state.lock().unwrap();
+                    state.rate_limiter = Some(RateLimits::new(r.headers())?);
+                    state.last_sent = Some(Instant::now());
+                    if let Some(ref r) = state.rate_limiter {
+                        state.send_after = if r.remaining == 0 {
+                            Some(r.reset)
+                        } else {
+                            r.retry_after
+                        }
+                        .map(|t| state.last_sent.unwrap().add(Duration::from_secs(t as u64)))
                     }
-                    .map(|t| state.last_sent.unwrap().add(Duration::from_secs(t as u64)))
+                    Ok(r)
                 }
-                Ok(r)
-            }
-            Err(e) => Err(ClientError::ReqwestError { source: e }),
+                Err(e) => Err(ClientError::ReqwestError { source: e }),
+            },
+            Err(e) => Err(ClientError::ClientCaughtBadRequest { source: e }),
         }
     }
 
@@ -138,6 +141,12 @@ pub enum ClientError {
     /// Your request is perfectly fine, just wait until your timeout is over.
     #[error("rate limited until {0:?}")]
     RateLimitedError(Instant),
+
+    #[error("request is missing required information")]
+    ClientCaughtBadRequest {
+        #[from]
+        source: RequestBuildError,
+    },
 }
 
 /// A simple tool to help with NationStates rate limits.

@@ -28,7 +28,6 @@ pub enum WAStatus {
 /// Each field represents a category.
 /// All fields *should* add up to 100.0,
 /// but expect it to not be exact due to floating-point arithmetic and on-site rounding error.
-//noinspection SpellCheckingInspection
 #[derive(Debug)]
 #[allow(missing_docs)]
 pub struct Government {
@@ -51,7 +50,6 @@ pub struct Government {
 /// Note:
 /// in a future release,
 /// the fields in this struct will be converted from `String`s to enum variants.
-//noinspection SpellCheckingInspection
 #[derive(Debug)]
 #[allow(missing_docs)]
 pub struct Freedoms {

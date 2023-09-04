@@ -15,7 +15,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let user_agent = std::env::var("USER_AGENT")?;
     let client = Client::new(user_agent);
     let target_name = "Aramos";
-    let shards = &[
+    let shards = vec![
         Admirable,
         Admirables,
         Animal,
@@ -86,7 +86,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         WCensus,
     ];
 
-    let request = PublicNationRequest::new(target_name, &shards);
+    let request = PublicNationRequest::new(target_name, shards);
     let end1 = Instant::now();
     let raw_response = client.get(request).await?.text().await?;
     // if !Path::exists("response.xml".as_ref()) {

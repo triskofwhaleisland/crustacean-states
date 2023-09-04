@@ -18,12 +18,13 @@ pub mod world;
 
 use itertools::Itertools;
 use reqwest::Url;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::num::{NonZeroU32, NonZeroU64, NonZeroU8};
 use strum::Display;
 use thiserror::Error;
+use url::ParseError;
 
 pub(crate) const BASE_URL: &str = "https://www.nationstates.net/cgi-bin/api.cgi?";
 
@@ -81,7 +82,7 @@ impl<'a> Params<'a> {
             "mode",
             &match modes {
                 CensusModes::History(..) => Some(String::from("history")),
-                CensusModes::Current(current_modes) => Some(current_modes.0.iter().join("+")),
+                CensusModes::Current(current_modes) => Some(current_modes.iter().join("+")),
             },
         );
         if let CensusModes::History(CensusHistoryParams { from, to }) = modes {
@@ -112,44 +113,59 @@ impl<'a> Iterator for Params<'a> {
     }
 }
 
+/// Error type for any issues with building a request.
 #[derive(Debug, Error)]
-pub enum RequestBuildError<'a> {
+pub enum RequestBuildError {
+    /// A required parameter was never provided, so the request could not be built.
     #[error("Builder does not have {0}")]
-    MissingParam(&'a str),
+    MissingParam(&'static str),
+    /// The URL parser [`Url::parse_with_params`] broke on a parameter.
+    ///
+    /// This error should never be expected!
+    #[error("URL parser error")]
+    UrlParse {
+        #[from]
+        source: ParseError,
+    },
 }
 
+/// Request type.
 pub trait NSRequest {
-    fn as_url(&self) -> Url;
+    /// Converts internal information into a URL that can be requested.
+    fn as_url(&self) -> Result<Url, RequestBuildError>;
 }
 
-#[derive(Clone, Debug, Default)]
+/// Shard for information from the World Census.
+/// A combination of two subunits: [`CensusScales`] and [`CensusModes`].
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct CensusShard<'a> {
     scale: CensusScales<'a>,
     modes: CensusModes,
 }
 
 impl<'a> CensusShard<'a> {
+    /// Create a new shard.
     pub fn new(scale: CensusScales<'a>, modes: CensusModes) -> CensusShard<'a> {
         CensusShard { scale, modes }
     }
 
     /// Specify the World Census scale(s) to list, using numerical IDs.
     /// For all scales, use [`CensusScales::All`].
-    /// For Today's World Census Report, use [`CensusScales::Today`].
-    pub fn scale(&mut self, scale: CensusScales<'a>) -> &mut Self {
+    /// For today's World Census Report, use [`CensusScales::Today`].
+    pub fn scale(&mut self, scale: CensusScales<'a>) -> &mut CensusShard<'a> {
         self.scale = scale;
         self
     }
 
     /// Specify what population the scale should be compared against.
+    ///
     /// For the default behavior without any modes listed:
     /// ```
-    /// use std::collections::HashSet;
     /// use crustacean_states::shards::CensusModes;
     /// use crustacean_states::shards::CensusCurrentMode as CCM;
     /// let modes = CensusModes::from(&[CCM::Score, CCM::Rank, CCM::PercentRank]);
     /// ```
-    pub fn modes(&mut self, modes: CensusModes) -> &mut Self {
+    pub fn modes(&mut self, modes: CensusModes) -> &mut CensusShard<'a> {
         self.modes = modes;
         self
     }
@@ -159,9 +175,9 @@ impl<'a> CensusShard<'a> {
 /// The IDs can be found [here](https://forum.nationstates.net/viewtopic.php?f=15&t=159491)
 /// or in the URL of [World Census](https://www.nationstates.net/page=list_nations?censusid=0)
 /// pages.
-/// [source](https://www.nationstates.net/pages/api.html#nationapi-publicshards)
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub enum CensusScales<'a> {
+    /// Today's World Census scale.
     #[default]
     Today,
     /// Only one scale.
@@ -173,37 +189,37 @@ pub enum CensusScales<'a> {
 }
 
 /// Either describes current or historical data.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum CensusModes {
     /// This is a special mode that cannot be combined with other modes,
     /// as only scores are available, not ranks.
     /// When requesting history, you can optionally specify a time window, using Unix epoch times.
-    /// [source](https://www.nationstates.net/pages/api.html#nationapi-publicshards)
     History(CensusHistoryParams),
     /// Represents current data.
-    Current(CensusCurrentModes),
+    Current(Vec<CensusCurrentMode>),
 }
 
 impl Default for CensusModes {
     fn default() -> Self {
-        Self::Current(CensusCurrentModes::new([
+        Self::Current(vec![
             CensusCurrentMode::Score,
             CensusCurrentMode::Rank,
             CensusCurrentMode::RegionRank,
-        ]))
+        ])
     }
 }
 
-impl<T> From<T> for CensusModes
+impl<'a, T> From<T> for CensusModes
 where
-    T: AsRef<[CensusCurrentMode]>,
+    T: 'a + AsRef<[CensusCurrentMode]>,
 {
     fn from(value: T) -> Self {
-        Self::Current(CensusCurrentModes::new(value.as_ref().iter().cloned()))
+        Self::Current(value.as_ref().to_vec())
     }
 }
 
-#[derive(Clone, Debug, Default)]
+/// Describes the start and end of the search through history in the World Census.
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct CensusHistoryParams {
     /// Beginning of the measurement.
     from: Option<NonZeroU64>,
@@ -212,15 +228,23 @@ pub struct CensusHistoryParams {
 }
 
 impl CensusHistoryParams {
+    /// Creates a new set of parameters.
+    ///
+    /// Note that `after` corresponds with the URL parameter `from` and `before`
+    /// corresponds with `to`.
+    /// This terminology was changed because both `from` and `to` are very ambiguous, and `from`
+    /// should be reserved for converting from other types into this one.
     pub fn new(after: NonZeroU64, before: NonZeroU64) -> Self {
         Self::default().before(before).after(after).to_owned()
     }
 
+    /// Restricts the data to be after/from a certain timestamp.
     pub fn after(&mut self, timestamp: NonZeroU64) -> &mut Self {
         self.from = Some(timestamp);
         self
     }
 
+    /// Restricts the data to be before/until a certain timestamp.
     pub fn before(&mut self, timestamp: NonZeroU64) -> &mut Self {
         self.to = Some(timestamp);
         self
@@ -246,37 +270,38 @@ pub enum CensusCurrentMode {
     PercentRegionRank,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct CensusCurrentModes(HashSet<CensusCurrentMode>);
-
-impl CensusCurrentModes {
-    pub fn new<I>(modes: I) -> CensusCurrentModes
-    where
-        I: IntoIterator<Item = CensusCurrentMode>,
-    {
-        CensusCurrentModes(HashSet::from_iter(modes))
-    }
-}
-
 /// Information on how nations in the region rank according to the World Census.
 #[derive(Clone, Debug, Default)]
 pub struct CensusRanksShard {
-    /// The World Census ranking to use. If `None`, returns the day's featured World Census ranking.
     scale: Option<NonZeroU8>,
-    /// The rank at which to start listing (e.g. `Some(1000)` would start at the 1000th nation).
     start: Option<NonZeroU32>,
 }
 
 impl CensusRanksShard {
+    /// Create a new shard.
+    /// -
+    /// `scale`:
+    /// The World Census statistic to use.
+    /// (If you want the World Census daily scale,
+    /// start with [`CensusRanksShard::default`] and use [`CensusRanksShard::daily_scale`].)
+    /// - `start`: The ranking to start with (e.g. `5` would indicate starting at the 5th nation).
     pub fn new(scale: u8, start: NonZeroU32) -> Self {
         Self::default().scale(scale).start(start).to_owned()
     }
 
+    /// Set the World Census scale being requested to an ID.
     pub fn scale(&mut self, x: u8) -> &mut Self {
         self.scale = NonZeroU8::try_from(x + 1).ok();
         self
     }
 
+    /// Set the World Census scale being requested to the daily census scale.
+    pub fn daily_scale(&mut self) -> &mut Self {
+        self.scale = None;
+        self
+    }
+
+    /// The rank at which to start listing (e.g. `Some(1000)` would start at the 1000th nation).
     pub fn start(&mut self, x: NonZeroU32) -> &mut Self {
         self.start = Some(x);
         self
@@ -286,8 +311,7 @@ impl CensusRanksShard {
 #[cfg(test)]
 mod tests {
     use crate::shards::{
-        CensusCurrentMode, CensusCurrentModes, CensusHistoryParams, CensusModes, CensusScales,
-        Params,
+        CensusCurrentMode, CensusHistoryParams, CensusModes, CensusScales, Params,
     };
     use std::num::{NonZeroU64, NonZeroU8};
 
@@ -377,9 +401,7 @@ mod tests {
     fn insert_mode_current_one() {
         assert_eq!(
             Params::default()
-                .insert_modes(&CensusModes::Current(CensusCurrentModes::new([
-                    CensusCurrentMode::PercentRank
-                ])))
+                .insert_modes(&CensusModes::Current(vec![CensusCurrentMode::PercentRank]))
                 .0
                 .get("mode"),
             Some(&String::from("prank"))

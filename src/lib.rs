@@ -4,12 +4,14 @@
 //!
 //! Using the library usually takes three steps:
 //!
-//! 1. Creating a [`NSRequest`][crate::shards::NSRequest] with the relevant shards.
+//! 1. Creating a request
+//! (e.g. [`PublicNationRequest`])
+//! with the relevant shards.
 //! 2. Sending the request as a URL through a [`Client`][crate::client::Client].
 //! 3. Parsing the response using a parser in [`parsers`].
 //!
 //! Currently, the following requests can be formed and sent:
-//! - Nation (public shards only): [`NSRequest::new_nation`], from [`PublicNationShards`][crate::shards::nation::PublicNationShard]; also, [`NSRequest::new_nation_standard`]
+//! - Nation (public shards only): [`PublicNationRequest::new_nation`], from [`PublicNationShards`][crate::shards::nation::PublicNationShard]; also, [`NSRequest::new_nation_standard`]
 //! - Region: [`NSRequest::new_region`], from [`RegionShards`][crate::shards::region::RegionShard]; also, [`NSRequest::new_region_standard`]
 //! - World (except for `regionsfromtag`): [`NSRequest::new_world`], from [`WorldShards`][crate::shards::world::WorldShard]
 //! - WA (World Assembly): [`NSRequest::new_wa`], from [`WAShards`][crate::shards::wa::WAShard`]
@@ -26,8 +28,10 @@
 //! ## Examples
 //! For a list of examples,
 //! see [the examples folder on GitHub](https://github.com/triskofwhaleisland/crustacean-states/tree/main/examples).
+//!
+//! [`PublicNationRequest`]: [crate::shards::nation::PublicNationRequest]
 
-// #![deny(missing_docs)]
+#![deny(missing_docs)]
 
 // #[allow(unused_imports)] // it's for the docs :)
 
