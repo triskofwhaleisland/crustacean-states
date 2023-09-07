@@ -1,7 +1,8 @@
-use crustacean_states::client::Client;
-use crustacean_states::parsers::nation::Nation;
-use crustacean_states::shards::nation::PublicNationRequest;
-use crustacean_states::shards::nation::PublicNationShard::DispatchList;
+use crustacean_states::{
+    client::Client,
+    parsers::nation::Nation,
+    shards::nation::{PublicNationRequest, PublicNationShard::DispatchList},
+};
 use std::error::Error;
 use tokio::time::Instant;
 

@@ -1,5 +1,4 @@
-use crustacean_states::client::Client;
-use crustacean_states::shards::region::RegionRequest;
+use crustacean_states::{client::Client, shards::region::RegionRequest};
 use std::error::Error;
 use tokio::time::Instant;
 

@@ -1,7 +1,5 @@
 //! For region shard requests.
-use crate::shards::{
-    CensusRanksShard, CensusShard, NSRequest, Params, RequestBuildError, BASE_URL,
-};
+use crate::shards::{CensusRanksShard, CensusShard, NSRequest, Params, BASE_URL};
 use itertools::Itertools;
 use std::num::{NonZeroU32, NonZeroU8};
 use strum::AsRefStr;
@@ -156,14 +154,14 @@ impl RmbShard {
 /// ```
 #[derive(Clone, Debug, Default)]
 pub struct RegionRequest<'a> {
-    region: Option<&'a str>,
+    region: &'a str,
     shards: Vec<RegionShard<'a>>,
 }
 
 impl<'a> RegionRequest<'a> {
     pub fn new(region: &'a str) -> Self {
         Self {
-            region: Some(region),
+            region,
             shards: vec![],
         }
     }
@@ -173,20 +171,13 @@ impl<'a> RegionRequest<'a> {
         T: AsRef<[RegionShard<'a>]>,
     {
         Self {
-            region: Some(region),
+            region,
             shards: shards.as_ref().to_vec(),
         }
     }
 
-    pub fn with_shards(shards: Vec<RegionShard<'a>>) -> Self {
-        Self {
-            region: None,
-            shards,
-        }
-    }
-
     pub fn region(&mut self, region: &'a str) -> &mut Self {
-        self.region = Some(region);
+        self.region = region;
         self
     }
 
@@ -214,7 +205,7 @@ impl<'a> RegionRequest<'a> {
 
 impl<'a> NSRequest for RegionRequest<'a> {
     //noinspection SpellCheckingInspection
-    fn as_url(&self) -> Result<Url, RequestBuildError> {
+    fn as_url(&self) -> Url {
         let query = self
             .shards
             .iter()
@@ -244,13 +235,11 @@ impl<'a> NSRequest for RegionRequest<'a> {
 
         Url::parse_with_params(
             BASE_URL,
-            params.insert_front("q", query).insert_front(
-                "region",
-                self.region
-                    .ok_or(RequestBuildError::MissingParam("region"))?,
-            ),
+            params
+                .insert_front("q", query)
+                .insert_front("region", self.region),
         )
-        .map_err(RequestBuildError::UrlParse)
+        .unwrap()
     }
 }
 
@@ -263,8 +252,8 @@ impl<'a> StandardRegionRequest<'a> {
 }
 
 impl<'a> NSRequest for StandardRegionRequest<'a> {
-    fn as_url(&self) -> Result<Url, RequestBuildError> {
-        Url::parse_with_params(BASE_URL, [("region", self.0)]).map_err(RequestBuildError::UrlParse)
+    fn as_url(&self) -> Url {
+        Url::parse_with_params(BASE_URL, [("region", self.0)]).unwrap()
     }
 }
 

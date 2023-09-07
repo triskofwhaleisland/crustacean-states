@@ -1,12 +1,16 @@
 //! Additional tools for making requests.
 
-use crate::shards::{NSRequest, RequestBuildError};
-use reqwest::header::{HeaderMap, HeaderValue};
-use reqwest::Response;
-use std::num::ParseIntError;
-use std::ops::Add;
-use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
+use crate::shards::NSRequest;
+use reqwest::{
+    header::{HeaderMap, HeaderValue},
+    Response,
+};
+use std::{
+    num::ParseIntError,
+    ops::Add,
+    sync::{Arc, Mutex},
+    time::{Duration, Instant},
+};
 use thiserror::Error;
 
 /// A client helper. Uses [`reqwest`] under the surface.
@@ -60,25 +64,22 @@ impl Client {
             return Err(ClientError::RateLimitedError(t));
         }
 
-        match request.as_url() {
-            Ok(rq) => match self.client.get(rq).send().await {
-                Ok(r) => {
-                    let mut state = self.state.lock().unwrap();
-                    state.rate_limiter = Some(RateLimits::new(r.headers())?);
-                    state.last_sent = Some(Instant::now());
-                    if let Some(ref r) = state.rate_limiter {
-                        state.send_after = if r.remaining == 0 {
-                            Some(r.reset)
-                        } else {
-                            r.retry_after
-                        }
-                        .map(|t| state.last_sent.unwrap().add(Duration::from_secs(t as u64)))
+        match self.client.get(request.as_url()).send().await {
+            Ok(r) => {
+                let mut state = self.state.lock().unwrap();
+                state.rate_limiter = Some(RateLimits::new(r.headers())?);
+                state.last_sent = Some(Instant::now());
+                if let Some(ref r) = state.rate_limiter {
+                    state.send_after = if r.remaining == 0 {
+                        Some(r.reset)
+                    } else {
+                        r.retry_after
                     }
-                    Ok(r)
+                    .map(|t| state.last_sent.unwrap().add(Duration::from_secs(t as u64)))
                 }
-                Err(e) => Err(ClientError::ReqwestError { source: e }),
-            },
-            Err(e) => Err(ClientError::ClientCaughtBadRequest { source: e }),
+                Ok(r)
+            }
+            Err(e) => Err(ClientError::ReqwestError { source: e }),
         }
     }
 
@@ -144,17 +145,6 @@ pub enum ClientError {
     /// Your request is perfectly fine, just wait until your timeout is over.
     #[error("rate limited until {0:?}")]
     RateLimitedError(Instant),
-
-    /// The client was going to send a request that would make no sense to the API
-    /// (for example,
-    /// sending a [`PublicNationRequest`](crate::shards::nation::PublicNationRequest)
-    /// without a `nation` parameter).
-    #[error("request is missing required information")]
-    ClientCaughtBadRequest {
-        #[from]
-        /// The parent error.
-        source: RequestBuildError,
-    },
 }
 
 /// A simple tool to help with NationStates rate limits.

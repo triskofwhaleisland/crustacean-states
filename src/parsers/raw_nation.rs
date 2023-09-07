@@ -2,12 +2,12 @@ use crate::{
     models::dispatch::{
         AccountCategory, BulletinCategory, DispatchCategory, FactbookCategory, MetaCategory,
     },
-    parsers::happenings::Event,
-    parsers::nation::{
-        BannerId, Cause, FreedomScores, Freedoms, Government, IntoNationError, Nation, Policy,
-        Sectors, StandardNation, WAStatus, WAVote,
-    },
     parsers::{
+        happenings::Event,
+        nation::{
+            BannerId, Cause, FreedomScores, Freedoms, Government, IntoNationError, Nation, Policy,
+            Sectors, StandardNation, WAStatus, WAVote,
+        },
         CensusCurrentData, CensusData, CensusHistoricalData, DefaultOrCustom, Dispatch,
         MaybeRelativeTime, MaybeSystemTime, RawEvent,
     },

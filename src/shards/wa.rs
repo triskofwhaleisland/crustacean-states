@@ -1,11 +1,12 @@
 //! For World Assembly shard requests.
 
-use crate::shards::{NSRequest, Params, RequestBuildError, BASE_URL};
+use crate::shards::{NSRequest, Params, BASE_URL};
 use itertools::Itertools;
-use std::fmt::{Display, Formatter};
-use std::string::ToString;
-use strum::AsRefStr;
-use strum::Display;
+use std::{
+    fmt::{Display, Formatter},
+    string::ToString,
+};
+use strum::{AsRefStr, Display};
 use url::Url;
 
 /// One of the two World Assembly chambers (or "councils").
@@ -156,7 +157,7 @@ impl ResolutionArchiveRequest {
 }
 
 impl<'a> NSRequest for WARequest<'a> {
-    fn as_url(&self) -> Result<Url, RequestBuildError> {
+    fn as_url(&self) -> Url {
         Url::parse_with_params(
             BASE_URL,
             Params::default()
@@ -196,6 +197,6 @@ impl<'a> NSRequest for WARequest<'a> {
                     .to_ascii_lowercase(),
                 ),
         )
-        .map_err(RequestBuildError::UrlParse)
+        .unwrap()
     }
 }
