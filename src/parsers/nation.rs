@@ -1,16 +1,16 @@
 //! The nation parser module.
 
-use crate::parsers::happenings::Event;
-use crate::parsers::{CensusData, DefaultOrCustom, Dispatch, MaybeRelativeTime, MaybeSystemTime};
-#[allow(unused_imports)] // needed for docs
-use crate::shards::nation::PublicNationShard;
-use crate::shards::wa::WACouncil;
-#[allow(unused_imports)] // needed for docs
-use crate::shards::NSRequest;
+use crate::{
+    parsers::happenings::Event,
+    parsers::{CensusData, DefaultOrCustom, Dispatch, MaybeRelativeTime, MaybeSystemTime},
+    shards::wa::WACouncil,
+};
 use quick_xml::DeError;
-use std::fmt::{Debug, Display, Formatter};
-use std::num::{NonZeroU16, NonZeroU32};
-use std::str::FromStr;
+use std::{
+    fmt::{Debug, Display, Formatter},
+    num::{NonZeroU16, NonZeroU32},
+    str::FromStr,
+};
 use thiserror::Error;
 
 /// The status of a nation in the World Assembly.
@@ -93,6 +93,7 @@ pub struct Sectors {
 }
 
 /// A nation, with every piece of information you could ask for!
+///
 /// Note that aside from the `name` field, every field is an `Option`.
 /// This is because,
 /// depending on the [`PublicNationShard`]s used to make the request,
@@ -110,108 +111,103 @@ pub struct Nation {
     /// (`type` is a reserved word in Rust, so `kind` is used in its place.)
     ///
     /// Requested using
-    /// [`PublicNationShard::Type`].
-    /// [`NSRequest::new_nation_standard`] requests this field.
+    /// [`PublicNationShard::Type`](crate::shards::nation::PublicNationShard::Type).
     pub kind: Option<String>,
     /// The full name of the nation.
     ///
-    /// Requested using [`PublicNationShard::FullName`].
-    /// [`NSRequest::new_nation_standard`] requests this field.
+    /// Requested using
+    /// [`PublicNationShard::FullName`](crate::shards::nation::PublicNationShard::FullName).
     pub full_name: Option<String>,
     /// The motto of the nation.
     ///
-    /// Requested using [`PublicNationShard::Motto`].
-    /// [`NSRequest::new_nation_standard`] requests this field.
+    /// Requested using
+    /// [`PublicNationShard::Motto`](crate::shards::nation::PublicNationShard::Motto).
     pub motto: Option<String>,
     /// The category of the nation.
     /// Note that this is currently a `String` representation,
     /// but will eventually become its own type.
     ///
-    /// Requested using [`PublicNationShard::Category`].
-    /// [`NSRequest::new_nation_standard`] requests this field.
+    /// Requested using
+    /// [`PublicNationShard::Category`](crate::shards::nation::PublicNationShard::Category).
     pub category: Option<String>,
     /// The WA status of the nation.
     ///
-    /// Requested using [`PublicNationShard::WA`].
-    /// [`NSRequest::new_nation_standard`] requests this field.
+    /// Requested using [`PublicNationShard::WA`](crate::shards::nation::PublicNationShard::WA).
     pub wa_status: Option<WAStatus>,
     /// A list of nations that endorse the nation.
     ///
-    /// Requested using [`PublicNationShard::Endorsements`].
-    /// [`NSRequest::new_nation_standard`] requests this field.
+    /// Requested using
+    /// [`PublicNationShard::Endorsements`](crate::shards::nation::PublicNationShard::Endorsements).
     pub endorsements: Option<Vec<String>>,
     /// The number of issues answered by the nation.
     ///
-    /// Requested using [`PublicNationShard::Answered`].
-    /// [`NSRequest::new_nation_standard`] requests this field.
+    /// Requested using
+    /// [`PublicNationShard::Answered`](crate::shards::nation::PublicNationShard::Answered).
     pub issues_answered: Option<u32>,
     /// The freedom statistics of the nation.
     ///
-    /// Requested using [`PublicNationShard::Freedom`].
-    /// [`NSRequest::new_nation_standard`] requests this field.
+    /// Requested using
+    /// [`PublicNationShard::Freedom`](crate::shards::nation::PublicNationShard::Freedom).
     pub freedom: Option<Freedoms>,
     /// The region that the nation resides in.
     ///
-    /// Requested using [`PublicNationShard::Region`].
-    /// [`NSRequest::new_nation_standard`] requests this field.
+    /// Requested using
+    /// [`PublicNationShard::Region`](crate::shards::nation::PublicNationShard::Region).
     pub region: Option<String>,
     /// The population of the nation in millions of people.
     ///
-    /// Requested using [`PublicNationShard::Population`].
-    /// [`NSRequest::new_nation_standard`] requests this field.
+    /// Requested using
+    /// [`PublicNationShard::Population`](crate::shards::nation::PublicNationShard::Population).
     pub population: Option<u32>,
     /// The effective tax rate of the nation.
     ///
-    /// Requested using [`PublicNationShard::Tax`].
-    /// [`NSRequest::new_nation_standard`] requests this field.
+    /// Requested using [`PublicNationShard::Tax`](crate::shards::nation::PublicNationShard::Tax).
     pub tax: Option<f64>,
     /// The national animal.
     ///
-    /// Requested using [`PublicNationShard::Animal`].
-    /// [`NSRequest::new_nation_standard`] requests this field.
+    /// Requested using
+    /// [`PublicNationShard::Animal`](crate::shards::nation::PublicNationShard::Animal).
     pub animal: Option<String>,
     /// The national currency.
     ///
-    /// Requested using [`PublicNationShard::Currency`].
-    /// [`NSRequest::new_nation_standard`] requests this field.
+    /// Requested using
+    /// [`PublicNationShard::Currency`](crate::shards::nation::PublicNationShard::Currency).
     pub currency: Option<String>,
     /// The adjective used to describe a citizen of the nation.
     /// (An example would be: I am **French**.)
     ///
-    /// Requested using [`PublicNationShard::Demonym`].
-    /// [`NSRequest::new_nation_standard`] requests this field.
+    /// Requested using
+    /// [`PublicNationShard::Demonym`](crate::shards::nation::PublicNationShard::Demonym).
     pub demonym_adjective: Option<String>,
     /// The singular noun used to describe a citizen of the nation.
     /// (An example would be: I am a **Frenchman**.)
     ///
-    /// Requested using [`PublicNationShard::Demonym2`].
-    /// [`NSRequest::new_nation_standard`] requests this field.
+    /// Requested using
+    /// [`PublicNationShard::Demonym2`](crate::shards::nation::PublicNationShard::Demonym2).
     pub demonym_singular: Option<String>,
     /// The plural noun used to describe a citizen of the nation.
     /// (An example would be: They are (some) **Frenchmen**.)
     ///
-    /// Requested using [`PublicNationShard::Demonym2Plural`].
-    /// [`NSRequest::new_nation_standard`] requests this field.
+    /// Requested using
+    /// [`PublicNationShard::Demonym2Plural`](crate::shards::nation::PublicNationShard::Demonym2Plural).
     pub demonym_plural: Option<String>,
     /// The URL to the flag of the nation.
     ///
-    /// Requested using [`PublicNationShard::Flag`].
-    /// [`NSRequest::new_nation_standard`] requests this field.
+    /// Requested using [`PublicNationShard::Flag`](crate::shards::nation::PublicNationShard::Flag).
     pub flag: Option<String>,
     /// The largest industry in the nation.
     ///
-    /// Requested using [`PublicNationShard::MajorIndustry`].
-    /// [`NSRequest::new_nation_standard`] requests this field.
+    /// Requested using
+    /// [`PublicNationShard::MajorIndustry`](crate::shards::nation::PublicNationShard::MajorIndustry).
     pub major_industry: Option<String>,
     /// The financial sector where the government spends the most money.
     ///
-    /// Requested using [`PublicNationShard::GovtPriority`].
-    /// [`NSRequest::new_nation_standard`] requests this field.
+    /// Requested using
+    /// [`PublicNationShard::GovtPriority`](crate::shards::nation::PublicNationShard::GovtPriority).
     pub government_priority: Option<String>,
     /// The nation's government spending as percentages in various financial areas.
     ///
-    /// Requested using [`PublicNationShard::Govt`].
-    /// [`NSRequest::new_nation_standard`] requests this field.
+    /// Requested using [`PublicNationShard::Govt`](crate::shards::nation::PublicNationShard::Govt).
     pub government: Option<Government>,
     /// When the nation was founded as a relative timestamp.
     /// Note: NationStates did not track this at the beginning.
@@ -219,46 +215,46 @@ pub struct Nation {
     /// which is represented by [`MaybeRelativeTime::Antiquity`]
     /// A nation founded more recently would be [`MaybeRelativeTime::Recorded`].
     ///
-    /// Requested using [`PublicNationShard::Founded`].
-    /// [`NSRequest::new_nation_standard`] requests this field.
+    /// Requested using
+    /// [`PublicNationShard::Founded`](crate::shards::nation::PublicNationShard::Founded).
     pub founded: Option<MaybeRelativeTime>,
     /// The Unix timestamp of when the nation first logged in.
     ///
-    /// Requested using [`PublicNationShard::FirstLogin`].
-    /// [`NSRequest::new_nation_standard`] requests this field.
+    /// Requested using
+    /// [`PublicNationShard::FirstLogin`](crate::shards::nation::PublicNationShard::FirstLogin).
     pub first_login: Option<u64>,
     /// The Unix timestamp of when the nation most recently logged in.
     ///
-    /// Requested using [`PublicNationShard::LastLogin`].
-    /// [`NSRequest::new_nation_standard`] requests this field.
+    /// Requested using
+    /// [`PublicNationShard::LastLogin`](crate::shards::nation::PublicNationShard::LastLogin).
     pub last_login: Option<u64>,
     /// When the nation was last active as a relative timestamp.
     ///
-    /// Requested using [`PublicNationShard::LastActivity`].
-    /// [`NSRequest::new_nation_standard`] requests this field.
+    /// Requested using
+    /// [`PublicNationShard::LastActivity`](crate::shards::nation::PublicNationShard::LastActivity).
     pub last_activity: Option<String>,
     /// The influence of the nation in its region using qualitative descriptors.
     /// Note that this is currently a `String` representation,
     /// but will shift to an enum in the future.
     ///
-    /// Requested using [`PublicNationShard::Influence`].
-    /// [`NSRequest::new_nation_standard`] requests this field.
+    /// Requested using
+    /// [`PublicNationShard::Influence`](crate::shards::nation::PublicNationShard::Influence).
     pub influence: Option<String>,
     /// The economy, political freedoms, and civil rights within the country,
     /// described using a quantitative scale.
     ///
-    /// Requested using [`PublicNationShard::FreedomScores`].
-    /// [`NSRequest::new_nation_standard`] requests this field.
+    /// Requested using
+    /// [`PublicNationShard::FreedomScores`](crate::shards::nation::PublicNationShard::FreedomScores).
     pub freedom_scores: Option<FreedomScores>,
     /// The percentage of the economy controlled or funded by the government and the public.
     ///
-    /// Requested using [`PublicNationShard::PublicSector`].
-    /// [`NSRequest::new_nation_standard`] requests this field.
+    /// Requested using
+    /// [`PublicNationShard::PublicSector`](crate::shards::nation::PublicNationShard::PublicSector).
     pub public_sector: Option<f64>,
     /// The national statistics on deaths.
     ///
-    /// Requested using [`PublicNationShard::Deaths`].
-    /// [`NSRequest::new_nation_standard`] requests this field.
+    /// Requested using
+    /// [`PublicNationShard::Deaths`](crate::shards::nation::PublicNationShard::Deaths).
     pub deaths: Option<Vec<Cause>>,
     /// The national leader.
     ///
@@ -266,8 +262,8 @@ pub struct Nation {
     /// the [`DefaultOrCustom::Custom`] variant is filled with the custom leader's name;
     /// if not, the [`DefaultOrCustom::Default`] variant is filled with the default leader name.
     ///
-    /// Requested using [`PublicNationShard::Leader`].
-    /// [`NSRequest::new_nation_standard`] requests this field.
+    /// Requested using
+    /// [`PublicNationShard::Leader`](crate::shards::nation::PublicNationShard::Leader).
     pub leader: Option<DefaultOrCustom>,
     /// The national capital.
     ///
@@ -275,8 +271,8 @@ pub struct Nation {
     /// the [`DefaultOrCustom::Custom`] variant is filled with the custom capital name;
     /// if not, the [`DefaultOrCustom::Default`] variant is filled with the default capital name.
     ///
-    /// Requested using [`PublicNationShard::Capital`].
-    /// [`NSRequest::new_nation_standard`] requests this field.
+    /// Requested using
+    /// [`PublicNationShard::Capital`](crate::shards::nation::PublicNationShard::Capital).
     pub capital: Option<DefaultOrCustom>,
     /// The national religion.
     ///
@@ -284,42 +280,45 @@ pub struct Nation {
     /// the [`DefaultOrCustom::Custom`] variant is filled with the custom religion;
     /// if not, the [`DefaultOrCustom::Default`] variant is filled with the default religion.
     ///
-    /// Requested using [`PublicNationShard::Religion`].
-    /// [`NSRequest::new_nation_standard`] requests this field.
+    /// Requested using
+    /// [`PublicNationShard::Religion`](crate::shards::nation::PublicNationShard::Religion).
     pub religion: Option<DefaultOrCustom>,
     /// The number of factbooks the nation has published.
     ///
-    /// Requested using [`PublicNationShard::Factbooks`].
-    /// [`NSRequest::new_nation_standard`] requests this field.
+    /// Requested using
+    /// [`PublicNationShard::Factbooks`](crate::shards::nation::PublicNationShard::Factbooks).
     pub factbooks: Option<u16>,
     /// The number of dispatches the nation has published.
     ///
-    /// Requested using [`PublicNationShard::Dispatches`].
-    /// [`NSRequest::new_nation_standard`] requests this field.
+    /// Requested using
+    /// [`PublicNationShard::Dispatches`](crate::shards::nation::PublicNationShard::Dispatches).
     pub dispatches: Option<u16>,
     /// The ID of the nation in the NationStates database.
     /// Note that earlier nations update first.
     ///
-    /// Requested using [`PublicNationShard::DbId`].
-    /// [`NSRequest::new_nation_standard`] requests this field.
+    /// Requested using [`PublicNationShard::DbId`](crate::shards::nation::PublicNationShard::DbId).
     pub dbid: Option<u32>,
     // END default
     /// A randomly-selected compliment for the nation.
     ///
-    /// Requested using [`PublicNationShard::Admirable`].
+    /// Requested using
+    /// [`PublicNationShard::Admirable`](crate::shards::nation::PublicNationShard::Admirable).
     pub admirable: Option<String>,
     /// All possible compliments for the nation.
     ///
-    /// Requested using [`PublicNationShard::Admirables`].
+    /// Requested using
+    /// [`PublicNationShard::Admirables`](crate::shards::nation::PublicNationShard::Admirables).
     pub admirables: Option<Vec<String>>,
     /// Describes the national animal on the nation's page.
     ///
-    /// Requested using [`PublicNationShard::AnimalTrait`].
+    /// Requested using
+    /// [`PublicNationShard::AnimalTrait`](crate::shards::nation::PublicNationShard::AnimalTrait).
     pub animal_trait: Option<String>,
     /// One Rift banner code that should be displayed for this nation:
     /// the nation's primary banner, if one is set; otherwise, a randomly chosen eligible banner.
     ///
-    /// Requested using [`PublicNationShard::Banner`].
+    /// Requested using
+    /// [`PublicNationShard::Banner`](crate::shards::nation::PublicNationShard::Banner).
     pub banner: Option<BannerId>,
     /// A list of Rift banners that should be displayed:
     /// the nation's primary banner (if any) is always listed first,
@@ -327,7 +326,8 @@ pub struct Nation {
     /// Banner codes can be converted into image URLs by prepending `/images/banners/`
     /// and appending `.jpg`.
     ///
-    /// Requested using [`PublicNationShard::Banners`].
+    /// Requested using
+    /// [`PublicNationShard::Banners`](crate::shards::nation::PublicNationShard::Banners).
     pub banners: Option<Vec<BannerId>>,
     /// Information on the nation's score and ranking on the World Census.
     /// If current data was requested (the default),
@@ -335,22 +335,26 @@ pub struct Nation {
     /// but if historical data was requested,
     /// the resulting data wil be found in the [`CensusData::Historical`] variant.
     ///
-    /// Requested and configured using [`PublicNationShard::Census`].
+    /// Requested and configured
+    /// using [`PublicNationShard::Census`](crate::shards::nation::PublicNationShard::Census).
     pub census: Option<CensusData>,
     /// Describes crime in the nation on its nation page.
     ///
-    /// Requested using [`PublicNationShard::Crime`].
+    /// Requested using
+    /// [`PublicNationShard::Crime`](crate::shards::nation::PublicNationShard::Crime).
     pub crime: Option<String>,
     /// The list of all dispatches published by this nation.
     ///
-    /// Requested using [`PublicNationShard::DispatchList`].
+    /// Requested using
+    /// [`PublicNationShard::DispatchList`](crate::shards::nation::PublicNationShard::DispatchList).
     pub dispatch_list: Option<Vec<Dispatch>>,
     /// The list of all factbooks published by this nation.
     /// Note that because factbooks are a subset of dispatches,
     /// this field will contain a list of dispatches,
     /// but those dispatches will always be factbooks.
     ///
-    /// Requested using [`PublicNationShard::FactbookList`].
+    /// Requested using
+    /// [`PublicNationShard::FactbookList`](crate::shards::nation::PublicNationShard::FactbookList).
     pub factbook_list: Option<Vec<Dispatch>>,
     /// The Unix timestamp of when the nation was founded.
     /// Note: NationStates did not track this at the beginning.
@@ -358,7 +362,8 @@ pub struct Nation {
     /// which is represented by [`MaybeSystemTime::Antiquity`].
     /// A nation founded more recently would be [`MaybeSystemTime::Recorded`].
     ///
-    /// Requested using [`PublicNationShard::FoundedTime`].
+    /// Requested using
+    /// [`PublicNationShard::FoundedTime`](crate::shards::nation::PublicNationShard::FoundedTime).
     pub founded_time: Option<MaybeSystemTime>,
     /// The vote of the nation in the General Assembly.
     ///
@@ -367,56 +372,70 @@ pub struct Nation {
     /// but the [`PublicNationShard::WA`] shard was not requested,
     /// the field will erroneously be `Some(`[`WAVote::Undecided`]`)`.
     ///
-    /// Requested using [`PublicNationShard::GAVote`].
+    /// Requested using
+    /// [`PublicNationShard::GAVote`](crate::shards::nation::PublicNationShard::GAVote).
     /// Recommended to request with [`PublicNationShard::WA`].
+    ///
+    /// [`PublicNationShard::WA`]: crate::shards::nation::PublicNationShard::WA
     pub ga_vote: Option<WAVote>,
     /// The GDP of the nation in its national currency.
     ///
-    /// Requested using [`PublicNationShard::Gdp`].
+    /// Requested using [`PublicNationShard::Gdp`](crate::shards::nation::PublicNationShard::Gdp).
     pub gdp: Option<u64>,
     /// The description of the nation's government found on its nation page.
     ///
-    /// Requested using [`PublicNationShard::GovtDesc`].
+    /// Requested using
+    /// [`PublicNationShard::GovtDesc`](crate::shards::nation::PublicNationShard::GovtDesc).
     pub govt_desc: Option<String>,
     /// The 10 most recent [`Event`]s in the nation.
     ///
-    /// Requested using [`PublicNationShard::Happenings`].
+    /// Requested using
+    /// [`PublicNationShard::Happenings`](crate::shards::nation::PublicNationShard::Happenings).
     pub happenings: Option<Vec<Event>>,
     /// The average income in the nation.
     ///
-    /// Requested using [`PublicNationShard::Income`].
+    /// Requested using
+    /// [`PublicNationShard::Income`](crate::shards::nation::PublicNationShard::Income).
     pub income: Option<u32>,
     /// The description of the nation's industry found on its nation page.
     ///
-    /// Requested using [`PublicNationShard::IndustryDesc`].
+    /// Requested using
+    /// [`PublicNationShard::IndustryDesc`](crate::shards::nation::PublicNationShard::IndustryDesc).
     pub industry_desc: Option<String>,
     /// The list of (joke) descriptions of laws in the nation found on its nation page.
     ///
-    /// Requested using [`PublicNationShard::Legislation`].
+    /// Requested using
+    /// [`PublicNationShard::Legislation`](crate::shards::nation::PublicNationShard::Legislation).
     pub legislation: Option<Vec<String>>,
     /// Notable facts about the nation, randomly selected by the API.
     ///
-    /// Requested using [`PublicNationShard::Notable`].
+    /// Requested using
+    /// [`PublicNationShard::Notable`](crate::shards::nation::PublicNationShard::Notable).
     pub notable: Option<String>,
     /// All possible notable facts about the nation.
     ///
-    /// Requested using [`PublicNationShard::Notables`].
+    /// Requested using
+    /// [`PublicNationShard::Notables`](crate::shards::nation::PublicNationShard::Notables).
     pub notables: Option<Vec<String>>,
     /// The list of policies the nation has in place.
     ///
-    /// Requested using [`PublicNationShard::Policies`].
+    /// Requested using
+    /// [`PublicNationShard::Policies`](crate::shards::nation::PublicNationShard::Policies).
     pub policies: Option<Vec<Policy>>,
     /// The average income of the poorest 10% in the nation.
     ///
-    /// Requested using [`PublicNationShard::Poorest`].
+    /// Requested using
+    /// [`PublicNationShard::Poorest`](crate::shards::nation::PublicNationShard::Poorest).
     pub poorest: Option<u32>,
     /// The region rank on today's featured World Census scale.
     ///
-    /// Requested using [`PublicNationShard::RCensus`].
+    /// Requested using
+    /// [`PublicNationShard::RCensus`](crate::shards::nation::PublicNationShard::RCensus).
     pub regional_census: Option<NonZeroU16>,
     /// The average income of the richest 10% in the nation.
     ///
-    /// Requested using [`PublicNationShard::Richest`].
+    /// Requested using
+    /// [`PublicNationShard::Richest`](crate::shards::nation::PublicNationShard::Richest).
     pub richest: Option<u32>,
     /// The vote of the nation in the Security Council.
     ///
@@ -425,29 +444,146 @@ pub struct Nation {
     /// and the [`PublicNationShard::WA`] shard was not requested,
     /// the field will erroneously be `Some(`[`WAVote::Undecided`]`)`.
     ///
-    /// Requested using [`PublicNationShard::SCVote`].
+    /// Requested using
+    /// [`PublicNationShard::SCVote`](crate::shards::nation::PublicNationShard::SCVote).
     /// Recommended to request with [`PublicNationShard::WA`].
+    ///
+    /// [`PublicNationShard::WA`]: crate::shards::nation::PublicNationShard::WA
     pub sc_vote: Option<WAVote>,
     /// Describes the nation's economy as percentages controlled or funded by various sectors.
     ///
-    /// Requested using [`PublicNationShard::Sectors`].
+    /// Requested using
+    /// [`PublicNationShard::Sectors`](crate::shards::nation::PublicNationShard::Sectors).
     pub sectors: Option<Sectors>,
     /// The adjectives that describe the nation's population on its nation page.
     ///
-    /// Requested using [`PublicNationShard::Sensibilities`].
+    /// Requested using
+    /// [`PublicNationShard::Sensibilities`](crate::shards::nation::PublicNationShard::Sensibilities).
     pub sensibilities: Option<String>,
     /// Whether a recruitment telegram can be sent to the nation or not.
     ///
-    /// Requested and configured using [`PublicNationShard::TGCanRecruit`].
+    /// Requested and configured using
+    /// [`PublicNationShard::TGCanRecruit`](crate::shards::nation::PublicNationShard::TGCanRecruit).
     pub tg_can_recruit: Option<bool>,
     /// Whether a campaign telegram can be sent to the nation or not.
     ///
-    /// Requested and configured using [`PublicNationShard::TGCanCampaign`].
+    /// Requested and configured using
+    /// [`PublicNationShard::TGCanCampaign`](crate::shards::nation::PublicNationShard::TGCanCampaign).
     pub tg_can_campaign: Option<bool>,
     /// The world rank on today's featured World Census scale.
     ///
-    /// Requested using [`PublicNationShard::WCensus`].
+    /// Requested using
+    /// [`PublicNationShard::WCensus`](crate::shards::nation::PublicNationShard::WCensus).
     pub world_census: Option<NonZeroU32>,
+}
+
+/// A nation given by the standard version of the public nation API.
+///
+/// This struct aims to have parity with [`Nation`],
+/// but also has benefits for parsing this specific case:
+/// fields are not wrapped in the [`Option`] type,
+/// and only the fields required for the struct are provided.
+/// This should speed up parsing and create ease of use.
+#[derive(Debug)]
+#[non_exhaustive]
+pub struct StandardNation {
+    /// The name of the nation.
+    pub name: String,
+    /// The pre-title of the nation.
+    /// (`type` is a reserved word in Rust, so `kind` is used in its place.)
+    pub kind: String,
+    /// The full name of the nation.
+    pub full_name: String,
+    /// The motto of the nation.
+    pub motto: String,
+    /// The category of the nation.
+    /// Note that this is currently a `String` representation,
+    /// but will eventually become its own type.
+    pub category: String,
+    /// The WA status of the nation.
+    pub wa_status: WAStatus,
+    /// A list of nations that endorse the nation.
+    pub endorsements: Vec<String>,
+    /// The number of issues answered by the nation.
+    pub issues_answered: u32,
+    /// The freedom statistics of the nation.
+    pub freedom: Freedoms,
+    /// The region that the nation resides in.
+    pub region: String,
+    /// The population of the nation in millions of people.
+    pub population: u32,
+    /// The effective tax rate of the nation.
+    pub tax: f64,
+    /// The national animal.
+    pub animal: String,
+    /// The national currency.
+    pub currency: String,
+    /// The adjective used to describe a citizen of the nation.
+    /// (An example would be: I am **French**.)
+    pub demonym_adjective: String,
+    /// The singular noun used to describe a citizen of the nation.
+    /// (An example would be: I am a **Frenchman**.)
+    pub demonym_singular: String,
+    /// The plural noun used to describe a citizen of the nation.
+    /// (An example would be: They are (some) **Frenchmen**.)
+    pub demonym_plural: String,
+    /// The URL to the flag of the nation.
+    pub flag: String,
+    /// The largest industry in the nation.
+    pub major_industry: String,
+    /// The financial sector where the government spends the most money.
+    pub government_priority: String,
+    /// The nation's government spending as percentages in various financial areas.
+    pub government: Government,
+    /// When the nation was founded as a relative timestamp.
+    ///
+    /// Note: NationStates did not track this at the beginning.
+    /// For this reason, some nations are considered "founded in antiquity",
+    /// which is represented by [`MaybeRelativeTime::Antiquity`]
+    /// A nation founded more recently would be [`MaybeRelativeTime::Recorded`].
+    pub founded: MaybeRelativeTime,
+    /// The Unix timestamp of when the nation first logged in.
+    pub first_login: u64,
+    /// The Unix timestamp of when the nation most recently logged in.
+    pub last_login: u64,
+    /// When the nation was last active as a relative timestamp.
+    pub last_activity: String,
+    /// The influence of the nation in its region using qualitative descriptors.
+    /// Note that this is currently a `String` representation,
+    /// but will shift to an enum in the future.
+    pub influence: String,
+    /// The economy, political freedoms, and civil rights within the country,
+    /// described using a quantitative scale.
+    pub freedom_scores: FreedomScores,
+    /// The percentage of the economy controlled or funded by the government and the public.
+    pub public_sector: f64,
+    /// The national statistics on deaths.
+    pub deaths: Vec<Cause>,
+    /// The national leader.
+    ///
+    /// If there is a custom leader,
+    /// the [`DefaultOrCustom::Custom`] variant is filled with the custom leader's name;
+    /// if not, the [`DefaultOrCustom::Default`] variant is filled with the default leader name.
+    pub leader: DefaultOrCustom,
+    /// The national capital.
+    ///
+    /// If there is a custom capital,
+    /// the [`DefaultOrCustom::Custom`] variant is filled with the custom capital name;
+    /// if not, the [`DefaultOrCustom::Default`] variant is filled with the default capital name.
+    pub capital: DefaultOrCustom,
+    /// The national religion.
+    ///
+    /// If there is a custom religion,
+    /// the [`DefaultOrCustom::Custom`] variant is filled with the custom religion;
+    /// if not, the [`DefaultOrCustom::Default`] variant is filled with the default religion.
+    pub religion: DefaultOrCustom,
+    /// The number of factbooks the nation has published.
+    pub factbooks: u16,
+    /// The number of dispatches the nation has published.
+    pub dispatches: u16,
+    /// The ID of the nation in the NationStates database.
+    /// Note that earlier nations update first.
+    pub dbid: u32,
 }
 
 /// Describes a national policy.

@@ -7,6 +7,9 @@ pub mod happenings;
 pub mod nation;
 mod raw_nation;
 
+pub(crate) const DEFAULT_LEADER: &str = "Leader";
+pub(crate) const DEFAULT_RELIGION: &str = "a major religion";
+
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 pub(super) struct RawEvent {
@@ -21,6 +24,30 @@ pub enum DefaultOrCustom {
     Default(String),
     /// The value is custom.
     Custom(String),
+}
+
+impl DefaultOrCustom {
+    fn leader(l: String) -> Self {
+        if l.is_empty() {
+            DefaultOrCustom::Default(DEFAULT_LEADER.to_string())
+        } else {
+            DefaultOrCustom::Custom(l)
+        }
+    }
+    fn capital(c: String) -> Self {
+        if c.is_empty() {
+            DefaultOrCustom::Default(format!("{} City", &c))
+        } else {
+            DefaultOrCustom::Custom(c)
+        }
+    }
+    fn religion(r: String) -> Self {
+        if r.is_empty() {
+            DefaultOrCustom::Default(DEFAULT_RELIGION.to_string())
+        } else {
+            DefaultOrCustom::Custom(r)
+        }
+    }
 }
 
 /// A relative timestamp that may or may not have been recorded.
