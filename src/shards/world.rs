@@ -1,11 +1,12 @@
 //! For world shard requests.
 
-use crate::impl_display_as_debug;
-use crate::models::dispatch::DispatchCategory;
-use crate::parsers::nation::BannerId;
-use crate::shards::world::HappeningsViewType::{Nation, Region};
-use crate::shards::{
-    CensusRanksShard, CensusShard, NSRequest, Params, RequestBuildError, BASE_URL,
+use crate::shards::region::RegionShard;
+use crate::{
+    impl_display_as_debug,
+    models::dispatch::DispatchCategory,
+    parsers::nation::BannerId,
+    shards::world::HappeningsViewType::{Nation, Region},
+    shards::{CensusRanksShard, CensusShard, NSRequest, Params, RequestBuildError, BASE_URL},
 };
 use itertools::Itertools;
 use std::fmt::{Display, Formatter};
@@ -31,6 +32,8 @@ pub enum WorldShard<'a> {
     /// or of today's featured census scale if `None`.
     CensusName(Option<u8>),
     /// Provides 20 nations and their world census scale ranking.
+    ///
+    /// Parallels [`RegionShard::CensusRanks`][crate::shards::region::RegionShard::CensusRanks].
     CensusRanks(CensusRanksShard),
     /// Provides the units of a given census scale if `Some(id)`
     /// or of today's featured census scale if `None`.
@@ -59,18 +62,24 @@ pub enum WorldShard<'a> {
         filter: Option<Vec<HappeningsFilterType>>,
         /// Limit the number of events. NOTE: the limit cannot be less than 100.
         limit: Option<u8>,
-        /// Filters events to only those after a certain event ID. NOTE:
+        /// Filters events to only those after a certain event ID.
+        ///
+        /// NOTE:
         /// if the ID was issued more than 100 events ago,
         /// only the 100 most recent events will be provided.
         since_id: Option<u32>,
-        /// Filters events to only those before a certain event ID. NOTE:
+        /// Filters events to only those before a certain event ID.
+        ///
+        /// NOTE:
         /// if the ID was issued more than 100 events ago, no events will be provided.
         before_id: Option<u32>,
         /// Filters events to only those after a certain timestamp.
+        ///
         /// NOTE: If more than 100 events have occurred since this timestamp,
         /// only the 100 most recent events will be provided.
         since_time: Option<u64>,
         /// Filters events to only those before a certain timestamp.
+        ///
         /// NOTE:
         /// if more than 100 events have occurred since this timestamp, no events will be provided.
         before_time: Option<u64>,
@@ -216,7 +225,7 @@ impl<'a> NSRequest for WorldRequest<'a> {
         });
 
         Url::parse_with_params(BASE_URL, params.insert_front("q", query))
-            .map_err(|e| RequestBuildError::UrlParse { source: e })
+            .map_err(RequestBuildError::UrlParse)
     }
 }
 

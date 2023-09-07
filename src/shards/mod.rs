@@ -124,11 +124,11 @@ pub enum RequestBuildError {
     ///
     /// This error should never be expected!
     #[error("URL parser error")]
-    UrlParse {
+    UrlParse(
         /// The parent error.
         #[from]
-        source: ParseError,
-    },
+        ParseError,
+    ),
 }
 
 /// Request type.

@@ -196,6 +196,6 @@ impl<'a> NSRequest for WARequest<'a> {
                     .to_ascii_lowercase(),
                 ),
         )
-        .map_err(|e| RequestBuildError::UrlParse { source: e })
+        .map_err(RequestBuildError::UrlParse)
     }
 }

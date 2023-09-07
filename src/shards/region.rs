@@ -250,7 +250,21 @@ impl<'a> NSRequest for RegionRequest<'a> {
                     .ok_or(RequestBuildError::MissingParam("region"))?,
             ),
         )
-        .map_err(|e| RequestBuildError::UrlParse { source: e })
+        .map_err(RequestBuildError::UrlParse)
+    }
+}
+
+pub struct StandardRegionRequest<'a>(&'a str);
+
+impl<'a> StandardRegionRequest<'a> {
+    pub fn new(region: &'a str) -> Self {
+        Self(region)
+    }
+}
+
+impl<'a> NSRequest for StandardRegionRequest<'a> {
+    fn as_url(&self) -> Result<Url, RequestBuildError> {
+        Url::parse_with_params(BASE_URL, [("region", self.0)]).map_err(RequestBuildError::UrlParse)
     }
 }
 

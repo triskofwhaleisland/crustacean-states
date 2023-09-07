@@ -5,11 +5,18 @@ use itertools::Itertools;
 use strum::AsRefStr;
 use url::Url;
 
-/// A nation request available to anyone.
+/// A nation request available to anyone (no login required).
+///
+/// Each request "shard"
+/// is associated with a certain field in its associated parsed type,
+/// [`Nation`](crate::parsers::nation::Nation).
+/// Enum variant docs include the struct field associated with it.
 //noinspection SpellCheckingInspection
 #[derive(AsRefStr, Clone, Debug, PartialEq)]
 pub enum PublicNationShard<'a> {
     /// A randomly-selected compliment for the nation.
+    ///
+    /// Nation field: [`admirable`](crate::parsers::nation::Nation.admirable)
     Admirable,
     /// All possible compliments for the nation.
     Admirables,
@@ -39,6 +46,8 @@ pub enum PublicNationShard<'a> {
     Category,
     /// By default, returns the score, rank, and region rank on today's featured World Census scale.
     /// Can be optionally configured with additional parameters.
+    ///
+    /// Parallels [`WorldShard::Census`](crate::shards::world::WorldShard::Census).
     Census(CensusShard<'a>),
     /// Describes crime in the nation on its nation page.
     Crime,
@@ -73,13 +82,15 @@ pub enum PublicNationShard<'a> {
     Demonym2,
     /// Plural noun used to describe citizens of the nation: e.g. They are (some) Frenchmen.
     ///
-    /// Note that in the English language,
-    /// the word "some" is not normally used in that way,
-    /// but it would be more inaccurate to say "the".
-    /// It should also be noted that the words "Frenchman" and "Frenchmen"
-    /// are no longer preferred English words to describe French people;
-    /// the adjectival demonym with the words "person" or "people" is now preferred,
-    /// e.g. I am a French (adj.) person.
+    /// *Note that in the English language,
+    /// the word "some" (plural indefinite article) is not normally used in that way;
+    /// however it would be more inaccurate to use "the" (plural definite article).
+    /// Other languages use articles differently than English.*
+    ///
+    /// *It should also be noted that the words "Frenchman" and "Frenchmen"
+    /// are no longer the preferred English words to describe French people;
+    /// the adjectival demonym with the words "person" or "people" is now preferred:
+    /// e.g. I am a French (adj.) person.*
     Demonym2Plural,
     /// The number of dispatches published by this nation.
     ///
@@ -123,10 +134,10 @@ pub enum PublicNationShard<'a> {
     /// Note: some nations have existed "since antiquity" (before this statistic was logged).
     FoundedTime,
     /// Describes civil rights, the economy,
-    /// and political freedom within the country using *qualitative* descriptors.
+    /// and political freedom within the country using *categorical* descriptors.
     Freedom,
     /// Describes civil rights, the economy,
-    /// and political freedom within the country using *quantitative* descriptors.
+    /// and political freedom within the country using *numerical* descriptors.
     FreedomScores,
     /// The full name of the nation.
     ///
@@ -273,7 +284,7 @@ impl<'a> PublicNationRequest<'a> {
     ///
     /// If you do not modify the shards on this request,
     /// you will get a default response using the "standard public nation API shard set".
-    /// See StandardPublicNationRequest for more information.
+    /// See [`StandardPublicNationRequest`] for more information.
     pub fn new(nation: &'a str) -> Self {
         Self {
             nation: Some(nation),
@@ -293,6 +304,7 @@ impl<'a> PublicNationRequest<'a> {
     }
 
     /// Creates a new builder given shards but no nation name.
+    ///
     /// Warning: a nation name must be provided before building!
     pub fn with_shards(shards: Vec<PublicNationShard<'a>>) -> Self {
         Self {
@@ -368,7 +380,7 @@ impl<'a> PublicNationRequest<'a> {
     /// # fn test() -> Result<(), Box<dyn Error>> {
     /// let mut request_builder = PublicNationRequest::new("Aramos");
     /// request_builder.add_shards(
-    ///     vec![PublicNationShard::Capital, PublicNationShard::Animal]
+    ///     [PublicNationShard::Capital, PublicNationShard::Animal]
     /// );
     /// assert_eq!(
     ///     request_builder,
@@ -422,7 +434,54 @@ impl<'a> NSRequest for PublicNationRequest<'a> {
                     .ok_or(RequestBuildError::MissingParam("nation"))?,
             ),
         )
-        .map_err(|e| RequestBuildError::UrlParse { source: e })
+        .map_err(RequestBuildError::UrlParse)
+    }
+}
+
+/// A "standard" public nation API request.
+/// Avoid this type if you only want certain information about a nation.
+///
+/// The associated parser type for this requester is
+/// [`StandardNation`](crate::parsers::nation::StandardNation).
+/// Parsing with [`Nation`](crate::parsers::nation::Nation)
+/// is also possible, but it will almost definitely be slower.
+///
+/// What does "standard" mean?
+/// NationStates will return certain information by default,
+/// as if you had requested a certain set of shards.
+/// Those shards are:
+/// [`Name`](PublicNationShard::Name), [`Type`](PublicNationShard::Type),
+/// [`FullName`](PublicNationShard::FullName), [`Motto`](PublicNationShard::Motto),
+/// [`Category`](PublicNationShard::Category), [`WA`](PublicNationShard::WA),
+/// [`Endorsements`](PublicNationShard::Endorsements), [`Answered`](PublicNationShard::Answered),
+/// [`Freedom`](PublicNationShard::Freedom), [`Region`](PublicNationShard::Region),
+/// [`Population`](PublicNationShard::Population), [`Tax`](PublicNationShard::Tax),
+/// [`Animal`](PublicNationShard::Animal), [`Currency`](PublicNationShard::Currency),
+/// [`Demonym`](PublicNationShard::Demonym), [`Demonym2`](PublicNationShard::Demonym2),
+/// [`Demonym2Plural`](PublicNationShard::Demonym2Plural), [`Flag`](PublicNationShard::Flag),
+/// [`MajorIndustry`](PublicNationShard::MajorIndustry),
+/// [`GovtPriority`](PublicNationShard::GovtPriority), [`Govt`](PublicNationShard::Govt),
+/// [`Founded`](PublicNationShard::Founded), [`FirstLogin`](PublicNationShard::FirstLogin),
+/// [`LastLogin`](PublicNationShard::LastLogin), [`LastActivity`](PublicNationShard::LastActivity),
+/// [`Influence`](PublicNationShard::Influence),
+/// [`FreedomScores`](PublicNationShard::FreedomScores),
+/// [`PublicSector`](PublicNationShard::PublicSector), [`Deaths`](PublicNationShard::Deaths),
+/// [`Leader`](PublicNationShard::Leader), [`Capital`](PublicNationShard::Capital),
+/// [`Religion`](PublicNationShard::Religion), [`Factbooks`](PublicNationShard::Factbooks), and
+/// [`Dispatches`](PublicNationShard::Dispatches).
+///
+pub struct StandardPublicNationRequest<'a>(&'a str);
+
+impl<'a> StandardPublicNationRequest<'a> {
+    /// Create a new standard public nation request of the provided nation.
+    pub fn new(nation: &'a str) -> Self {
+        Self(nation)
+    }
+}
+
+impl<'a> NSRequest for StandardPublicNationRequest<'a> {
+    fn as_url(&self) -> Result<Url, RequestBuildError> {
+        Url::parse_with_params(BASE_URL, [("nation", self.0)]).map_err(RequestBuildError::UrlParse)
     }
 }
 

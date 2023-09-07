@@ -1,21 +1,20 @@
-use crate::models::dispatch::{
-    AccountCategory, BulletinCategory, DispatchCategory, FactbookCategory, MetaCategory,
+use crate::{
+    models::dispatch::{
+        AccountCategory, BulletinCategory, DispatchCategory, FactbookCategory, MetaCategory,
+    },
+    parsers::happenings::Event,
+    parsers::nation::{
+        BannerId, Cause, FreedomScores, Freedoms, Government, IntoNationError, Nation, Policy,
+        Sectors, StandardNation, WAStatus, WAVote,
+    },
+    parsers::{
+        CensusCurrentData, CensusData, CensusHistoricalData, DefaultOrCustom, Dispatch,
+        MaybeRelativeTime, MaybeSystemTime, RawEvent,
+    },
+    pretty_name,
 };
-use crate::parsers::happenings::Event;
-use crate::parsers::nation::{
-    BannerId, Cause, FreedomScores, Freedoms, Government, IntoNationError, Nation, Policy, Sectors,
-    WAStatus, WAVote,
-};
-use crate::parsers::{
-    CensusCurrentData, CensusData, CensusHistoricalData, DefaultOrCustom, Dispatch,
-    MaybeRelativeTime, MaybeSystemTime, RawEvent,
-};
-use crate::pretty_name;
 use serde::Deserialize;
 use std::num::{NonZeroU16, NonZeroU32, NonZeroU64};
-
-const DEFAULT_LEADER: &str = "Leader";
-const DEFAULT_RELIGION: &str = "a major religion";
 
 //noinspection SpellCheckingInspection
 #[derive(Debug, Deserialize)]
@@ -90,6 +89,48 @@ struct RawNation {
     tgcanrecruit: Option<u8>,
     tgcancampaign: Option<u8>,
     wcensus: Option<NonZeroU32>,
+}
+
+//noinspection SpellCheckingInspection
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "UPPERCASE")]
+struct RawStandardNation {
+    name: String,
+    #[serde(rename = "TYPE")]
+    kind: String,
+    fullname: String,
+    motto: String,
+    category: String,
+    unstatus: String,
+    endorsements: String,
+    issues_answered: u32,
+    freedom: RawFreedoms,
+    region: String,
+    population: u32,
+    tax: f64,
+    animal: String,
+    currency: String,
+    demonym: String,
+    demonym2: String,
+    demonym2plural: String,
+    flag: String,
+    majorindustry: String,
+    govtpriority: String,
+    govt: RawGovernment,
+    founded: String,
+    firstlogin: u64,
+    lastlogin: u64,
+    lastactivity: String,
+    influence: String,
+    freedomscores: RawFreedomScores,
+    publicsector: f64,
+    deaths: Deaths,
+    leader: String,
+    capital: String,
+    religion: String,
+    factbooks: u16,
+    dispatches: u16,
+    dbid: u32,
 }
 
 #[derive(Debug, Deserialize)]
@@ -482,21 +523,13 @@ impl TryFrom<RawNation> for Nation {
     fn try_from(value: RawNation) -> Result<Self, Self::Error> {
         let name = match (value.name, value.id) {
             (Some(n), _) => Ok(n),
-            (None, Some(i)) => Ok(i),
+            (None, Some(i)) => Ok(pretty_name(i)),
             (None, None) => Err(IntoNationError::NoNameError),
         }?;
 
         let happenings = value
             .happenings
             .map(|h| h.inner.into_iter().map(Event::from).collect());
-
-        let capital = value.capital.map(|c| {
-            if c.is_empty() {
-                DefaultOrCustom::Default(format!("{} City", &name))
-            } else {
-                DefaultOrCustom::Custom(c)
-            }
-        });
 
         let wa_status = match value.unstatus {
             Some(s) => match s.as_str() {
@@ -526,7 +559,7 @@ impl TryFrom<RawNation> for Nation {
             wa_status,
             endorsements: value.endorsements.as_ref().map(|e| {
                 if !e.is_empty() {
-                    e.split(',').map(pretty_name).collect::<Vec<String>>()
+                    e.split(',').map(pretty_name).collect()
                 } else {
                     vec![]
                 }
@@ -554,22 +587,10 @@ impl TryFrom<RawNation> for Nation {
             public_sector: value.publicsector,
             deaths: value
                 .deaths
-                .map(|d| d.inner.into_iter().map(Cause::from).collect::<Vec<_>>()),
-            leader: value.leader.map(|l| {
-                if l.is_empty() {
-                    DefaultOrCustom::Default(DEFAULT_LEADER.to_string())
-                } else {
-                    DefaultOrCustom::Custom(l)
-                }
-            }),
-            capital,
-            religion: value.religion.map(|r| {
-                if r.is_empty() {
-                    DefaultOrCustom::Default(DEFAULT_RELIGION.to_string())
-                } else {
-                    DefaultOrCustom::Custom(r)
-                }
-            }),
+                .map(|d| d.inner.into_iter().map(Cause::from).collect()),
+            leader: value.leader.map(DefaultOrCustom::leader),
+            capital: value.capital.map(DefaultOrCustom::capital),
+            religion: value.religion.map(DefaultOrCustom::religion),
             factbooks: value.factbooks,
             dispatches: value.dispatches,
             dbid: value.dbid,
@@ -583,7 +604,7 @@ impl TryFrom<RawNation> for Nation {
                     a.inner
                         .into_iter()
                         .map(BannerId::try_from)
-                        .collect::<Result<Vec<BannerId>, IntoNationError>>()
+                        .collect::<Result<Vec<_>, _>>()
                 })
                 .transpose()?,
             census: value
@@ -593,13 +614,10 @@ impl TryFrom<RawNation> for Nation {
                         c.inner
                             .into_iter()
                             .map(CensusHistoricalData::from)
-                            .collect::<Vec<_>>(),
+                            .collect(),
                     )),
                     Some(_) => Ok(CensusData::Current(
-                        c.inner
-                            .into_iter()
-                            .map(CensusCurrentData::from)
-                            .collect::<Vec<_>>(),
+                        c.inner.into_iter().map(CensusCurrentData::from).collect(),
                     )),
                     None => Err(IntoNationError::NoCensusDataError),
                 })
@@ -611,7 +629,7 @@ impl TryFrom<RawNation> for Nation {
                     v.inner
                         .into_iter()
                         .map(Dispatch::try_from)
-                        .collect::<Result<Vec<Dispatch>, IntoNationError>>()
+                        .collect::<Result<Vec<_>, _>>()
                 })
                 .transpose()?,
             factbook_list: value
@@ -620,7 +638,7 @@ impl TryFrom<RawNation> for Nation {
                     v.inner
                         .into_iter()
                         .map(Dispatch::try_from)
-                        .collect::<Result<Vec<Dispatch>, IntoNationError>>()
+                        .collect::<Result<Vec<_>, _>>()
                 })
                 .transpose()?,
             founded_time: value.foundedtime.map(MaybeSystemTime::from),
@@ -645,7 +663,7 @@ impl TryFrom<RawNation> for Nation {
                     v.inner
                         .into_iter()
                         .map(Policy::try_from)
-                        .collect::<Result<Vec<Policy>, IntoNationError>>()
+                        .collect::<Result<Vec<_>, _>>()
                 })
                 .transpose()?,
             poorest: value.poorest,
@@ -675,6 +693,66 @@ impl TryFrom<RawNation> for Nation {
                 })
                 .transpose()?,
             world_census: value.wcensus,
+        })
+    }
+}
+
+impl StandardNation {
+    /// Converts the XML response from NationStates to a [`Nation`].
+    pub fn from_xml(xml: &str) -> Result<Self, IntoNationError> {
+        Self::try_from(quick_xml::de::from_str::<RawStandardNation>(xml)?)
+    }
+}
+
+impl TryFrom<RawStandardNation> for StandardNation {
+    type Error = IntoNationError;
+
+    fn try_from(value: RawStandardNation) -> Result<Self, Self::Error> {
+        Ok(StandardNation {
+            name: value.name,
+            kind: value.kind,
+            full_name: value.fullname,
+            motto: value.motto,
+            category: value.category,
+            wa_status: match value.unstatus.as_str() {
+                "WA Delegate" => Ok(WAStatus::Delegate),
+                "WA Member" => Ok(WAStatus::Member),
+                "Non-member" => Ok(WAStatus::NonMember),
+                other => Err(IntoNationError::BadWAStatusError(other.to_string())),
+            }?,
+            endorsements: if !value.endorsements.is_empty() {
+                value.endorsements.split(',').map(pretty_name).collect()
+            } else {
+                vec![]
+            },
+            issues_answered: value.issues_answered,
+            freedom: value.freedom.into(),
+            region: value.region,
+            population: value.population,
+            tax: value.tax,
+            animal: value.animal,
+            currency: value.currency,
+            demonym_adjective: value.demonym,
+            demonym_singular: value.demonym2,
+            demonym_plural: value.demonym2plural,
+            flag: value.flag,
+            major_industry: value.majorindustry,
+            government_priority: value.govtpriority,
+            government: value.govt.into(),
+            founded: value.founded.into(),
+            first_login: value.firstlogin,
+            last_login: value.lastlogin,
+            last_activity: value.lastactivity,
+            influence: value.influence,
+            freedom_scores: value.freedomscores.into(),
+            public_sector: value.publicsector,
+            deaths: value.deaths.inner.into_iter().map(Cause::from).collect(),
+            leader: DefaultOrCustom::leader(value.leader),
+            capital: DefaultOrCustom::capital(value.capital),
+            religion: DefaultOrCustom::religion(value.religion),
+            factbooks: value.factbooks,
+            dispatches: value.dispatches,
+            dbid: value.dbid,
         })
     }
 }
