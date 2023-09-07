@@ -416,7 +416,7 @@ impl Display for HappeningsFilterType {
 
 // /// When searching regions by tag, you can do it by including certain tags and excluding others.
 // /// Example:
-// /// ```
+// /// ```rust
 // /// use url::Url;
 // /// use crustacean_states::shards::NSRequest;
 // /// use crustacean_states::shards::world::IncludeOrExcludeTag::{Exclude, Include};

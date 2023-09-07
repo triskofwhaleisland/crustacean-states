@@ -115,6 +115,7 @@ impl<'a> Iterator for Params<'a> {
 
 /// Error type for any issues with building a request.
 #[derive(Debug, Error)]
+#[non_exhaustive]
 pub enum RequestBuildError {
     /// A required parameter was never provided, so the request could not be built.
     #[error("Builder does not have {0}")]
@@ -124,6 +125,7 @@ pub enum RequestBuildError {
     /// This error should never be expected!
     #[error("URL parser error")]
     UrlParse {
+        /// The parent error.
         #[from]
         source: ParseError,
     },
@@ -160,10 +162,10 @@ impl<'a> CensusShard<'a> {
     /// Specify what population the scale should be compared against.
     ///
     /// For the default behavior without any modes listed:
-    /// ```
-    /// use crustacean_states::shards::CensusModes;
+    /// ```rust
+    /// # use crustacean_states::shards::{CensusModes, CensusShard};
     /// use crustacean_states::shards::CensusCurrentMode as CCM;
-    /// let modes = CensusModes::from(&[CCM::Score, CCM::Rank, CCM::PercentRank]);
+    /// let shard = CensusShard::default().modes(CensusModes::from(&[CCM::Score, CCM::Rank, CCM::PercentRank]));
     /// ```
     pub fn modes(&mut self, modes: CensusModes) -> &mut CensusShard<'a> {
         self.modes = modes;

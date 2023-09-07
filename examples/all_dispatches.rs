@@ -14,7 +14,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     eprintln!("Made client!");
 
     let target_nation = "Testlandia";
-    let request = PublicNationRequest::new(target_nation, vec![DispatchList]);
+    let request = PublicNationRequest::new_with_shards(target_nation, [DispatchList]);
     let end1 = Instant::now();
     // eprintln!("{request}");
     let text = client.get(request).await?.text().await?;

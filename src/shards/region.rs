@@ -100,6 +100,10 @@ pub enum RegionShard<'a> {
     WANations,
 }
 
+/// A builder for the [`RegionShard::Messages`] shard.
+///
+/// Be aware the default behavior is for the number of messages to be 20,
+/// ending at the most recent message.
 #[derive(Clone, Debug, Default)]
 pub struct RmbShard {
     /// Return this many messages. Must be in the range 1-100.
@@ -111,30 +115,45 @@ pub struct RmbShard {
 }
 
 impl RmbShard {
-    pub fn new(limit: u8, offset: u32, starting_post: u32) -> Self {
-        Self::default()
-            .limit(limit)
-            .offset(offset)
-            .starting_post(starting_post)
-            .to_owned()
-    }
-
+    /// Return this many messages. Must be in the range 1-100.
+    ///
+    /// This sets a *maximum* number of messages.
+    /// If there are not enough messages based on other parameters
+    /// (e.g. using [`starting_post`](RmbShard::starting_post) on a recent post),
+    /// the website will return as many messages as it can.
     pub fn limit(&mut self, x: u8) -> &mut Self {
-        self.limit = NonZeroU8::new(x);
+        self.limit = NonZeroU8::try_from(x).ok();
         self
     }
 
+    /// Skip the `x` most recent messages.
+    /// Begin further in the past.
     pub fn offset(&mut self, x: u32) -> &mut Self {
-        self.offset = NonZeroU32::new(x);
+        self.offset = NonZeroU32::try_from(x).ok();
         self
     }
 
-    pub fn starting_post(&mut self, x: u32) -> &mut Self {
-        self.starting_post = NonZeroU32::new(x);
+    /// Instead of returning the most recent messages, return messages starting from this post ID.
+    pub fn starting_post(&mut self, post_id: u32) -> &mut Self {
+        self.starting_post = NonZeroU32::try_from(post_id).ok();
         self
     }
 }
 
+/// Make a request of the region API.
+///
+/// ## Example
+/// ```rust
+/// # use crustacean_states::client::Client;
+/// # use crustacean_states::shards::region::{RegionRequest, RegionShard};
+/// # use std::error::Error;
+/// # async fn test() -> Result<(), Box<dyn Error>> {
+/// # let client = Client::new("");
+/// let request = RegionRequest::new_with_shards("Anteria", &[RegionShard::NumNations]);
+/// let response = client.get(request).await?;
+/// # Ok(())
+/// # }
+/// ```
 #[derive(Clone, Debug, Default)]
 pub struct RegionRequest<'a> {
     region: Option<&'a str>,
@@ -142,27 +161,20 @@ pub struct RegionRequest<'a> {
 }
 
 impl<'a> RegionRequest<'a> {
-    pub fn new_empty(region: &'a str) -> Self {
+    pub fn new(region: &'a str) -> Self {
         Self {
             region: Some(region),
             shards: vec![],
         }
     }
 
-    pub fn new<T>(region: &'a str, shards: &'a T) -> Self
+    pub fn new_with_shards<T>(region: &'a str, shards: T) -> Self
     where
         T: AsRef<[RegionShard<'a>]>,
     {
         Self {
             region: Some(region),
             shards: shards.as_ref().to_vec(),
-        }
-    }
-
-    pub fn new_standard(region: &'a str) -> Self {
-        Self {
-            region: Some(region),
-            shards: vec![],
         }
     }
 
@@ -197,14 +209,6 @@ impl<'a> RegionRequest<'a> {
     {
         self.shards.extend(shards);
         self
-    }
-
-    pub fn build(&self) -> Result<RegionRequest, RequestBuildError> {
-        Ok(RegionRequest::new(
-            self.region
-                .ok_or(RequestBuildError::MissingParam("region"))?,
-            &self.shards,
-        ))
     }
 }
 

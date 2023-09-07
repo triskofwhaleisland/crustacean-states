@@ -82,6 +82,7 @@ impl Client {
         }
     }
 
+    /// Estimates the length of time to wait between each request to avoid a 429 Too Many Requests error.
     pub fn wait_duration(&self) -> Option<Duration> {
         self.state
             .lock()
@@ -94,12 +95,12 @@ impl Client {
 
 /// Describes the various errors that may come about from using [`Client`].
 #[derive(Debug, Error)]
-#[allow(missing_docs)]
 #[non_exhaustive]
 pub enum ClientError {
     /// An error relating to the internal [`reqwest::Client`] occurred.
     #[error("reqwest client failed")]
     ReqwestError {
+        /// The parent error.
         #[from]
         source: reqwest::Error,
     },
@@ -110,6 +111,7 @@ pub enum ClientError {
     /// your response is probably malformed and you should not attempt to parse it further!
     #[error("could not convert to string")]
     ToStrError {
+        /// The parent error.
         #[from]
         source: reqwest::header::ToStrError,
     },
@@ -135,6 +137,7 @@ pub enum ClientError {
     #[error("couldn't parse as integer")]
     IntegerParseError {
         #[from]
+        /// The parent error.
         source: ParseIntError,
     },
     /// If you shouldn't send a request until later, you will be rate-limited by this error.
@@ -142,9 +145,14 @@ pub enum ClientError {
     #[error("rate limited until {0:?}")]
     RateLimitedError(Instant),
 
+    /// The client was going to send a request that would make no sense to the API
+    /// (for example,
+    /// sending a [`PublicNationRequest`](crate::shards::nation::PublicNationRequest)
+    /// without a `nation` parameter).
     #[error("request is missing required information")]
     ClientCaughtBadRequest {
         #[from]
+        /// The parent error.
         source: RequestBuildError,
     },
 }
