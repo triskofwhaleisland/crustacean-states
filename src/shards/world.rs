@@ -1,12 +1,13 @@
 //! For world shard requests.
 
-use crate::shards::region::RegionShard;
 use crate::{
     impl_display_as_debug,
     models::dispatch::DispatchCategory,
     parsers::nation::BannerId,
-    shards::world::HappeningsViewType::{Nation, Region},
-    shards::{CensusRanksShard, CensusShard, NSRequest, Params, RequestBuildError, BASE_URL},
+    shards::{
+        world::HappeningsViewType::{Nation, Region},
+        CensusRanksShard, CensusShard, NSRequest, Params, BASE_URL,
+    },
 };
 use itertools::Itertools;
 use std::fmt::{Display, Formatter};
@@ -148,7 +149,7 @@ impl<'a> WorldRequest<'a> {
 
 impl<'a> NSRequest for WorldRequest<'a> {
     //noinspection SpellCheckingInspection
-    fn as_url(&self) -> Result<Url, RequestBuildError> {
+    fn as_url(&self) -> Url {
         let query = self
             .0
             .iter()
@@ -224,8 +225,7 @@ impl<'a> NSRequest for WorldRequest<'a> {
             _ => {}
         });
 
-        Url::parse_with_params(BASE_URL, params.insert_front("q", query))
-            .map_err(RequestBuildError::UrlParse)
+        Url::parse_with_params(BASE_URL, params.insert_front("q", query)).unwrap()
     }
 }
 

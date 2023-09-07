@@ -18,13 +18,13 @@ pub mod world;
 
 use itertools::Itertools;
 use reqwest::Url;
-use std::collections::HashMap;
-use std::fmt::Debug;
-use std::hash::Hash;
-use std::num::{NonZeroU32, NonZeroU64, NonZeroU8};
+use std::{
+    collections::HashMap,
+    fmt::Debug,
+    hash::Hash,
+    num::{NonZeroU32, NonZeroU64, NonZeroU8},
+};
 use strum::Display;
-use thiserror::Error;
-use url::ParseError;
 
 pub(crate) const BASE_URL: &str = "https://www.nationstates.net/cgi-bin/api.cgi?";
 
@@ -113,28 +113,28 @@ impl<'a> Iterator for Params<'a> {
     }
 }
 
-/// Error type for any issues with building a request.
-#[derive(Debug, Error)]
-#[non_exhaustive]
-pub enum RequestBuildError {
-    /// A required parameter was never provided, so the request could not be built.
-    #[error("Builder does not have {0}")]
-    MissingParam(&'static str),
-    /// The URL parser [`Url::parse_with_params`] broke on a parameter.
-    ///
-    /// This error should never be expected!
-    #[error("URL parser error")]
-    UrlParse(
-        /// The parent error.
-        #[from]
-        ParseError,
-    ),
-}
+// /// Error type for any issues with building a request.
+// #[derive(Debug, Error)]
+// #[non_exhaustive]
+// pub enum RequestBuildError {
+//     /// A required parameter was never provided, so the request could not be built.
+//     #[error("Builder does not have {0}")]
+//     MissingParam(&'static str),
+//     /// The URL parser [`Url::parse_with_params`] broke on a parameter.
+//     ///
+//     /// This error should never be expected!
+//     #[error("URL parser error")]
+//     UrlParse(
+//         /// The parent error.
+//         #[from]
+//         ParseError,
+//     ),
+// }
 
 /// Request type.
 pub trait NSRequest {
     /// Converts internal information into a URL that can be requested.
-    fn as_url(&self) -> Result<Url, RequestBuildError>;
+    fn as_url(&self) -> Url;
 }
 
 /// Shard for information from the World Census.

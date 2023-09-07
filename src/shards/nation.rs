@@ -1,6 +1,6 @@
 //! For public nation shard requests.
 
-use crate::shards::{CensusShard, NSRequest, Params, RequestBuildError, BASE_URL};
+use crate::shards::{CensusShard, NSRequest, Params, BASE_URL};
 use itertools::Itertools;
 use strum::AsRefStr;
 use url::Url;
@@ -273,9 +273,9 @@ pub enum PublicNationShard<'a> {
 ///     vec![PublicNationShard::Capital],
 /// );
 /// ```
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct PublicNationRequest<'a> {
-    nation: Option<&'a str>,
+    nation: &'a str,
     shards: Vec<PublicNationShard<'a>>,
 }
 
@@ -287,7 +287,7 @@ impl<'a> PublicNationRequest<'a> {
     /// See [`StandardPublicNationRequest`] for more information.
     pub fn new(nation: &'a str) -> Self {
         Self {
-            nation: Some(nation),
+            nation,
             shards: vec![],
         }
     }
@@ -298,24 +298,14 @@ impl<'a> PublicNationRequest<'a> {
         T: AsRef<[PublicNationShard<'a>]>,
     {
         Self {
-            nation: Some(nation),
+            nation,
             shards: shards.as_ref().to_vec(),
-        }
-    }
-
-    /// Creates a new builder given shards but no nation name.
-    ///
-    /// Warning: a nation name must be provided before building!
-    pub fn with_shards(shards: Vec<PublicNationShard<'a>>) -> Self {
-        Self {
-            nation: None,
-            shards,
         }
     }
 
     /// Sets the nation for the request.
     pub fn nation(&mut self, nation: &'a str) -> &mut Self {
-        self.nation = Some(nation);
+        self.nation = nation;
         self
     }
 
@@ -372,7 +362,6 @@ impl<'a> PublicNationRequest<'a> {
     /// ## Example
     /// ```rust
     /// # use std::error::Error;
-    /// # use crustacean_states::shards::RequestBuildError;
     /// # use crustacean_states::shards::nation::{
     /// #    PublicNationRequest,
     /// #    PublicNationShard,
@@ -388,7 +377,7 @@ impl<'a> PublicNationRequest<'a> {
     ///         "Aramos",
     ///         vec![
     ///             PublicNationShard::Capital,
-    ///             PublicNationShard::Animal
+    ///             PublicNationShard::Animal,
     ///         ],
     ///     ),
     /// );
@@ -406,7 +395,7 @@ impl<'a> PublicNationRequest<'a> {
 
 impl<'a> NSRequest for PublicNationRequest<'a> {
     //noinspection SpellCheckingInspection
-    fn as_url(&self) -> Result<Url, RequestBuildError> {
+    fn as_url(&self) -> Url {
         let query = self
             .shards
             .iter()
@@ -428,13 +417,11 @@ impl<'a> NSRequest for PublicNationRequest<'a> {
 
         Url::parse_with_params(
             BASE_URL,
-            params.insert_front("q", query).insert_front(
-                "nation",
-                self.nation
-                    .ok_or(RequestBuildError::MissingParam("nation"))?,
-            ),
+            params
+                .insert_front("q", query)
+                .insert_front("nation", self.nation),
         )
-        .map_err(RequestBuildError::UrlParse)
+        .unwrap()
     }
 }
 
@@ -470,6 +457,7 @@ impl<'a> NSRequest for PublicNationRequest<'a> {
 /// [`Religion`](PublicNationShard::Religion), [`Factbooks`](PublicNationShard::Factbooks), and
 /// [`Dispatches`](PublicNationShard::Dispatches).
 ///
+#[derive(Clone, Debug)]
 pub struct StandardPublicNationRequest<'a>(&'a str);
 
 impl<'a> StandardPublicNationRequest<'a> {
@@ -480,8 +468,8 @@ impl<'a> StandardPublicNationRequest<'a> {
 }
 
 impl<'a> NSRequest for StandardPublicNationRequest<'a> {
-    fn as_url(&self) -> Result<Url, RequestBuildError> {
-        Url::parse_with_params(BASE_URL, [("nation", self.0)]).map_err(RequestBuildError::UrlParse)
+    fn as_url(&self) -> Url {
+        Url::parse_with_params(BASE_URL, [("nation", self.0)]).unwrap()
     }
 }
 
@@ -506,14 +494,13 @@ mod tests {
     }
 
     #[test]
-    fn add_shards() -> Result<(), crate::shards::RequestBuildError> {
+    fn add_shards() {
         let mut request_builder = crate::shards::nation::PublicNationRequest::new("Aramos");
         request_builder.add_shards([PublicNationShard::Capital, PublicNationShard::Animal]);
-        assert_eq!(request_builder.nation, Some("Aramos"));
+        assert_eq!(request_builder.nation, "Aramos");
         assert_eq!(
             request_builder.shards,
             vec![PublicNationShard::Capital, PublicNationShard::Animal]
         );
-        Ok(())
     }
 }

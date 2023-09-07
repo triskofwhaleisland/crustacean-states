@@ -1,8 +1,10 @@
 //! The nation parser module.
 
 use crate::{
-    parsers::happenings::Event,
-    parsers::{CensusData, DefaultOrCustom, Dispatch, MaybeRelativeTime, MaybeSystemTime},
+    parsers::{
+        happenings::Event, CensusData, DefaultOrCustom, Dispatch, MaybeRelativeTime,
+        MaybeSystemTime,
+    },
     shards::wa::WACouncil,
 };
 use quick_xml::DeError;
