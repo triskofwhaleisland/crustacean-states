@@ -12,7 +12,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     eprintln!("Made client!");
 
     let target_region = "Anteria";
-    let request = RegionRequest::new_standard(target_region);
+    let request = RegionRequest::new(target_region);
     let end1 = Instant::now();
     let response = client.get(request);
     let response = response.await?;

@@ -14,7 +14,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let client = Client::new(user_agent);
     eprintln!("Made client!");
     let target = "Aramos";
-    let request = PublicNationRequest::new(target, vec![Endorsements]);
+    let request = PublicNationRequest::new_with_shards(target, [Endorsements]);
     eprintln!("{request:?}");
     let response = client.get(request).await?;
     let text = response.text().await?;
@@ -24,7 +24,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let l = endorsements.len();
     let mut n = 0;
     for endorsed_nation in endorsements {
-        let request = PublicNationRequest::new(&endorsed_nation, vec![Endorsements]);
+        let request = PublicNationRequest::new_with_shards(&endorsed_nation, vec![Endorsements]);
         eprintln!("{request:?}");
         let response = match client.get(request.clone()).await {
             Ok(r) => Ok(r),
