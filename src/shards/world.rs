@@ -288,7 +288,8 @@ impl HappeningsShardBuilder {
         self
     }
 
-    /// Limit event gathering to a certain number of results. NOTE: This number may not be larger than 100.
+    /// Limit event gathering to a certain number of results.
+    /// NOTE: This number may not be larger than 100.
     pub fn limit(mut self, max_results: u8) -> Self {
         self.limit = Some(max_results);
         self
@@ -412,7 +413,8 @@ pub enum HappeningsFilterType {
     Resolution,
     /// A nation applies to, is admitted to, or resigns from the World Assembly.
     Member,
-    /// A nation in the World Assembly endorses another nation in the World Assembly in the same region.
+    /// A nation in the World Assembly endorses another nation in the World Assembly.
+    /// Be aware that nations can only endorse other nations in the same region.
     /// Follows the form "NATION1 endorsed NATION2."
     Endo,
 }

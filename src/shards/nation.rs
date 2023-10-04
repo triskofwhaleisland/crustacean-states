@@ -94,8 +94,8 @@ pub enum PublicNationShard<'a> {
     Demonym2Plural,
     /// The number of dispatches published by this nation.
     ///
-    /// This will always be greater than or equal to the number of factbooks published by this nation,
-    /// which can be requested with [`PublicNationShard::Factbooks`].
+    /// This will always be greater than or equal to the number of factbooks
+    /// published by this nation, which can be requested with [`PublicNationShard::Factbooks`].
     Dispatches,
     /// The list of all dispatches published by this nation.
     ///
@@ -141,7 +141,8 @@ pub enum PublicNationShard<'a> {
     FreedomScores,
     /// The full name of the nation.
     ///
-    /// Will always be equivalent to "The {[`PublicNationShard::Type`]} of {[`PublicNationShard::Name`]}",
+    /// Will always be equivalent to
+    /// "The {[`PublicNationShard::Type`]} of {[`PublicNationShard::Name`]}",
     /// where `{}` represents string interpolation.
     FullName,
     /// The vote of the nation in the General Assembly.
@@ -245,12 +246,14 @@ pub enum PublicNationShard<'a> {
     Tax,
     /// Whether a recruitment telegram will be blocked by the nation's telegram settings.
     TGCanRecruit {
-        /// Whether the nation will deny a recruitment telegram from this region in particular due to having received one too recently.
+        /// Whether the nation will deny a recruitment telegram from this region in particular
+        /// due to having received one too recently.
         from: Option<&'a str>,
     },
     /// Whether a campaign telegram will be blocked by the nation's telegram settings.
     TGCanCampaign {
-        /// Whether the nation will deny a campaign telegram from this region in particular due to having received one too recently.
+        /// Whether the nation will deny a campaign telegram from this region in particular
+        /// due to having received one too recently.
         from: Option<&'a str>,
     },
     /// The pre-title of the nation.
