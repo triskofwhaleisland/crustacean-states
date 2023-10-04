@@ -2,7 +2,8 @@
 //! You add multiple shards together in order to get the most efficient response.
 //! Remember: 50 requests per 30 seconds is both a lot and very little at the same time!
 //!
-//! There are two very important restrictions for shards: first, you can only combine shards that are
+//! There are two very important restrictions for shards:
+//! first, you can only combine shards that are
 //! - for the same nation, or
 //! - for the same region, or
 //! - for the same World Assembly council, or
@@ -165,7 +166,9 @@ impl<'a> CensusShard<'a> {
     /// ```rust
     /// # use crustacean_states::shards::{CensusModes, CensusShard};
     /// use crustacean_states::shards::CensusCurrentMode as CCM;
-    /// let shard = CensusShard::default().modes(CensusModes::from(&[CCM::Score, CCM::Rank, CCM::PercentRank]));
+    /// let shard = CensusShard::default().modes(CensusModes::from(
+    ///     &[CCM::Score, CCM::Rank, CCM::PercentRank]
+    /// ));
     /// ```
     pub fn modes(&mut self, modes: CensusModes) -> &mut CensusShard<'a> {
         self.modes = modes;

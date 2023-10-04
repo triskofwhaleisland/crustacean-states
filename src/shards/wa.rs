@@ -43,6 +43,30 @@ pub enum WAShard<'a> {
     PreviousResolution(u16),
 }
 
+impl<'a> From<WAGlobalShard> for WAShard<'a> {
+    fn from(value: WAGlobalShard) -> Self {
+        Self::GlobalInfo(value)
+    }
+}
+
+impl<'a> From<WACouncilShard> for WAShard<'a> {
+    fn from(value: WACouncilShard) -> Self {
+        Self::CouncilInfo(value)
+    }
+}
+
+impl<'a> From<&'a [ResolutionShard]> for WAShard<'a> {
+    fn from(value: &'a [ResolutionShard]) -> Self {
+        WAShard::CurrentResolution(value)
+    }
+}
+
+impl<'a> From<u16> for WAShard<'a> {
+    fn from(value: u16) -> Self {
+        WAShard::PreviousResolution(value)
+    }
+}
+
 impl<'a> Display for WAShard<'a> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(

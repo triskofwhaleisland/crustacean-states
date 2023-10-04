@@ -11,13 +11,21 @@
 //! 3. Parsing the response using a parser in [`parsers`].
 //!
 //! Currently, the following requests can be formed and sent:
-//! - Nation (public shards only): [`PublicNationRequest::new_nation`], from [`PublicNationShards`][crate::shards::nation::PublicNationShard]; also, [`NSRequest::new_nation_standard`]
-//! - Region: [`NSRequest::new_region`], from [`RegionShards`][crate::shards::region::RegionShard]; also, [`NSRequest::new_region_standard`]
-//! - World (except for `regionsfromtag`): [`NSRequest::new_world`], from [`WorldShards`][crate::shards::world::WorldShard]
-//! - WA (World Assembly): [`NSRequest::new_wa`], from [`WAShards`][crate::shards::wa::WAShard`]
+//! - Nation (public shards only):
+//! [`PublicNationRequest::new`](shards::nation::PublicNationRequest::new),
+//! from [`PublicNationShards`](shards::nation::PublicNationShard);
+//! also, [`StandardPublicNationRequest`](shards::nation::StandardPublicNationRequest)
+//! - Region: [`RegionRequest::new`](shards::region::RegionRequest::new),
+//! from [`RegionShards`](shards::region::RegionShard);
+//! also, [`StandardRegionRequest`](shards::region::StandardRegionRequest)
+//! - World (except for `regionsfromtag`):
+//! [`WorldRequest::new`](shards::world::WorldRequest::new),
+//! from [`WorldShards`](shards::world::WorldShard)
+//! - WA (World Assembly): [`WAShard`](shards::wa::WARequest),
+//! from [`WAShards`](shards::wa::WAShard`)
 //!
 //! The following requests can be parsed:
-//! - [`Nation`][crate::parsers::nation::Nation] (some fields still being finalized)
+//! - [`Nation`](parsers::nation::Nation) (some fields still being finalized)
 //!
 //! The following functionality is planned, but is not implemented:
 //! - parsers for Region, World, and WA request responses
@@ -32,8 +40,6 @@
 //! [`PublicNationRequest`]: [crate::shards::nation::PublicNationRequest]
 
 // #![deny(missing_docs)]
-
-// #[allow(unused_imports)] // it's for the docs :)
 
 #[doc(hidden)]
 mod macros;

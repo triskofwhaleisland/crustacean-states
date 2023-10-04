@@ -83,7 +83,8 @@ impl Client {
         }
     }
 
-    /// Estimates the length of time to wait between each request to avoid a 429 Too Many Requests error.
+    /// Estimates the length of time to wait between each request to avoid a
+    /// 429 Too Many Requests error.
     pub fn wait_duration(&self) -> Option<Duration> {
         self.state
             .lock()
@@ -122,7 +123,7 @@ pub enum ClientError {
     ///
     /// The response is probably not malformed if you have this error,
     /// as the RFC for standardization of these headers by the IETF is still an active Internet draft.
-    /// [This link should take you to the current draft.](https://datatracker.ietf.org/doc/draft-ietf-httpapi-ratelimit-headers/)
+    /// [Here is the current draft.](https://datatracker.ietf.org/doc/draft-ietf-httpapi-ratelimit-headers/)
     #[error("couldn't find RateLimit-{0} in headers")]
     NoRateLimitElementError(String),
     /// The `RateLimit-Policy` header is unique as it should contain two values.

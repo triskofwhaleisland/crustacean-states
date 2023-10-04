@@ -98,7 +98,8 @@ pub struct Sectors {
 ///
 /// Note that aside from the `name` field, every field is an `Option`.
 /// This is because,
-/// depending on the [`PublicNationShard`]s used to make the request,
+/// depending on the [`PublicNationShard`](crate::shards::nation::PublicNationShard)s used
+/// to make the request,
 /// only certain fields will be returned.
 #[derive(Debug)]
 #[non_exhaustive]
@@ -107,7 +108,8 @@ pub struct Nation {
     /// This is the only field that is guaranteed to be filled in.
     /// Note that because of limitations to the way the name is sent by NationStates,
     /// it may not be capitalized properly by the "pretty name" function.
-    /// The only way to get the accurate capitalization is to request [`PublicNationShard::Name`].
+    /// The only way to get the accurate capitalization is
+    /// to request [`PublicNationShard::Name`](crate::shards::nation::PublicNationShard).
     pub name: String,
     /// The pre-title of the nation.
     /// (`type` is a reserved word in Rust, so `kind` is used in its place.)
@@ -595,7 +597,8 @@ pub struct Policy {
     pub name: String,
     /// The banner that is associated with the policy.
     pub picture: BannerId,
-    /// The category the policy belongs to. Note: this field will eventually be converted into an `enum`.
+    /// The category the policy belongs to.
+    /// Note: this field will eventually be converted into an `enum`.
     // TODO PolicyCategory
     pub category: String,
     /// The description of the policy.
@@ -612,7 +615,8 @@ pub enum IntoNationError {
     /// A `u8` could not be parsed as a `bool` because it was not `0` or `1`.
     #[error("boolean cannot be derived from {0}")]
     BadBooleanError(u8),
-    /// A `String` could not be parsed as a [`DispatchCategory`][crate::dispatch::DispatchCategory].
+    /// A `String`
+    /// could not be parsed as a [`DispatchCategory`](crate::models::dispatch::DispatchCategory).
     #[error("malformed dispatch category: {0}")]
     BadDispatchCategory(String),
     /// A `String` could not be parsed as a [`WAStatus`].
@@ -652,7 +656,9 @@ pub enum WAVote {
     ///
     /// This is the default response that the game provides,
     /// even if the nation is not in the World Assembly.
-    /// See the documentation for [`PublicNationShard::GAVote`] or [`PublicNationShard::SCVote`]
+    /// See the documentation for
+    /// [`PublicNationShard::GAVote`](crate::shards::nation::PublicNationShard::GAVote)
+    /// or [`PublicNationShard::SCVote`](crate::shards::nation::PublicNationShard::SCVote)
     /// for more details.
     Undecided,
 }
