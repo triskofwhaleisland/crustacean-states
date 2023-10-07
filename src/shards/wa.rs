@@ -34,7 +34,9 @@ pub enum WACouncil {
 /// A shard for the World Assembly.
 #[derive(AsRefStr, Clone, Debug)]
 pub enum WAShard<'a> {
+    /// Information about the WA as a whole.
     GlobalInfo(WAGlobalShard),
+    /// Information about an individual WA chamber.
     CouncilInfo(WACouncilShard),
     /// Information about a resolution in a World Assembly council.
     /// Request more information with [`ResolutionShard`]s.
@@ -85,6 +87,7 @@ impl<'a> Display for WAShard<'a> {
     }
 }
 
+/// Information about the World Assembly as a whole.
 #[derive(Clone, Debug, Display)]
 pub enum WAGlobalShard {
     /// The number of nations in the World Assembly.
@@ -97,6 +100,7 @@ pub enum WAGlobalShard {
     Members,
 }
 
+/// Information for the World Assembly that is specific to a council.
 #[derive(Clone, Debug, Display)]
 pub enum WACouncilShard {
     /// A shard that returns `[Event]`s in the World Assembly.
@@ -109,7 +113,7 @@ pub enum WACouncilShard {
     LastResolution,
 }
 
-/// Extra information about the current at-vote resolution.
+/// Information about the current at-vote resolution.
 #[derive(Clone, Debug, Display)]
 pub enum ResolutionShard {
     /// Lists every nation voting for and against the resolution.
@@ -125,25 +129,33 @@ pub enum ResolutionShard {
     DelVotes,
 }
 
+/// Request information about the WA.
 #[derive(Clone, Debug)]
 pub enum WARequest<'a> {
+    /// Information about the WA as a whole.
     Global(GlobalRequest<'a>),
+    /// Information about a WA council.
     Council(CouncilRequest<'a>),
+    /// Information about the at-vote resolution.
     AtVoteResolution(ResolutionRequest<'a>),
+    /// Information about a previous resolution.
     PastResolution(ResolutionArchiveRequest),
 }
 
+/// Request information about the WA as a whole.
 #[derive(Clone, Debug)]
 pub struct GlobalRequest<'a> {
     shards: &'a [WAGlobalShard],
 }
 
 impl<'a> GlobalRequest<'a> {
+    /// Create a new request about the WA as a whole.
     pub fn new(shards: &'a [WAGlobalShard]) -> Self {
         Self { shards }
     }
 }
 
+/// Request information about a WA council.
 #[derive(Clone, Debug)]
 pub struct CouncilRequest<'a> {
     council: WACouncil,
@@ -151,11 +163,13 @@ pub struct CouncilRequest<'a> {
 }
 
 impl<'a> CouncilRequest<'a> {
+    /// Create a request about a WA council.
     pub fn new(council: WACouncil, shards: &'a [WAShard<'a>]) -> Self {
         Self { council, shards }
     }
 }
 
+/// Request information about the current at-vote resolution.
 #[derive(Clone, Debug)]
 pub struct ResolutionRequest<'a> {
     council: WACouncil,
@@ -163,11 +177,13 @@ pub struct ResolutionRequest<'a> {
 }
 
 impl<'a> ResolutionRequest<'a> {
+    /// Create a request about the current at-vote resolution.
     pub fn new(council: WACouncil, shards: &'a [ResolutionShard]) -> Self {
         Self { council, shards }
     }
 }
 
+/// Request information about previous resolutions.
 #[derive(Clone, Debug)]
 pub struct ResolutionArchiveRequest {
     council: WACouncil,
@@ -175,6 +191,7 @@ pub struct ResolutionArchiveRequest {
 }
 
 impl ResolutionArchiveRequest {
+    /// Create a request about previous resolutions.
     pub fn new(council: WACouncil, id: u16) -> Self {
         Self { council, id }
     }

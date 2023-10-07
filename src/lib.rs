@@ -1,6 +1,6 @@
 //! A NationStates API wrapper that takes full advantage of Rust's type system.
 //!
-//! Works with the current API (v12) as of 2 July 2023.
+//! Works with the current API (v12) as of 4 October 2023.
 //!
 //! Using the library usually takes three steps:
 //!
@@ -49,7 +49,8 @@ pub mod models;
 pub mod parsers;
 pub mod shards;
 
-/// Takes a nation name with capital letters and spaces and turns it into a safe-to-send, lowercase name.
+/// Takes a nation name with capital letters and spaces
+/// and turns it into a safe-to-send, lowercase name.
 pub fn safe_name(unsafe_name: impl ToString) -> String {
     unsafe_name
         .to_string()
@@ -58,9 +59,11 @@ pub fn safe_name(unsafe_name: impl ToString) -> String {
         .to_ascii_lowercase()
 }
 
-/// Takes a lowercase, web-safe name and replaces it with a name that should match the real name on NationStates.
+/// Takes a lowercase, web-safe name and replaces it with a name
+/// that should match the real name on NationStates.
 ///
-/// Note: this will not always result in a name that is capitalized the same way as it is on NationStates.
+/// Note: this will not always result in a name
+/// that is capitalized the same way as it is on NationStates.
 pub fn pretty_name<T: ToString>(safe_name: T) -> String {
     safe_name
         .to_string()

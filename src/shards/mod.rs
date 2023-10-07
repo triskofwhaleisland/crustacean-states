@@ -276,7 +276,7 @@ pub enum CensusCurrentMode {
 }
 
 /// Information on how nations in the region rank according to the World Census.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct CensusRanksShard {
     scale: Option<NonZeroU8>,
     start: Option<NonZeroU32>,

@@ -6,7 +6,7 @@ use strum::AsRefStr;
 use url::Url;
 
 /// A request of a region.
-#[derive(AsRefStr, Clone, Debug)]
+#[derive(AsRefStr, Clone, Debug, PartialEq)]
 pub enum RegionShard<'a> {
     /// The list of all nations banned from the region.
     BanList,
@@ -102,7 +102,7 @@ pub enum RegionShard<'a> {
 ///
 /// Be aware the default behavior is for the number of messages to be 20,
 /// ending at the most recent message.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct RmbShard {
     /// Return this many messages. Must be in the range 1-100.
     limit: Option<NonZeroU8>,
@@ -152,13 +152,18 @@ impl RmbShard {
 /// # Ok(())
 /// # }
 /// ```
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct RegionRequest<'a> {
     region: &'a str,
     shards: Vec<RegionShard<'a>>,
 }
 
 impl<'a> RegionRequest<'a> {
+    /// Creates a new builder given a region name.
+    ///
+    /// If you do not modify the shards on this request,
+    /// you will get a default response using the "standard region API shard set".
+    /// See [`StandardRegionRequest`] for more information.
     pub fn new(region: &'a str) -> Self {
         Self {
             region,
@@ -166,6 +171,7 @@ impl<'a> RegionRequest<'a> {
         }
     }
 
+    /// Create a new request.
     pub fn new_with_shards<T>(region: &'a str, shards: T) -> Self
     where
         T: AsRef<[RegionShard<'a>]>,
@@ -176,11 +182,29 @@ impl<'a> RegionRequest<'a> {
         }
     }
 
+    /// Sets the region for the request.
     pub fn region(&mut self, region: &'a str) -> &mut Self {
         self.region = region;
         self
     }
 
+    /// Modify shards using a function.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use crustacean_states::shards::region::{RegionRequest, RegionShard};
+    /// let mut request_builder = RegionRequest::new("Anteria");
+    /// request_builder.shards(|s| {
+    ///     s.push(RegionShard::Delegate);
+    /// });
+    /// assert_eq!(
+    ///     request_builder,
+    ///     RegionRequest::new_with_shards(
+    ///         "Anteria",
+    ///         vec![RegionShard::Delegate]
+    ///     ),
+    /// );
+    /// ```
     pub fn shards<F>(&mut self, f: F) -> &mut Self
     where
         F: FnOnce(&mut Vec<RegionShard>),
@@ -189,11 +213,56 @@ impl<'a> RegionRequest<'a> {
         self
     }
 
+    /// Add a shard.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use crustacean_states::shards::region::{
+    /// #   RegionRequest, RegionShard
+    /// # };
+    /// let mut request_builder = RegionRequest::new("Anteria");
+    /// request_builder.add_shard(RegionShard::Delegate);
+    /// assert_eq!(
+    ///     request_builder,
+    ///     RegionRequest::new_with_shards(
+    ///         "Anteria",
+    ///         vec![RegionShard::Delegate],
+    ///     ),
+    /// );
+    /// ```
     pub fn add_shard(&mut self, shard: RegionShard<'a>) -> &mut Self {
         self.shards.push(shard);
         self
     }
 
+    /// Add multiple shards.
+    /// Note that the shards can be in any form of iterator, not just a `Vec`.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use crustacean_states::shards::region::{
+    /// #    RegionRequest,
+    /// #    RegionShard,
+    /// # };
+    /// # fn test() -> Result<(), Box<dyn Error>> {
+    /// let mut request_builder = RegionRequest::new("Anteria");
+    /// request_builder.add_shards(
+    ///     [RegionShard::Delegate, RegionShard::BanList]
+    /// );
+    /// assert_eq!(
+    ///     request_builder,
+    ///     RegionRequest::new_with_shards(
+    ///         "Anteria",
+    ///         vec![
+    ///             RegionShard::Delegate,
+    ///             RegionShard::BanList,
+    ///         ],
+    ///     ),
+    /// );
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn add_shards<I>(&mut self, shards: I) -> &mut Self
     where
         I: IntoIterator<Item = RegionShard<'a>>,
@@ -243,9 +312,29 @@ impl<'a> NSRequest for RegionRequest<'a> {
     }
 }
 
+/// A "standard" region API request.
+/// Avoid this type if you only want certain information about a nation.
+///
+/// What does "standard" mean?
+/// NationStates will return certain information by default,
+/// as if you had requested a certain set of shards.
+/// Those shards are:
+/// [`Name`](RegionShard::Name), [`Factbook`](RegionShard::Factbook),
+/// [`NumNations`](RegionShard::NumNations),
+/// [`Nations`](RegionShard::Nations), [`Delegate`](RegionShard::Delegate),
+/// [`DelegateVotes`](RegionShard::DelegateVotes),
+/// [`DelegateAuth`](RegionShard::DelegateAuth),
+/// [`Frontier`](RegionShard::Frontier),
+/// [`Founder`](RegionShard::Founder), [`Governor`](RegionShard::Governor),
+/// [`Officers`](RegionShard::Officers), [`Power`](RegionShard::Power), [`Flag`](RegionShard::Flag),
+/// [`Banner`](RegionShard::Banner), [`BannerUrl`](RegionShard::BannerUrl),
+/// [`Embassies`](RegionShard::Embassies), [`WABadges`](RegionShard::WABadges),
+/// [`LastUpdate`](RegionShard::LastUpdate), [`LastMajorUpdate`](RegionShard::LastMajorUpdate), and
+/// [`LastMinorUpdate`](RegionShard::LastMinorUpdate).
 pub struct StandardRegionRequest<'a>(&'a str);
 
 impl<'a> StandardRegionRequest<'a> {
+    /// Create a new standard region request.
     pub fn new(region: &'a str) -> Self {
         Self(region)
     }
