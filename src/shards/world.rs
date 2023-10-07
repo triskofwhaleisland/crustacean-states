@@ -15,7 +15,7 @@ use strum::AsRefStr;
 use url::Url;
 
 /// A request for the wide world of NationStates.
-#[derive(AsRefStr, Clone, Debug)]
+#[derive(AsRefStr, Clone, Debug, PartialEq)]
 pub enum WorldShard<'a> {
     /// Provides the name of a banner given its ID, as well as the necessary conditions to unlock it.
     Banner(Vec<BannerId>),
@@ -115,20 +115,42 @@ pub enum WorldShard<'a> {
     TGQueue,
 }
 
-#[derive(Default)]
+/// A request of the world API.
+/// If you're going to make a request, start here!
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct WorldRequest<'a>(Vec<WorldShard<'a>>);
 
 impl<'a> WorldRequest<'a> {
+    /// Make a new [`WorldRequest`].
     pub fn new<T>(shards: &'a T) -> Self
     where
         T: AsRef<[WorldShard<'a>]>,
     {
         Self(shards.as_ref().to_vec())
     }
+
+    /// Make an empty [`WorldRequest`].
+    ///
+    /// Please remember to actually modify this before you send it,
+    /// as you will almost definitely get a `400 Bad Request` error from the API.
     pub fn new_empty() -> Self {
         Self(vec![])
     }
 
+    /// Modify shards using a function.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use crustacean_states::shards::world::{WorldShard, WorldRequest};
+    /// let mut request_builder = WorldRequest::new(&[WorldShard::CensusId]);
+    /// request_builder.shards(|s| {
+    ///     s.push(WorldShard::FeaturedRegion);
+    /// });
+    /// assert_eq!(
+    ///     request_builder,
+    ///     WorldRequest::new(&[WorldShard::CensusId, WorldShard::FeaturedRegion]),
+    /// );
+    /// ```
     pub fn shards<F>(&mut self, f: F) -> &mut Self
     where
         F: FnOnce(&mut Vec<WorldShard<'a>>),
@@ -136,11 +158,47 @@ impl<'a> WorldRequest<'a> {
         f(&mut self.0);
         self
     }
-
+    /// Add a shard.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use crustacean_states::shards::world::{
+    /// #   WorldRequest, WorldShard
+    /// # };
+    /// let mut request_builder = WorldRequest::new_empty();
+    /// request_builder.add_shard(WorldShard::DispatchList {
+    ///     author: None, category: None, sort: None,
+    /// });
+    /// assert_eq!(
+    ///     request_builder,
+    ///     WorldRequest::new(&[WorldShard::DispatchList {
+    ///         author: None, category: None, sort: None,
+    ///     }]),
+    /// );
+    /// ```
     pub fn add_shard(&mut self, shard: WorldShard<'a>) -> &mut Self {
         self.0.push(shard);
         self
     }
+
+    /// ```rust
+    /// # use std::error::Error;
+    /// # use crustacean_states::shards::world::{
+    /// #    WorldRequest,
+    /// #    WorldShard,
+    /// # };
+    /// # fn test() -> Result<(), Box<dyn Error>> {
+    /// let mut request_builder = WorldRequest::new_empty();
+    /// request_builder.add_shards(
+    ///     [WorldShard::TGQueue, WorldShard::LastEventId]
+    /// );
+    /// assert_eq!(
+    ///     request_builder,
+    ///     WorldRequest::new(&[WorldShard::TGQueue, WorldShard::LastEventId]),
+    /// );
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn add_shards<I: IntoIterator<Item = WorldShard<'a>>>(&mut self, shards: I) -> &mut Self {
         self.0.extend(shards);
         self
@@ -345,7 +403,7 @@ impl HappeningsShardBuilder {
 }
 
 /// The ways to sort dispatches.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum DispatchSort {
     /// Newest first.
     New,
@@ -356,7 +414,7 @@ pub enum DispatchSort {
 impl_display_as_debug!(DispatchSort);
 
 /// The happenings shard can either target nations or regions.
-#[derive(Clone, Debug, AsRefStr)]
+#[derive(Clone, Debug, PartialEq, AsRefStr)]
 pub enum HappeningsViewType {
     /// Targets one or more nations.
     Nation(Vec<String>),
@@ -365,7 +423,7 @@ pub enum HappeningsViewType {
 }
 
 /// The happenings shard can target multiple kinds of events.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 #[non_exhaustive]
 pub enum HappeningsFilterType {
     /// Triggered by answering an issue (dismissing the issue results in no event).

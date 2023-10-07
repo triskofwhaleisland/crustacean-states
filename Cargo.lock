@@ -110,7 +110,7 @@ checksum = "e496a50fda8aacccc86d7529e2c1e0892dbd0f898a6b5645b5561b89c3210efa"
 
 [[package]]
 name = "crustacean-states"
-version = "0.2.0-alpha"
+version = "0.2.0-beta.1"
 dependencies = [
  "dotenv",
  "http",

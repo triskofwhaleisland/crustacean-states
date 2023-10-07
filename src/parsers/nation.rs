@@ -680,7 +680,7 @@ impl TryFrom<String> for WAVote {
 }
 
 /// The ID of a banner. WIP. TODO make banner id categories
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct BannerId {
     pub(crate) category: String,
     pub(crate) number: u16,
