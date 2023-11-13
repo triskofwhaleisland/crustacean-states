@@ -5,11 +5,12 @@ use crustacean_states::{
 };
 use std::error::Error;
 use tokio::time::Instant;
+use dotenvy::dotenv;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let begin1 = Instant::now();
-    dotenv::dotenv()?;
+    dotenv()?;
     let user_agent = std::env::var("USER_AGENT")?;
     let client = Client::new(user_agent);
     eprintln!("Made client!");

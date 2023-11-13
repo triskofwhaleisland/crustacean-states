@@ -21,6 +21,6 @@ thiserror = "1.0"
 url = "2.2"
 
 [dev-dependencies]
-dotenv = "0.15"
+dotenvy = "0.15"
 quick-xml = { version = "0.30", features = ["async-tokio", "serialize"] }
 tokio = { version = "1", default-features = false, features = ["rt-multi-thread", "macros"] }

@@ -8,6 +8,7 @@ use crustacean_states::{
 };
 use std::error::Error;
 use tokio::time::Instant;
+use dotenvy::dotenv;
 // use std::fs::{File, OpenOptions};
 // use std::io::{Read, Write};
 // use std::path::Path;
@@ -15,7 +16,7 @@ use tokio::time::Instant;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let begin1 = Instant::now();
-    dotenv::dotenv()?;
+    dotenv()?;
     let user_agent = std::env::var("USER_AGENT")?;
     let client = Client::new(user_agent);
     let target_name = "Aramos";
