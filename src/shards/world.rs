@@ -13,6 +13,7 @@ use itertools::Itertools;
 use std::fmt::{Display, Formatter};
 use strum::AsRefStr;
 use url::Url;
+use crate::shards::region::Tag;
 
 /// A request for the wide world of NationStates.
 #[derive(AsRefStr, Clone, Debug, PartialEq)]
@@ -110,7 +111,7 @@ pub enum WorldShard<'a> {
     Regions,
     // TODO implement correctly
     // /// List of regions which do have some tags and don't have others.
-    // RegionsByTag(Vec<IncludeOrExcludeTag>),
+    RegionsByTag(Vec<IncludeOrExcludeTag>),
     /// The number of manual, mass, and API telegrams in the queue.
     TGQueue,
 }
@@ -277,9 +278,9 @@ impl<'a> NSRequest for WorldRequest<'a> {
                     .insert_on("sincetime", since_time)
                     .insert_on("beforetime", before_time);
             }
-            // WorldShard::RegionsByTag(complex_tags) => {
-            //     params.insert("tags", complex_tags.iter().join(","));
-            // }
+            WorldShard::RegionsByTag(complex_tags) => {
+                params.insert("tags", complex_tags.iter().join(","));
+            }
             _ => {}
         });
 
@@ -483,44 +484,46 @@ impl Display for HappeningsFilterType {
     }
 }
 
-// /// When searching regions by tag, you can do it by including certain tags and excluding others.
-// /// Example:
-// /// ```rust
-// /// use url::Url;
-// /// use crustacean_states::shards::NSRequest;
-// /// use crustacean_states::shards::world::IncludeOrExcludeTag::{Exclude, Include};
-// /// use crustacean_states::shards::world::Tag::{Fandom, Fascist, RegionalGovernment};
-// /// use crustacean_states::shards::world::WorldShard;
-// ///
-// /// let request = Url::from(NSRequest::new_world(vec![WorldShard::RegionsByTag(vec![
-// ///     Include(RegionalGovernment), Include(Fandom), Exclude(Fascist)
-// /// ])]));
-// /// assert_eq!(
-// ///     request.as_str(),
-// ///     "https://www.nationstates.net/cgi-bin/api.cgi?q=regionsbytag&tags=regionalgovernment%2Cfandom%2C-fascist",
-// /// )
-// /// ```
-// #[derive(Debug)]
-// pub enum IncludeOrExcludeTag {
-//     /// Include this tag.
-//     Include(Tag),
-//     /// Exclude this tag.
-//     Exclude(Tag),
-// }
+/// When searching regions by tag, you can do it by including certain tags and excluding others.
+/// Example:
+/// ```rust
+/// use url::Url;
+/// use crustacean_states::shards::{
+///     NSRequest,
+///     world::{IncludeOrExcludeTag::{Include, Exclude}, WorldRequest, WorldShard},
+///     region::Tag::{Fandom, Fascist, RegionalGovernment},
+/// };
+///
+/// let shard = [WorldShard::RegionsByTag(vec![
+///     Include(RegionalGovernment), Include(Fandom), Exclude(Fascist)
+/// ])];
+/// let request = WorldRequest::new(&shard);
+/// assert_eq!(
+///     request.as_url().as_str(),
+///     "https://www.nationstates.net/cgi-bin/api.cgi?q=regionsbytag&tags=regional_government%2Cfandom%2C-fascist",
+/// )
+/// ```
+#[derive(Clone, Debug, PartialEq)]
+pub enum IncludeOrExcludeTag {
+    /// Include this tag.
+    Include(Tag),
+    /// Exclude this tag.
+    Exclude(Tag),
+}
 
-// impl Display for IncludeOrExcludeTag {
-//     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-//         write!(
-//             f,
-//             "{}",
-//             match self {
-//                 IncludeOrExcludeTag::Include(tag) => {
-//                     format!("{:?}", tag).to_ascii_lowercase()
-//                 }
-//                 IncludeOrExcludeTag::Exclude(tag) => {
-//                     format!("-{:?}", tag).to_ascii_lowercase()
-//                 }
-//             }
-//         )
-//     }
-// }
+impl Display for IncludeOrExcludeTag {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                IncludeOrExcludeTag::Include(tag) => {
+                    format!("{:?}", tag).to_ascii_lowercase()
+                }
+                IncludeOrExcludeTag::Exclude(tag) => {
+                    format!("-{:?}", tag).to_ascii_lowercase()
+                }
+            }
+        )
+    }
+}
