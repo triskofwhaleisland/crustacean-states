@@ -5,6 +5,7 @@ use crate::{
     models::dispatch::DispatchCategory,
     parsers::nation::BannerId,
     shards::{
+        region::Tag,
         world::HappeningsViewType::{Nation, Region},
         CensusRanksShard, CensusShard, NSRequest, Params, BASE_URL,
     },
@@ -13,7 +14,6 @@ use itertools::Itertools;
 use std::fmt::{Display, Formatter};
 use strum::AsRefStr;
 use url::Url;
-use crate::shards::region::Tag;
 
 /// A request for the wide world of NationStates.
 #[derive(AsRefStr, Clone, Debug, PartialEq)]
@@ -40,18 +40,18 @@ pub enum WorldShard<'a> {
     /// Provides the units of a given census scale if `Some(id)`
     /// or of today's featured census scale if `None`.
     CensusScale(Option<u8>),
-    /// Provides the index that nations are ranked on for a given census scale if `Some(id)`
+    /// Provides the index that nations are ranked on for a given census scale if `Some(id)`,
     /// or for today's featured census scale if `None`.
     CensusTitle(Option<u8>),
     /// Gets a dispatch with a specific ID.
     Dispatch(u32),
     /// Lists 20 dispatches. The fields can provide more control.
     DispatchList {
-        /// If `Some(nation)`, search only for dispatches written by `nation`.
+        /// If `Some(nation)`, then search only for dispatches written by `nation`.
         author: Option<&'a str>,
-        /// If `Some(category)`, search only for dispatches that have a certain category.
+        /// If `Some(category)`, then search only for dispatches that have a certain category.
         category: Option<DispatchCategory>,
-        /// If `Some(sort)`, sort according to the dispatch sorting rules.
+        /// If `Some(sort)`, then sort, according to the dispatch sorting rules.
         sort: Option<DispatchSort>,
     },
     /// Gets the featured region on the website, which updates daily.
@@ -62,7 +62,7 @@ pub enum WorldShard<'a> {
         view: Option<HappeningsViewType>,
         /// Only get events of a certain type.
         filter: Option<Vec<HappeningsFilterType>>,
-        /// Limit the number of events. NOTE: the limit cannot be less than 100.
+        /// Limit the number of events. NOTE: the limit can’t be less than 100.
         limit: Option<u8>,
         /// Filters events to only those after a certain event ID.
         ///
@@ -90,9 +90,9 @@ pub enum WorldShard<'a> {
     LastEventId,
     /// List of every nation in the game right now.
     /// WARNING:
-    /// There are nearly 300,000 nations currently on NationStates (as of 20 June 2023),
+    /// There are nearly 300 thousand nations currently on NationStates (as of 20 June 2023),
     /// over 8.6 million nations have been created on the site,
-    /// and in April 2020 there was an all-time high of 600,000 nations in the game.
+    /// and in April 2020 there was an all-time high of 600 thousand nations in the game.
     /// Be very careful.
     Nations,
     /// The 50 most recently created nations.
@@ -182,6 +182,8 @@ impl<'a> WorldRequest<'a> {
         self
     }
 
+    /// Add multiple shards
+    ///
     /// ```rust
     /// # use std::error::Error;
     /// # use crustacean_states::shards::world::{
@@ -446,7 +448,7 @@ pub enum HappeningsFilterType {
     /// cancelling closure, establishment, and cancellation.
     Embassy,
     /// Has to do with the ejection or ejection + ban ("banjection") of a nation from a region.
-    /// Follows the form "NATION was ejected (and banned) from REGION by OTHER NATION."
+    /// Follows the form "NATION was ejected (and banned) from REGION by OTHER_NATION."
     Eject,
     /// Has to do with all administrative actions done in a region,
     /// such as banning nations, updating regional tags,
@@ -518,10 +520,10 @@ impl Display for IncludeOrExcludeTag {
             "{}",
             match self {
                 IncludeOrExcludeTag::Include(tag) => {
-                    format!("{:?}", tag).to_ascii_lowercase()
+                    format!("{}", tag).to_ascii_lowercase()
                 }
                 IncludeOrExcludeTag::Exclude(tag) => {
-                    format!("-{:?}", tag).to_ascii_lowercase()
+                    format!("-{}", tag).to_ascii_lowercase()
                 }
             }
         )

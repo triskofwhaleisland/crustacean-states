@@ -6,9 +6,9 @@ use crustacean_states::{
         CensusCurrentMode as CCM, CensusModes, CensusScales, CensusShard,
     },
 };
+use dotenvy::dotenv;
 use std::error::Error;
 use tokio::time::Instant;
-use dotenvy::dotenv;
 // use std::fs::{File, OpenOptions};
 // use std::io::{Read, Write};
 // use std::path::Path;

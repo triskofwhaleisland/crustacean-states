@@ -3,9 +3,9 @@ use crustacean_states::{
     parsers::nation::Nation,
     shards::nation::{PublicNationRequest, PublicNationShard::Endorsements},
 };
+use dotenvy::dotenv;
 use std::error::Error;
 use tokio::time::Instant;
-use dotenvy::dotenv;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {

@@ -1,7 +1,7 @@
 use crustacean_states::{client::Client, shards::region::RegionRequest};
+use dotenvy::dotenv;
 use std::error::Error;
 use tokio::time::Instant;
-use dotenvy::dotenv;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
