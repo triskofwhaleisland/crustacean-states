@@ -4,7 +4,7 @@ use crate::{parsers::RawEvent, regex};
 use once_cell::sync::Lazy;
 use regex::{Regex, RegexSet};
 
-/// A happenings line.
+/// A line of `happenings`.
 #[derive(Debug)]
 #[non_exhaustive]
 pub struct Event {

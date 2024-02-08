@@ -96,7 +96,7 @@ pub enum WAGlobalShard {
     NumDelegates,
     /// The list of delegates currently serving in the World Assembly.
     Delegates,
-    /// The list of all members of the World Assembly.
+    /// The list of all World Assembly members.
     Members,
 }
 
@@ -122,7 +122,7 @@ pub enum ResolutionShard {
     VoteTrack,
     /// Lists every delegate's vote, including voting power.
     /// NOTE: this will not return the resolution text.
-    /// Votes are chronologically ordered, oldest vote first.
+    /// Votes are chronologically ordered; the oldest vote comes first.
     DelLog,
     /// List every delegate's vote, including voting power.
     /// NOTE: Votes are grouped into yes and no votes.
@@ -218,9 +218,10 @@ impl<'a> NSRequest for WARequest<'a> {
                 )
                 .insert_on(
                     "id",
-                    &match self {
-                        WARequest::PastResolution(ResolutionArchiveRequest { id, .. }) => Some(id),
-                        _ => None,
+                    &if let WARequest::PastResolution(ResolutionArchiveRequest { id, .. }) = self {
+                        Some(id)
+                    } else {
+                        None
                     },
                 )
                 .insert(

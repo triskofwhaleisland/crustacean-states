@@ -47,9 +47,9 @@ impl Client {
 
     /// Make a request of the API.
     ///
-    /// If the last request was too recent, early-returns [`ClientError::RateLimitedError`].
+    /// If the last request was too recent, early-return [`ClientError::RateLimitedError`].
     ///
-    /// If there was an error in the [`reqwest`] crate, returns [`ClientError::ReqwestError`].
+    /// If there was an error in the [`reqwest`] crate, return [`ClientError::ReqwestError`].
     // Note: this function cannot be tested because it is `async`.
     pub async fn get<U: NSRequest>(&self, request: U) -> Result<Response, ClientError> {
         // If the client was told that it should not send until some time after now,
@@ -58,7 +58,7 @@ impl Client {
             .lock()
             .unwrap()
             .send_after
-            .filter(|t| t > &Instant::now())
+            .filter(|t| *t > Instant::now())
         {
             // Raise an error detailing when the request should have been sent.
             return Err(ClientError::RateLimitedError(t));
@@ -110,7 +110,7 @@ pub enum ClientError {
     /// is not made solely of visible ASCII characters.
     ///
     /// If you get this,
-    /// your response is probably malformed and you should not attempt to parse it further!
+    /// your response is probably malformed, and you shouldn't attempt to parse it further!
     #[error("could not convert to string")]
     ToStrError {
         /// The parent error.
@@ -142,8 +142,8 @@ pub enum ClientError {
         /// The parent error.
         source: ParseIntError,
     },
-    /// If you shouldn't send a request until later, you will be rate-limited by this error.
-    /// Your request is perfectly fine, just wait until your timeout is over.
+    /// If you shouldn't send a request until later, this error will rate-limit you.
+    /// Your request is perfectly fine, wait until your timeout is over.
     #[error("rate limited until {0:?}")]
     RateLimitedError(Instant),
 }
@@ -151,15 +151,15 @@ pub enum ClientError {
 /// A simple tool to help with NationStates rate limits.
 #[derive(Clone, Debug)]
 pub struct RateLimits {
-    // policy and limits are currently disabled
+    // Policy and limits are currently disabled
     // because this part of the program is private and implementation will probably change.
     // ---
     // /// The number of requests that can be sent within a timeframe,
     // /// and how long that timeframe is in seconds.
-    // policy: (u8, u8),
+    // - `policy`: (u8, u8),
     // /// The number of requests that can be sent in this timeframe.
     // /// Always equal to `policy.0`.
-    // limit: u8,
+    // - `limit`: u8,
     // ---
     remaining: u8,
     reset: u8,

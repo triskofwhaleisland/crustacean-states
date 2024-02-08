@@ -123,6 +123,11 @@ pub struct WorldRequest<'a>(Vec<WorldShard<'a>>);
 
 impl<'a> WorldRequest<'a> {
     /// Make a new [`WorldRequest`].
+    ///
+    /// NOTE!
+    /// In 0.3, [`new_empty`](Self::new_empty)
+    /// will become [`new`](Self::new)
+    /// and [`new`](Self::new) will be replaced with an implementation of [`From`].
     pub fn new<T>(shards: &'a T) -> Self
     where
         T: AsRef<[WorldShard<'a>]>,
@@ -134,6 +139,11 @@ impl<'a> WorldRequest<'a> {
     ///
     /// Please remember to actually modify this before you send it,
     /// as you will almost definitely get a `400 Bad Request` error from the API.
+    ///
+    /// NOTE!
+    /// In 0.3, [`new_empty`](Self::new_empty)
+    /// will become [`new`](Self::new)
+    /// and [`new`](Self::new) will be replaced with an implementation of [`From`].
     pub fn new_empty() -> Self {
         Self(vec![])
     }
@@ -182,7 +192,7 @@ impl<'a> WorldRequest<'a> {
         self
     }
 
-    /// Add multiple shards
+    /// Add multiple shards.
     ///
     /// ```rust
     /// # use std::error::Error;
@@ -520,12 +530,13 @@ impl Display for IncludeOrExcludeTag {
             "{}",
             match self {
                 IncludeOrExcludeTag::Include(tag) => {
-                    format!("{}", tag).to_ascii_lowercase()
+                    format!("{}", tag)
                 }
                 IncludeOrExcludeTag::Exclude(tag) => {
-                    format!("-{}", tag).to_ascii_lowercase()
+                    format!("-{}", tag)
                 }
             }
+            .to_ascii_lowercase()
         )
     }
 }

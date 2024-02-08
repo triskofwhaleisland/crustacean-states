@@ -14,7 +14,7 @@ use url::Url;
 //noinspection SpellCheckingInspection
 #[derive(AsRefStr, Clone, Debug, PartialEq)]
 pub enum PublicNationShard<'a> {
-    /// A randomly-selected compliment for the nation.
+    /// A randomly selected compliment for the nation.
     ///
     /// Nation field: [`admirable`](crate::parsers::nation::Nation.admirable)
     Admirable,
@@ -76,21 +76,21 @@ pub enum PublicNationShard<'a> {
     DbId,
     /// Causes of death and their frequencies as a percentage.
     Deaths,
-    /// Adjective used to describe citizens of the nation: e.g. I am French.
+    /// Adjective used to describe citizens of the nation: e.g., I’m French.
     Demonym,
-    /// Singular noun used to describe a citizen of the nation: e.g. I am a Frenchman.
+    /// Singular noun used to describe a citizen of the nation: e.g., I’m a Frenchman.
     Demonym2,
-    /// Plural noun used to describe citizens of the nation: e.g. They are (some) Frenchmen.
+    /// Plural noun used to describe citizens of the nation: e.g., They’re (some) Frenchmen.
     ///
     /// *Note that in the English language,
     /// the word "some" (plural indefinite article) is not normally used in that way;
-    /// however it would be more inaccurate to use "the" (plural definite article).
+    /// however, it would be more inaccurate to use "the" (plural definite article).
     /// Other languages use articles differently than English.*
     ///
     /// *It should also be noted that the words "Frenchman" and "Frenchmen"
     /// are no longer the preferred English words to describe French people;
     /// the adjectival demonym with the words "person" or "people" is now preferred:
-    /// e.g. I am a French (adj.) person.*
+    /// e.g., I am a French (adj.) person.*
     Demonym2Plural,
     /// The number of dispatches published by this nation.
     ///
@@ -147,7 +147,7 @@ pub enum PublicNationShard<'a> {
     FullName,
     /// The vote of the nation in the General Assembly.
     ///
-    /// Note: this shard cannot tell the difference
+    /// Note: this shard can’t tell the difference
     /// between the nation not being part of the World Assembly and the nation not voting.
     /// For WA status, see [`PublicNationShard::WA`].
     ///
@@ -184,7 +184,7 @@ pub enum PublicNationShard<'a> {
     // /// See also: [`PublicNationShard::CustomLeader`]
     #[strum(serialize = "customleader")]
     Leader,
-    /// The list of descriptions of laws in the nation found on its nation page.
+    /// The list of law descriptions in the nation found on its nation page.
     Legislation,
     /// The largest industry in the nation.
     MajorIndustry,
@@ -192,7 +192,7 @@ pub enum PublicNationShard<'a> {
     Motto,
     /// The name of the nation.
     ///
-    /// Note: this will always return the correct capitalization of the nation name.
+    /// Note: this will always return the correct capitalization of the nation's name.
     Name,
     /// Three randomly selected notable facts about the nation,
     /// in the form "{`fact1`}, {`fact2`}, and {`fact3`}",
@@ -212,7 +212,7 @@ pub enum PublicNationShard<'a> {
     Population,
     /// The percentage of the economy controlled or funded by the government and the public.
     ///
-    /// For a breakdown of all sectors and their percent of the economy that they control,
+    /// For a breakdown of all sectors and their percentage of the economy that they control,
     /// see [`PublicNationShard::Sectors`].
     PublicSector,
     /// The region rank on today's featured World Census scale.
@@ -229,7 +229,7 @@ pub enum PublicNationShard<'a> {
     Richest,
     /// The vote of the nation in the Security Council.
     ///
-    /// Note: this shard cannot tell the difference
+    /// Note: this shard can’t tell the difference
     /// between the nation not being part of the World Assembly and the nation not voting.
     /// For WA status, see [`PublicNationShard::WA`].
     ///

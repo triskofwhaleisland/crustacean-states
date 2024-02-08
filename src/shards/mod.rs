@@ -1,5 +1,5 @@
 //! A shard is a tiny request, composed of two parts: the query and the extra parameters.
-//! You add multiple shards together in order to get the most efficient response.
+//! You add multiple shards together to get the most efficient response.
 //! Remember: 50 requests per 30 seconds is both a lot and very little at the same time!
 //!
 //! There are two very important restrictions for shards:
@@ -114,23 +114,24 @@ impl<'a> Iterator for Params<'a> {
     }
 }
 
-// /// Error type for any issues with building a request.
-// #[derive(Debug, Error)]
-// #[non_exhaustive]
-// pub enum RequestBuildError {
-//     /// A required parameter was never provided, so the request could not be built.
-//     #[error("Builder does not have {0}")]
-//     MissingParam(&'static str),
-//     /// The URL parser [`Url::parse_with_params`] broke on a parameter.
-//     ///
-//     /// This error should never be expected!
-//     #[error("URL parser error")]
-//     UrlParse(
-//         /// The parent error.
-//         #[from]
-//         ParseError,
-//     ),
-// }
+/* // Error type for any issues with building a request.
+#[derive(Debug, Error)]
+#[non_exhaustive]
+pub enum RequestBuildError {
+    /// A required parameter was never provided, so the request could not be built.
+    #[error("Builder does not have {0}")]
+    MissingParam(&'static str),
+    /// The URL parser [`Url::parse_with_params`] broke on a parameter.
+    ///
+    /// This error should never be expected!
+    #[error("URL parser error")]
+    UrlParse(
+        /// The parent error.
+        #[from]
+        ParseError,
+    ),
+}
+ */
 
 /// Request type.
 pub trait NSRequest {
@@ -284,12 +285,12 @@ pub struct CensusRanksShard {
 
 impl CensusRanksShard {
     /// Create a new shard.
-    /// -
-    /// `scale`:
+    /// - `scale`:
     /// The World Census statistic to use.
     /// (If you want the World Census daily scale,
     /// start with [`CensusRanksShard::default`] and use [`CensusRanksShard::daily_scale`].)
-    /// - `start`: The ranking to start with (e.g. `5` would indicate starting at the 5th nation).
+    /// - `start`: The ranking to start with
+    /// (e.g. `5` would indicate starting at the fifth nation).
     pub fn new(scale: u8, start: NonZeroU32) -> Self {
         Self::default().scale(scale).start(start).to_owned()
     }

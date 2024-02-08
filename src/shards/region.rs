@@ -64,7 +64,7 @@ pub enum RegionShard<'a> {
     GAVote,
     /// The 10 most recent events in the region.
     Happenings,
-    /// The history of delegates of the region, as well as its embassies.
+    /// The history of regional delegates and embassies.
     History,
     /// The Unix timestamp when the region had its last update.
     LastUpdate,
@@ -118,7 +118,7 @@ impl RmbShard {
     ///
     /// This sets a *maximum* number of messages.
     /// If there are not enough messages based on other parameters
-    /// (e.g. using [`starting_post`](RmbShard::starting_post) on a recent post),
+    /// (e.g., using [`starting_post`](RmbShard::starting_post) on a recent post),
     /// the website will return as many messages as it can.
     pub fn limit(&mut self, x: u8) -> &mut Self {
         self.limit = NonZeroU8::try_from(x).ok();
@@ -579,7 +579,7 @@ pub enum Tag {
     /// (self-tag)
     VideoGame,
     /// Game-created region where the bans are temporary and the coups are plenty.
-    /// Currently has seven regions:
+    /// Currently, there are seven such regions:
     /// [Warzone Africa](https://www.nationstates.net/region=warzone_africa),
     /// [Warzone Airspace](https://www.nationstates.net/region=warzone_airspace),
     /// [Warzone Asia](https://www.nationstates.net/region=warzone_asia),

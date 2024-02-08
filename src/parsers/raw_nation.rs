@@ -166,7 +166,7 @@ struct RawDispatchList {
 #[derive(Debug, Deserialize)]
 struct RawFactbookList {
     #[serde(rename = "FACTBOOK", default)]
-    inner: Vec<RawDispatch>, // only containing factbooks!!
+    inner: Vec<RawDispatch>, // only containing factbooks!
 }
 
 #[derive(Debug, Deserialize)]
