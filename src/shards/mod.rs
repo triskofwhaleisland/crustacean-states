@@ -215,12 +215,12 @@ impl Default for CensusModes {
     }
 }
 
-impl<'a, T> From<T> for CensusModes
+impl<T> From<T> for CensusModes
 where
-    T: 'a + AsRef<[CensusCurrentMode]>,
+    T: IntoIterator<Item=CensusCurrentMode>
 {
     fn from(value: T) -> Self {
-        Self::Current(value.as_ref().to_vec())
+        Self::Current(Vec::from_iter(value))
     }
 }
 

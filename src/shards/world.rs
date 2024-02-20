@@ -122,29 +122,11 @@ pub enum WorldShard<'a> {
 pub struct WorldRequest<'a>(Vec<WorldShard<'a>>);
 
 impl<'a> WorldRequest<'a> {
-    /// Make a new [`WorldRequest`].
-    ///
-    /// NOTE!
-    /// In 0.3, [`new_empty`](Self::new_empty)
-    /// will become [`new`](Self::new)
-    /// and [`new`](Self::new) will be replaced with an implementation of [`From`].
-    pub fn new<T>(shards: &'a T) -> Self
-    where
-        T: AsRef<[WorldShard<'a>]>,
-    {
-        Self(shards.as_ref().to_vec())
-    }
-
     /// Make an empty [`WorldRequest`].
     ///
     /// Please remember to actually modify this before you send it,
     /// as you will almost definitely get a `400 Bad Request` error from the API.
-    ///
-    /// NOTE!
-    /// In 0.3, [`new_empty`](Self::new_empty)
-    /// will become [`new`](Self::new)
-    /// and [`new`](Self::new) will be replaced with an implementation of [`From`].
-    pub fn new_empty() -> Self {
+    pub fn new() -> Self {
         Self(vec![])
     }
 
@@ -153,13 +135,13 @@ impl<'a> WorldRequest<'a> {
     /// ## Example
     /// ```rust
     /// # use crustacean_states::shards::world::{WorldShard, WorldRequest};
-    /// let mut request_builder = WorldRequest::new(&[WorldShard::CensusId]);
+    /// let mut request_builder = WorldRequest::from([WorldShard::CensusId]);
     /// request_builder.shards(|s| {
     ///     s.push(WorldShard::FeaturedRegion);
     /// });
     /// assert_eq!(
     ///     request_builder,
-    ///     WorldRequest::new(&[WorldShard::CensusId, WorldShard::FeaturedRegion]),
+    ///     WorldRequest::from(&[WorldShard::CensusId, WorldShard::FeaturedRegion]),
     /// );
     /// ```
     pub fn shards<F>(&mut self, f: F) -> &mut Self
@@ -176,19 +158,19 @@ impl<'a> WorldRequest<'a> {
     /// # use crustacean_states::shards::world::{
     /// #   WorldRequest, WorldShard
     /// # };
-    /// let mut request_builder = WorldRequest::new_empty();
+    /// let mut request_builder = WorldRequest::new();
     /// request_builder.add_shard(WorldShard::DispatchList {
     ///     author: None, category: None, sort: None,
     /// });
     /// assert_eq!(
     ///     request_builder,
-    ///     WorldRequest::new(&[WorldShard::DispatchList {
+    ///     WorldRequest::from([WorldShard::DispatchList {
     ///         author: None, category: None, sort: None,
     ///     }]),
     /// );
     /// ```
     pub fn add_shard(&mut self, shard: WorldShard<'a>) -> &mut Self {
-        self.0.push(shard);
+        self.shards(|v| v.push(shard));
         self
     }
 
@@ -201,20 +183,29 @@ impl<'a> WorldRequest<'a> {
     /// #    WorldShard,
     /// # };
     /// # fn test() -> Result<(), Box<dyn Error>> {
-    /// let mut request_builder = WorldRequest::new_empty();
+    /// let mut request_builder = WorldRequest::new();
     /// request_builder.add_shards(
     ///     [WorldShard::TGQueue, WorldShard::LastEventId]
     /// );
     /// assert_eq!(
     ///     request_builder,
-    ///     WorldRequest::new(&[WorldShard::TGQueue, WorldShard::LastEventId]),
+    ///     WorldRequest::from(&[WorldShard::TGQueue, WorldShard::LastEventId]),
     /// );
     /// # Ok(())
     /// # }
     /// ```
     pub fn add_shards<I: IntoIterator<Item = WorldShard<'a>>>(&mut self, shards: I) -> &mut Self {
-        self.0.extend(shards);
+        self.shards(|v| v.extend(shards));
         self
+    }
+}
+
+impl<'a, T> From<T> for WorldRequest<'a>
+where
+    T: IntoIterator<Item = WorldShard<'a>>,
+{
+    fn from(value: T) -> Self {
+        Self(Vec::from_iter(value))
     }
 }
 
@@ -319,49 +310,61 @@ impl HappeningsShardBuilder {
     }
 
     /// Restrict the events gathered to one nation.
-    pub fn view_nation(mut self, nation: &str) -> Self {
-        self.view = Some(Nation(vec![nation.to_string()]));
+    pub fn view_nation<T>(&mut self, nation: T) -> &mut Self
+    where
+        T: Into<String>,
+    {
+        self.view = Some(Nation(vec![nation.into()]));
         self
     }
 
     /// Restrict the events gathered to several nations.
-    pub fn view_nations(mut self, nations: &[&str]) -> Self {
-        self.view = Some(Nation(
-            nations.iter().map(|nation| nation.to_string()).collect(),
-        ));
+    pub fn view_nations<I, T>(&mut self, nations: I) -> &mut Self
+    where
+        I: IntoIterator<Item = T>,
+        T: Into<String>,
+    {
+        self.view = Some(Nation(Vec::from_iter(nations.into_iter().map(Into::into))));
         self
     }
 
     /// Restrict the events gathered to one region.
-    pub fn view_region(mut self, region: &str) -> Self {
-        self.view = Some(Region(vec![region.to_string()]));
+    pub fn view_region<T>(&mut self, nation: T) -> &mut Self
+    where
+        T: Into<String>,
+    {
+        self.view = Some(Region(vec![nation.into()]));
         self
     }
 
     /// Restrict the events gathered to several regions.
-    pub fn view_regions(mut self, regions: &[&str]) -> Self {
-        self.view = Some(Region(
-            regions.iter().map(|region| region.to_string()).collect(),
-        ));
+    pub fn view_regions<I, T>(&mut self, nations: I) -> &mut Self
+    where
+        I: IntoIterator<Item = T>,
+        T: Into<String>,
+    {
+        self.view = Some(Region(Vec::from_iter(nations.into_iter().map(Into::into))));
         self
     }
 
     /// Add one filter to the events request.
-    pub fn add_filter(self, filter: HappeningsFilterType) -> Self {
-        self.add_filters(vec![filter])
+    pub fn add_filter(&mut self, filter: HappeningsFilterType) -> &mut Self {
+        self.filter.push(filter);
+        self
     }
 
     /// Add several filters to the events request.
-    pub fn add_filters(mut self, filters: Vec<HappeningsFilterType>) -> Self {
-        filters
-            .into_iter()
-            .for_each(|filter| self.filter.push(filter));
+    pub fn add_filters<I>(&mut self, filters: I) -> &mut Self
+    where
+        I: IntoIterator<Item = HappeningsFilterType>,
+    {
+        self.filter.extend(filters);
         self
     }
 
     /// Limit event gathering to a certain number of results.
     /// NOTE: This number may not be larger than 100.
-    pub fn limit(mut self, max_results: u8) -> Self {
+    pub fn limit(&mut self, max_results: u8) -> &mut Self {
         self.limit = Some(max_results);
         self
     }
@@ -369,14 +372,14 @@ impl HappeningsShardBuilder {
     /// Filters events to only those after a certain event ID. NOTE:
     /// if the ID was issued more than 100 events ago,
     /// only the 100 most recent events will be provided.
-    pub fn since_id(mut self, id: u32) -> Self {
+    pub fn since_id(&mut self, id: u32) -> &mut Self {
         self.since_id = Some(id);
         self
     }
 
     /// Filters events to only those before a certain event ID. NOTE:
     /// if the ID was issued more than 100 events ago, no events will be provided.
-    pub fn before_id(mut self, id: u32) -> Self {
+    pub fn before_id(&mut self, id: u32) -> &mut Self {
         self.before_id = Some(id);
         self
     }
@@ -384,7 +387,7 @@ impl HappeningsShardBuilder {
     /// Filters events to only those after a certain timestamp.
     /// NOTE: If more than 100 events have occurred since this timestamp,
     /// only the 100 most recent events will be provided.
-    pub fn since_time(mut self, timestamp: u64) -> Self {
+    pub fn since_time(&mut self, timestamp: u64) -> &mut Self {
         self.since_time = Some(timestamp);
         self
     }
@@ -392,20 +395,28 @@ impl HappeningsShardBuilder {
     /// Filters events to only those before a certain timestamp.
     /// NOTE:
     /// if more than 100 events have occurred since this timestamp, no events will be provided.
-    pub fn before_time(mut self, timestamp: u64) -> Self {
+    pub fn before_time(&mut self, timestamp: u64) -> &mut Self {
         self.before_time = Some(timestamp);
         self
     }
 
     /// Creates a [`WorldShard::Happenings`] variant from the provided information.
-    pub fn build<'a>(self) -> WorldShard<'a> {
+    pub fn build<'a>(&mut self) -> WorldShard<'a> {
+        WorldShard::Happenings {
+            view: self.view.clone(),
+            filter: (!self.filter.is_empty()).then_some(self.filter.clone()),
+            limit: self.limit,
+            since_id: self.since_id,
+            before_id: self.before_id,
+            since_time: self.since_time,
+            before_time: self.before_time,
+        }
+    }
+    /// Creates a [`WorldShard::Happenings`] variant from the provided information. Consumes the builder.
+    pub fn build_consuming<'a>(self) -> WorldShard<'a> {
         WorldShard::Happenings {
             view: self.view,
-            filter: if self.filter.is_empty() {
-                None
-            } else {
-                Some(self.filter)
-            },
+            filter: (!self.filter.is_empty()).then_some(self.filter),
             limit: self.limit,
             since_id: self.since_id,
             before_id: self.before_id,
@@ -509,7 +520,7 @@ impl Display for HappeningsFilterType {
 /// let shard = [WorldShard::RegionsByTag(vec![
 ///     Include(RegionalGovernment), Include(Fandom), Exclude(Fascist)
 /// ])];
-/// let request = WorldRequest::new(&shard);
+/// let request = WorldRequest::from(shard);
 /// assert_eq!(
 ///     request.as_url().as_str(),
 ///     "https://www.nationstates.net/cgi-bin/api.cgi?q=regionsbytag&tags=regional_government%2Cfandom%2C-fascist",
@@ -527,16 +538,16 @@ impl Display for IncludeOrExcludeTag {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{}",
+            "{}{}",
             match self {
-                IncludeOrExcludeTag::Include(tag) => {
-                    format!("{}", tag)
-                }
-                IncludeOrExcludeTag::Exclude(tag) => {
-                    format!("-{}", tag)
+                IncludeOrExcludeTag::Include(_) => "",
+                IncludeOrExcludeTag::Exclude(_) => "-",
+            },
+            match self {
+                IncludeOrExcludeTag::Include(tag) | IncludeOrExcludeTag::Exclude(tag) => {
+                    tag.to_string().to_ascii_lowercase()
                 }
             }
-            .to_ascii_lowercase()
         )
     }
 }

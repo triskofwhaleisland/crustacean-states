@@ -1,3 +1,15 @@
+# Welcome to the development branch.
+
+I'm on the next level, yeah
+
+절대적 룰을 지켜
+
+내 손을 놓지 말아
+
+결속은 나의 무기
+
+---
+
 A NationStates API in Rust.
 
 Proud to be 100% safe. Takes full advantage of Rust's type system.
@@ -9,6 +21,12 @@ Licensed under either of
 * MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
 
 at your option.
+
+### Statement on Ethics
+
+A legally non-binding statement on the ethical standards that I,
+the creator of the project,
+would like you to use for any derivative works of this project may be found [here](ethics.md).
 
 ## Contribution
 

@@ -271,10 +271,10 @@ pub enum PublicNationShard<'a> {
 /// ## Example
 /// ```rust
 /// # use crustacean_states::shards::nation::{PublicNationRequest, PublicNationShard};
-/// let request = PublicNationRequest::new_with_shards(
+/// let request = PublicNationRequest::from((
 ///     "Aramos",
-///     vec![PublicNationShard::Capital],
-/// );
+///     [PublicNationShard::Capital],
+/// ));
 /// ```
 #[derive(Clone, Debug, PartialEq)]
 pub struct PublicNationRequest<'a> {
@@ -288,27 +288,22 @@ impl<'a> PublicNationRequest<'a> {
     /// If you do not modify the shards on this request,
     /// you will get a default response using the "standard public nation API shard set".
     /// See [`StandardPublicNationRequest`] for more information.
-    pub fn new(nation: &'a str) -> Self {
+    pub fn new<S>(nation: &'a S) -> Self
+    where
+        S: AsRef<str> + ?Sized,
+    {
         Self {
-            nation,
+            nation: nation.as_ref(),
             shards: vec![],
         }
     }
 
-    /// Create a new request.
-    pub fn new_with_shards<T>(nation: &'a str, shards: T) -> Self
-    where
-        T: AsRef<[PublicNationShard<'a>]>,
-    {
-        Self {
-            nation,
-            shards: shards.as_ref().to_vec(),
-        }
-    }
-
     /// Sets the nation for the request.
-    pub fn nation(&mut self, nation: &'a str) -> &mut Self {
-        self.nation = nation;
+    pub fn nation<S>(&mut self, nation: &'a S) -> &mut Self
+    where
+        S: AsRef<str> + ?Sized,
+    {
+        self.nation = nation.as_ref();
         self
     }
 
@@ -323,10 +318,10 @@ impl<'a> PublicNationRequest<'a> {
     /// });
     /// assert_eq!(
     ///     request_builder,
-    ///     PublicNationRequest::new_with_shards(
+    ///     PublicNationRequest::from((
     ///         "Aramos",
-    ///         vec![PublicNationShard::Capital]
-    ///     ),
+    ///         [PublicNationShard::Capital]
+    ///     )),
     /// );
     /// ```
     pub fn shards<F>(&mut self, f: F) -> &mut Self
@@ -348,14 +343,14 @@ impl<'a> PublicNationRequest<'a> {
     /// request_builder.add_shard(PublicNationShard::Capital);
     /// assert_eq!(
     ///     request_builder,
-    ///     PublicNationRequest::new_with_shards(
+    ///     PublicNationRequest::from((
     ///         "Aramos",
     ///         vec![PublicNationShard::Capital],
-    ///     ),
+    ///     )),
     /// );
     /// ```
     pub fn add_shard(&mut self, shard: PublicNationShard<'a>) -> &mut Self {
-        self.shards.push(shard);
+        self.shards(|v| v.push(shard));
         self
     }
 
@@ -376,13 +371,13 @@ impl<'a> PublicNationRequest<'a> {
     /// );
     /// assert_eq!(
     ///     request_builder,
-    ///     PublicNationRequest::new_with_shards(
+    ///     PublicNationRequest::from((
     ///         "Aramos",
     ///         vec![
     ///             PublicNationShard::Capital,
     ///             PublicNationShard::Animal,
     ///         ],
-    ///     ),
+    ///     )),
     /// );
     /// # Ok(())
     /// # }
@@ -391,8 +386,21 @@ impl<'a> PublicNationRequest<'a> {
     where
         I: IntoIterator<Item = PublicNationShard<'a>>,
     {
-        self.shards.extend(shards);
+        self.shards(|v| v.extend(shards));
         self
+    }
+}
+
+impl<'a, S, I> From<(&'a S, I)> for PublicNationRequest<'a>
+where
+    S: AsRef<str> + ?Sized,
+    I: IntoIterator<Item = PublicNationShard<'a>>,
+{
+    fn from(value: (&'a S, I)) -> Self {
+        Self {
+            nation: value.0.as_ref(),
+            shards: Vec::from_iter(value.1),
+        }
     }
 }
 

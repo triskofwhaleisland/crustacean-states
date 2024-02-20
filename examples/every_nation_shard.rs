@@ -97,7 +97,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         PNS::WCensus,
     ];
 
-    let request = PublicNationRequest::new_with_shards(target_name, shards);
+    let request = PublicNationRequest::from((target_name, shards));
     let end1 = Instant::now();
     let raw_response = client.get(request).await?.text().await?;
     // if !Path::exists("response.xml".as_ref()) {
