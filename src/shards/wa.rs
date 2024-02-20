@@ -11,7 +11,7 @@ use url::Url;
 
 /// One of the two World Assembly chambers (or "councils").
 #[repr(u8)]
-#[derive(Clone, Debug, Default)]
+#[derive(Copy, Clone, Debug, Default)]
 pub enum WACouncil {
     /// The General Assembly.
     ///
@@ -77,9 +77,7 @@ impl<'a> Display for WAShard<'a> {
             match self {
                 WAShard::GlobalInfo(g) => g.to_string(),
                 WAShard::CouncilInfo(c) => c.to_string(),
-                WAShard::CurrentResolution(a) => a
-                    .iter()
-                    .fold(String::from("resolution"), |acc, s| format!("{acc}+{s:?}")),
+                WAShard::CurrentResolution(a) => format!("resolution{}", a.iter().join("+")),
                 WAShard::PreviousResolution(_) => String::from("resolution"),
             }
             .to_ascii_lowercase()
@@ -164,8 +162,19 @@ pub struct CouncilRequest<'a> {
 
 impl<'a> CouncilRequest<'a> {
     /// Create a request about a WA council.
-    pub fn new(council: WACouncil, shards: &'a [WAShard<'a>]) -> Self {
-        Self { council, shards }
+    pub fn new(council: WACouncil, shards: impl AsRef<[WAShard<'a>]>) -> Self {
+        Self {
+            council,
+            shards: shards.as_ref(),
+        }
+    }
+}
+impl<'a, T: AsRef<[WAShard<'a>]>> From<(WACouncil, T)> for CouncilRequest<'a> {
+    fn from(value: (WACouncil, T)) -> Self {
+        Self {
+            council: value.0,
+            shards: value.1.as_ref(),
+        }
     }
 }
 
@@ -206,12 +215,10 @@ impl<'a> NSRequest for WARequest<'a> {
                     "wa",
                     match self {
                         WARequest::Global(_) => None,
-                        WARequest::Council(CouncilRequest { council, .. }) => Some(council.clone()),
-                        WARequest::AtVoteResolution(ResolutionRequest { council, .. }) => {
-                            Some(council.clone())
-                        }
-                        WARequest::PastResolution(ResolutionArchiveRequest { council, .. }) => {
-                            Some(council.clone())
+                        WARequest::Council(CouncilRequest { council, .. })
+                        | WARequest::AtVoteResolution(ResolutionRequest { council, .. })
+                        | WARequest::PastResolution(ResolutionArchiveRequest { council, .. }) => {
+                            Some(*council)
                         }
                     }
                     .unwrap_or_default() as u8,

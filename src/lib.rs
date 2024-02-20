@@ -51,7 +51,7 @@ pub mod shards;
 
 /// Takes a nation name with capital letters and spaces
 /// and turns it into a safe-to-send, lowercase name.
-pub fn safe_name(unsafe_name: impl ToString) -> String {
+pub fn safe_name<S: ToString>(unsafe_name: S) -> String {
     unsafe_name
         .to_string()
         .to_ascii_lowercase()
@@ -64,7 +64,7 @@ pub fn safe_name(unsafe_name: impl ToString) -> String {
 ///
 /// Note: this will not always result in a name
 /// that is capitalized the same way as it is on NationStates.
-pub fn pretty_name<T: ToString>(safe_name: T) -> String {
+pub fn pretty_name<S: ToString>(safe_name: S) -> String {
     safe_name
         .to_string()
         .replace('_', " ")

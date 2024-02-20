@@ -2,6 +2,7 @@
 
 use crate::shards::{CensusShard, NSRequest, Params, BASE_URL};
 use itertools::Itertools;
+use std::borrow::Cow;
 use strum::AsRefStr;
 use url::Url;
 
@@ -278,7 +279,7 @@ pub enum PublicNationShard<'a> {
 /// ```
 #[derive(Clone, Debug, PartialEq)]
 pub struct PublicNationRequest<'a> {
-    nation: &'a str,
+    nation: Cow<'a, str>,
     shards: Vec<PublicNationShard<'a>>,
 }
 
@@ -288,22 +289,22 @@ impl<'a> PublicNationRequest<'a> {
     /// If you do not modify the shards on this request,
     /// you will get a default response using the "standard public nation API shard set".
     /// See [`StandardPublicNationRequest`] for more information.
-    pub fn new<S>(nation: &'a S) -> Self
+    pub fn new<S>(nation: S) -> Self
     where
-        S: AsRef<str> + ?Sized,
+        S: Into<Cow<'a, str>>,
     {
         Self {
-            nation: nation.as_ref(),
+            nation: nation.into(),
             shards: vec![],
         }
     }
 
     /// Sets the nation for the request.
-    pub fn nation<S>(&mut self, nation: &'a S) -> &mut Self
+    pub fn nation<S>(&mut self, nation: S) -> &mut Self
     where
-        S: AsRef<str> + ?Sized,
+        S: Into<Cow<'a, str>>,
     {
-        self.nation = nation.as_ref();
+        self.nation = nation.into();
         self
     }
 
@@ -391,14 +392,14 @@ impl<'a> PublicNationRequest<'a> {
     }
 }
 
-impl<'a, S, I> From<(&'a S, I)> for PublicNationRequest<'a>
+impl<'a, S, I> From<(S, I)> for PublicNationRequest<'a>
 where
-    S: AsRef<str> + ?Sized,
+    S: Into<Cow<'a, str>>,
     I: IntoIterator<Item = PublicNationShard<'a>>,
 {
-    fn from(value: (&'a S, I)) -> Self {
+    fn from(value: (S, I)) -> Self {
         Self {
-            nation: value.0.as_ref(),
+            nation: value.0.into(),
             shards: Vec::from_iter(value.1),
         }
     }
@@ -430,7 +431,7 @@ impl<'a> NSRequest for PublicNationRequest<'a> {
             BASE_URL,
             params
                 .insert_front("q", query)
-                .insert_front("nation", self.nation),
+                .insert_front("nation", self.nation.clone()),
         )
         .unwrap()
     }
@@ -499,7 +500,7 @@ mod tests {
     fn pns_complex_as_str() {
         let shard = PublicNationShard::Census(CensusShard::new(
             CensusScales::Today,
-            CensusModes::from([CensusCurrentMode::Score].as_ref()),
+            CensusModes::from([CensusCurrentMode::Score]),
         ));
         assert_eq!(shard.as_ref(), "Census")
     }

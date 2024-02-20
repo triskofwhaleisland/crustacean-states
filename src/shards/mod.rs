@@ -217,7 +217,7 @@ impl Default for CensusModes {
 
 impl<T> From<T> for CensusModes
 where
-    T: IntoIterator<Item=CensusCurrentMode>
+    T: IntoIterator<Item = CensusCurrentMode>,
 {
     fn from(value: T) -> Self {
         Self::Current(Vec::from_iter(value))

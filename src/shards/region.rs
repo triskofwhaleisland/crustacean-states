@@ -1,6 +1,7 @@
 //! For region shard requests.
 use crate::shards::{CensusRanksShard, CensusShard, NSRequest, Params, BASE_URL};
 use itertools::Itertools;
+use std::borrow::Cow;
 use std::fmt::{Display, Formatter};
 use std::num::{NonZeroU32, NonZeroU8};
 use strum::AsRefStr;
@@ -155,7 +156,7 @@ impl RmbShard {
 /// ```
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct RegionRequest<'a> {
-    region: &'a str,
+    region: Cow<'a, str>,
     shards: Vec<RegionShard<'a>>,
 }
 
@@ -165,21 +166,10 @@ impl<'a> RegionRequest<'a> {
     /// If you do not modify the shards on this request,
     /// you will get a default response using the "standard region API shard set".
     /// See [`StandardRegionRequest`] for more information.
-    pub fn new(region: &'a str) -> Self {
+    pub fn new<S: Into<Cow<'a, str>>>(region: S) -> Self {
         Self {
-            region,
+            region: region.into(),
             shards: vec![],
-        }
-    }
-
-    /// Create a new request.
-    pub fn new_with_shards<T>(region: &'a str, shards: T) -> Self
-    where
-        T: AsRef<[RegionShard<'a>]>,
-    {
-        Self {
-            region,
-            shards: shards.as_ref().to_vec(),
         }
     }
 
@@ -200,10 +190,10 @@ impl<'a> RegionRequest<'a> {
     /// });
     /// assert_eq!(
     ///     request_builder,
-    ///     RegionRequest::new_with_shards(
+    ///     RegionRequest::from((
     ///         "Anteria",
-    ///         vec![RegionShard::Delegate]
-    ///     ),
+    ///         [RegionShard::Delegate]
+    ///     )),
     /// );
     /// ```
     pub fn shards<F>(&mut self, f: F) -> &mut Self
@@ -232,7 +222,7 @@ impl<'a> RegionRequest<'a> {
     /// );
     /// ```
     pub fn add_shard(&mut self, shard: RegionShard<'a>) -> &mut Self {
-        self.shards.push(shard);
+        self.shards(|v| v.push(shard));
         self
     }
 
@@ -253,13 +243,13 @@ impl<'a> RegionRequest<'a> {
     /// );
     /// assert_eq!(
     ///     request_builder,
-    ///     RegionRequest::new_with_shards(
+    ///     RegionRequest::from((
     ///         "Anteria",
-    ///         vec![
+    ///         [
     ///             RegionShard::Delegate,
     ///             RegionShard::BanList,
     ///         ],
-    ///     ),
+    ///     )),
     /// );
     /// # Ok(())
     /// # }
@@ -268,8 +258,21 @@ impl<'a> RegionRequest<'a> {
     where
         I: IntoIterator<Item = RegionShard<'a>>,
     {
-        self.shards.extend(shards);
+        self.shards(|v| v.extend(shards));
         self
+    }
+}
+
+impl<'a, S, T> From<(S, T)> for RegionRequest<'a>
+where
+    S: Into<Cow<'a, str>>,
+    T: IntoIterator<Item = RegionShard<'a>>,
+{
+    fn from(value: (S, T)) -> Self {
+        Self {
+            region: value.0.into(),
+            shards: Vec::from_iter(value.1),
+        }
     }
 }
 

@@ -1,16 +1,14 @@
 //! For world shard requests.
 
+use crate::shards::world::HappeningsViewType::{ManyNations, ManyRegions, OneNation, OneRegion};
 use crate::{
     impl_display_as_debug,
     models::dispatch::DispatchCategory,
     parsers::nation::BannerId,
-    shards::{
-        region::Tag,
-        world::HappeningsViewType::{Nation, Region},
-        CensusRanksShard, CensusShard, NSRequest, Params, BASE_URL,
-    },
+    shards::{region::Tag, CensusRanksShard, CensusShard, NSRequest, Params, BASE_URL},
 };
 use itertools::Itertools;
+use std::borrow::Cow;
 use std::fmt::{Display, Formatter};
 use strum::AsRefStr;
 use url::Url;
@@ -59,7 +57,7 @@ pub enum WorldShard<'a> {
     /// Lists the 100 most recent events. The fields can provide more control.
     Happenings {
         /// Only get events from a certain nation or region.
-        view: Option<HappeningsViewType>,
+        view: Option<HappeningsViewType<'a>>,
         /// Only get events of a certain type.
         filter: Option<Vec<HappeningsFilterType>>,
         /// Limit the number of events. NOTE: the limit can’t be less than 100.
@@ -259,21 +257,7 @@ impl<'a> NSRequest for WorldRequest<'a> {
                 before_time,
             } => {
                 params
-                    .insert_on(
-                        "view",
-                        &view.as_ref().map(|v| {
-                            format!(
-                                "{}.{}",
-                                v.as_ref(),
-                                match v {
-                                    Nation(entities) | Region(entities) => {
-                                        entities.iter().join(",")
-                                    }
-                                }
-                            )
-                            .to_ascii_lowercase()
-                        }),
-                    )
+                    .insert_on("view", &view.as_ref().map(ToString::to_string))
                     .insert_on("filter", &filter.as_ref().map(|f| f.iter().join("+")))
                     .insert_on("limit", limit)
                     .insert_on("sinceid", since_id)
@@ -293,8 +277,8 @@ impl<'a> NSRequest for WorldRequest<'a> {
 
 /// The best way to build a request for world events.
 #[derive(Default)]
-pub struct HappeningsShardBuilder {
-    view: Option<HappeningsViewType>,
+pub struct HappeningsShardBuilder<'a> {
+    view: Option<HappeningsViewType<'a>>,
     filter: Vec<HappeningsFilterType>,
     limit: Option<u8>,
     since_id: Option<u32>,
@@ -303,7 +287,7 @@ pub struct HappeningsShardBuilder {
     before_time: Option<u64>,
 }
 
-impl HappeningsShardBuilder {
+impl<'a> HappeningsShardBuilder<'a> {
     /// Create a new [`HappeningsShardBuilder`].
     pub fn new() -> Self {
         Self::default()
@@ -312,9 +296,9 @@ impl HappeningsShardBuilder {
     /// Restrict the events gathered to one nation.
     pub fn view_nation<T>(&mut self, nation: T) -> &mut Self
     where
-        T: Into<String>,
+        T: Into<Cow<'a, str>>,
     {
-        self.view = Some(Nation(vec![nation.into()]));
+        self.view = Some(OneNation(nation.into()));
         self
     }
 
@@ -322,28 +306,32 @@ impl HappeningsShardBuilder {
     pub fn view_nations<I, T>(&mut self, nations: I) -> &mut Self
     where
         I: IntoIterator<Item = T>,
-        T: Into<String>,
+        T: Into<Cow<'a, str>>,
     {
-        self.view = Some(Nation(Vec::from_iter(nations.into_iter().map(Into::into))));
+        self.view = Some(ManyNations(Vec::from_iter(
+            nations.into_iter().map(|val| val.into()),
+        )));
         self
     }
 
     /// Restrict the events gathered to one region.
     pub fn view_region<T>(&mut self, nation: T) -> &mut Self
     where
-        T: Into<String>,
+        T: Into<Cow<'a, str>>,
     {
-        self.view = Some(Region(vec![nation.into()]));
+        self.view = Some(OneRegion(nation.into()));
         self
     }
 
     /// Restrict the events gathered to several regions.
-    pub fn view_regions<I, T>(&mut self, nations: I) -> &mut Self
+    pub fn view_regions<I, T>(&mut self, regions: I) -> &mut Self
     where
         I: IntoIterator<Item = T>,
-        T: Into<String>,
+        T: Into<Cow<'a, str>>,
     {
-        self.view = Some(Region(Vec::from_iter(nations.into_iter().map(Into::into))));
+        self.view = Some(ManyRegions(Vec::from_iter(
+            regions.into_iter().map(|val| val.into()),
+        )));
         self
     }
 
@@ -401,7 +389,10 @@ impl HappeningsShardBuilder {
     }
 
     /// Creates a [`WorldShard::Happenings`] variant from the provided information.
-    pub fn build<'a>(&mut self) -> WorldShard<'a> {
+    pub fn build<'b>(&mut self) -> WorldShard<'b>
+    where
+        'a: 'b,
+    {
         WorldShard::Happenings {
             view: self.view.clone(),
             filter: (!self.filter.is_empty()).then_some(self.filter.clone()),
@@ -413,7 +404,10 @@ impl HappeningsShardBuilder {
         }
     }
     /// Creates a [`WorldShard::Happenings`] variant from the provided information. Consumes the builder.
-    pub fn build_consuming<'a>(self) -> WorldShard<'a> {
+    pub fn build_consuming<'b>(self) -> WorldShard<'b>
+    where
+        'a: 'b,
+    {
         WorldShard::Happenings {
             view: self.view,
             filter: (!self.filter.is_empty()).then_some(self.filter),
@@ -439,11 +433,34 @@ impl_display_as_debug!(DispatchSort);
 
 /// The happenings shard can either target nations or regions.
 #[derive(Clone, Debug, PartialEq, AsRefStr)]
-pub enum HappeningsViewType {
+pub enum HappeningsViewType<'a> {
+    /// Targets one nation.
+    OneNation(Cow<'a, str>),
     /// Targets one or more nations.
-    Nation(Vec<String>),
-    /// Targets one or more regions.
-    Region(Vec<String>),
+    ManyNations(Vec<Cow<'a, str>>),
+    /// Targets one region.
+    OneRegion(Cow<'a, str>),
+    /// Targets more than one region.
+    ManyRegions(Vec<Cow<'a, str>>),
+}
+
+impl<'a> Display for HappeningsViewType<'a> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}.{}",
+            self.as_ref().to_ascii_lowercase(),
+            match self {
+                OneNation(entity) | OneRegion(entity) => {
+                    entity.to_string()
+                }
+                ManyNations(entities) | ManyRegions(entities) => {
+                    entities.iter().join(",")
+                }
+            }
+            .to_ascii_lowercase(),
+        )
+    }
 }
 
 /// The happenings shard can target multiple kinds of events.
