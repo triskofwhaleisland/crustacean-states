@@ -18,7 +18,7 @@
 //! - Region: [`RegionRequest::new`](shards::region::RegionRequest::new),
 //! from [`RegionShards`](shards::region::RegionShard);
 //! also, [`StandardRegionRequest`](shards::region::StandardRegionRequest)
-//! - World (except for `regionsfromtag`):
+//! - World:
 //! [`WorldRequest::new`](shards::world::WorldRequest::new),
 //! from [`WorldShards`](shards::world::WorldShard)
 //! - WA (World Assembly): [`WAShard`](shards::wa::WARequest),
