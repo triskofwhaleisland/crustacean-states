@@ -139,7 +139,7 @@ impl<'a> WorldRequest<'a> {
     /// });
     /// assert_eq!(
     ///     request_builder,
-    ///     WorldRequest::from(&[WorldShard::CensusId, WorldShard::FeaturedRegion]),
+    ///     WorldRequest::from([WorldShard::CensusId, WorldShard::FeaturedRegion]),
     /// );
     /// ```
     pub fn shards<F>(&mut self, f: F) -> &mut Self
@@ -187,7 +187,7 @@ impl<'a> WorldRequest<'a> {
     /// );
     /// assert_eq!(
     ///     request_builder,
-    ///     WorldRequest::from(&[WorldShard::TGQueue, WorldShard::LastEventId]),
+    ///     WorldRequest::from([WorldShard::TGQueue, WorldShard::LastEventId]),
     /// );
     /// # Ok(())
     /// # }
