@@ -63,6 +63,139 @@ pub struct Freedoms {
     pub political_freedom: String,
 }
 
+#[repr(u8)]
+#[derive(Ord, PartialOrd, Eq, PartialEq, Copy, Clone, Debug)]
+pub enum CivilRights {
+    Outlawed = 1,
+    UnheardOf = 2,
+    Rare = 3,
+    Few = 4,
+    Some = 5,
+    BelowAverage = 6,
+    Average = 7,
+    Good = 8,
+    VeryGood = 9,
+    Excellent = 10,
+    Superb = 11,
+    WorldBenchmark = 12,
+    Excessive = 13,
+    WidelyAbused = 14,
+    Frightening = 15,
+}
+
+#[repr(u8)]
+#[derive(Ord, PartialOrd, Eq, PartialEq, Copy, Clone, Debug)]
+pub enum Economy {
+    Imploded = 1,
+    BasketCase = 2,
+    Struggling = 3,
+    Fragile = 4,
+    Weak = 5,
+    Developing = 6,
+    Fair = 7,
+    Reasonable = 8,
+    Good = 9,
+    Strong = 10,
+    VeryStrong = 11,
+    Thriving = 12,
+    Powerhouse = 13,
+    AllConsuming = 14,
+    Frightening = 15,
+}
+
+#[repr(u8)]
+#[derive(Ord, PartialOrd, Eq, PartialEq, Copy, Clone, Debug)]
+pub enum PoliticalFreedoms {
+    Outlawed = 1,
+    UnheardOf = 2,
+    Rare = 3,
+    Few = 4,
+    Some = 5,
+    BelowAverage = 6,
+    Average = 7,
+    Good = 8,
+    VeryGood = 9,
+    Excellent = 10,
+    Superb = 11,
+    WorldBenchmark = 12,
+    Excessive = 13,
+    WidelyAbused = 14,
+    Corrupted = 15,
+}
+
+//noinspection SpellCheckingInspection
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum GovernmentCategory {
+    PsychoticDictatorship,
+    IronFistConsumerists,
+    CorporatePoliceState,
+    AuthoritarianDemocracy,
+    MoralisticDemocracy,
+    RightWingUtopia,
+    TyrannyByMajority,
+    ConservativeDemocracy,
+    FreeMarketParadise,
+    CorruptDictatorship,
+    FatherKnowsBestState,
+    CompulsoryConsumeristState,
+    DemocraticSocialists,
+    InoffensiveCentristDemocracy,
+    CapitalistParadise,
+    LiberalDemocraticSocialists,
+    NewYorkTimesDemocracy,
+    CorporateBordello,
+    IronFistSocialists,
+    LibertarianPoliceState,
+    BenevolentDictatorship,
+    ScandinavianLiberalParadise,
+    LeftLeaningCollegeState,
+    Capitalizt,
+    LeftWingUtopia,
+    CivilRightsLovefest,
+    Anarchy,
+}
+/// personal, economic, political
+pub struct CategoryRanking(i8, i8, i8);
+
+impl GovernmentCategory {
+    fn cmp_absolute(&self) -> CategoryRanking {
+        match self {
+            GovernmentCategory::PsychoticDictatorship => CategoryRanking(-1, -1, -1),
+            GovernmentCategory::IronFistConsumerists => CategoryRanking(-1, 0, -1),
+            GovernmentCategory::CorporatePoliceState => CategoryRanking(-1, 1, -1),
+            GovernmentCategory::AuthoritarianDemocracy => CategoryRanking(-1, -1, 0),
+            GovernmentCategory::MoralisticDemocracy => CategoryRanking(-1, 0, 0),
+            GovernmentCategory::RightWingUtopia => CategoryRanking(-1, 1, 0),
+            GovernmentCategory::TyrannyByMajority => CategoryRanking(-1, 1, -1),
+            GovernmentCategory::ConservativeDemocracy => CategoryRanking(-1, 1, 0),
+            GovernmentCategory::FreeMarketParadise => CategoryRanking(-1, 1, 1),
+            GovernmentCategory::CorruptDictatorship => CategoryRanking(0, -1, -1),
+            GovernmentCategory::FatherKnowsBestState => CategoryRanking(0, 0, -1),
+            GovernmentCategory::CompulsoryConsumeristState => CategoryRanking(0, 1, -1),
+            GovernmentCategory::DemocraticSocialists => CategoryRanking(0, -1, 0),
+            GovernmentCategory::InoffensiveCentristDemocracy => CategoryRanking(0, 0, 0),
+            GovernmentCategory::CapitalistParadise => CategoryRanking(0, 1, 0),
+            GovernmentCategory::LiberalDemocraticSocialists => CategoryRanking(0, -1, 1),
+            GovernmentCategory::NewYorkTimesDemocracy => CategoryRanking(0, 0, 1),
+            GovernmentCategory::CorporateBordello => CategoryRanking(0, 1, 1),
+            GovernmentCategory::IronFistSocialists => CategoryRanking(1, -1, -1),
+            GovernmentCategory::LibertarianPoliceState => CategoryRanking(1, 0, -1),
+            GovernmentCategory::BenevolentDictatorship => CategoryRanking(1, 1, -1),
+            GovernmentCategory::ScandinavianLiberalParadise => CategoryRanking(1, -1, 0),
+            GovernmentCategory::LeftLeaningCollegeState => CategoryRanking(1, 0, 0),
+            GovernmentCategory::Capitalizt => CategoryRanking(1, 1, 0),
+            GovernmentCategory::LeftWingUtopia => CategoryRanking(1, -1, 1),
+            GovernmentCategory::CivilRightsLovefest => CategoryRanking(1, 0, 1),
+            GovernmentCategory::Anarchy => CategoryRanking(1, 1, 1),
+        }
+    }
+    fn cmp(&self, other: &Self) -> CategoryRanking {
+        let (CategoryRanking(x1, y1, z1), CategoryRanking(x2, y2, z2)) =
+            (self.cmp_absolute(), other.cmp_absolute());
+        CategoryRanking((x2 - x1).signum(), (y2 - y1).signum(), (z2 - z1).signum())
+    }
+}
+
 /// Gives a score out of 100 for the three types of national freedom.
 // TODO restrict type from 0 to 100
 #[derive(Debug)]
