@@ -162,14 +162,14 @@ pub struct CouncilRequest<'a> {
 
 impl<'a> CouncilRequest<'a> {
     /// Create a request about a WA council.
-    pub fn new(council: WACouncil, shards: impl AsRef<[WAShard<'a>]>) -> Self {
+    pub fn new(council: WACouncil, shards: impl AsRef<&'a [WAShard<'a>]>) -> Self {
         Self {
             council,
             shards: shards.as_ref(),
         }
     }
 }
-impl<'a, T: AsRef<[WAShard<'a>]>> From<(WACouncil, T)> for CouncilRequest<'a> {
+impl<'a, T: AsRef<&'a [WAShard<'a>]>> From<(WACouncil, T)> for CouncilRequest<'a> {
     fn from(value: (WACouncil, T)) -> Self {
         Self {
             council: value.0,

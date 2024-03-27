@@ -168,7 +168,7 @@ impl<'a> CensusShard<'a> {
     /// # use crustacean_states::shards::{CensusModes, CensusShard};
     /// use crustacean_states::shards::CensusCurrentMode as CCM;
     /// let shard = CensusShard::default().modes(CensusModes::from(
-    ///     &[CCM::Score, CCM::Rank, CCM::PercentRank]
+    ///     [CCM::Score, CCM::Rank, CCM::PercentRank]
     /// ));
     /// ```
     pub fn modes(&mut self, modes: CensusModes) -> &mut CensusShard<'a> {

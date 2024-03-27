@@ -149,7 +149,7 @@ impl RmbShard {
 /// # use std::error::Error;
 /// # async fn test() -> Result<(), Box<dyn Error>> {
 /// # let client = Client::new("");
-/// let request = RegionRequest::new_with_shards("Anteria", &[RegionShard::NumNations]);
+/// let request = RegionRequest::from(("Anteria", [RegionShard::NumNations]));
 /// let response = client.get(request).await?;
 /// # Ok(())
 /// # }
@@ -175,7 +175,7 @@ impl<'a> RegionRequest<'a> {
 
     /// Sets the region for the request.
     pub fn region(&mut self, region: &'a str) -> &mut Self {
-        self.region = region;
+        self.region = region.into();
         self
     }
 
@@ -198,7 +198,7 @@ impl<'a> RegionRequest<'a> {
     /// ```
     pub fn shards<F>(&mut self, f: F) -> &mut Self
     where
-        F: FnOnce(&mut Vec<RegionShard>),
+        F: FnOnce(&mut Vec<RegionShard<'a>>),
     {
         f(&mut self.shards);
         self
@@ -215,15 +215,14 @@ impl<'a> RegionRequest<'a> {
     /// request_builder.add_shard(RegionShard::Delegate);
     /// assert_eq!(
     ///     request_builder,
-    ///     RegionRequest::new_with_shards(
+    ///     RegionRequest::from((
     ///         "Anteria",
     ///         vec![RegionShard::Delegate],
-    ///     ),
+    ///     )),
     /// );
     /// ```
     pub fn add_shard(&mut self, shard: RegionShard<'a>) -> &mut Self {
-        self.shards(|v| v.push(shard));
-        self
+        self.shards(|v| v.push(shard))
     }
 
     /// Add multiple shards.
@@ -258,8 +257,7 @@ impl<'a> RegionRequest<'a> {
     where
         I: IntoIterator<Item = RegionShard<'a>>,
     {
-        self.shards(|v| v.extend(shards));
-        self
+        self.shards(|v| v.extend(shards))
     }
 }
 
@@ -310,7 +308,7 @@ impl<'a> NSRequest for RegionRequest<'a> {
             BASE_URL,
             params
                 .insert_front("q", query)
-                .insert_front("region", self.region),
+                .insert_front("region", self.region.clone()),
         )
         .unwrap()
     }
