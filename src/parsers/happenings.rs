@@ -1,8 +1,9 @@
 //! National, regional, and world happenings.
 
-use crate::{parsers::RawEvent, regex};
 use once_cell::sync::Lazy;
 use regex::{Regex, RegexSet};
+
+use crate::{parsers::RawEvent, regex};
 
 /// A line of `happenings`.
 #[derive(Debug)]
@@ -50,22 +51,25 @@ impl From<RawEvent> for Event {
     fn from(value: RawEvent) -> Self {
         let which_matched = ALL_EXPRESSIONS.matches(&value.text);
 
-        let nations = if which_matched.matched(0) {
-            NATION_RE
-                .find_iter(&value.text)
-                .map(|m| m.as_str().to_string())
-                .collect()
-        } else {
-            vec![]
-        };
-        let regions = if which_matched.matched(1) {
-            REGION_RE
-                .find_iter(&value.text)
-                .map(|m| m.as_str().to_string())
-                .collect()
-        } else {
-            vec![]
-        };
+        let nations = which_matched
+            .matched(0)
+            .then(|| {
+                NATION_RE
+                    .find_iter(&value.text)
+                    .map(|m| m.as_str().to_string())
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        let regions = which_matched
+            .matched(1)
+            .then(|| {
+                REGION_RE
+                    .find_iter(&value.text)
+                    .map(|m| m.as_str().to_string())
+                    .collect()
+            })
+            .unwrap_or_default();
 
         Self {
             timestamp: value.timestamp,
