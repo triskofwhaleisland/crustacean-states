@@ -189,10 +189,33 @@ impl GovernmentCategory {
             GovernmentCategory::Anarchy => CategoryRanking(1, 1, 1),
         }
     }
-    fn cmp(&self, other: &Self) -> CategoryRanking {
+    pub fn cmp_ranking(&self, other: &Self) -> CategoryRanking {
         let (CategoryRanking(x1, y1, z1), CategoryRanking(x2, y2, z2)) =
             (self.cmp_absolute(), other.cmp_absolute());
         CategoryRanking((x2 - x1).signum(), (y2 - y1).signum(), (z2 - z1).signum())
+    }
+}
+
+impl TryFrom<(i8, i8, i8)> for CategoryRanking {
+    type Error = ();
+
+    fn try_from(value: (i8, i8, i8)) -> Result<Self, Self::Error> {
+        let (civil, economic, political) = value;
+        let range = -1..=1;
+        if [civil, economic, political]
+            .iter()
+            .all(|s| range.contains(s))
+        {
+            Ok(CategoryRanking(civil, economic, political))
+        } else {
+            Err(())
+        }
+    }
+}
+
+impl From<CategoryRanking> for (i8, i8, i8) {
+    fn from(value: CategoryRanking) -> Self {
+        (value.0, value.1, value.2)
     }
 }
 
