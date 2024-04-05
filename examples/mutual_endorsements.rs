@@ -13,7 +13,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let user_agent = std::env::var("USER_AGENT")?;
     let client = Client::new(user_agent);
     eprintln!("Made client!");
-    let target = "Aramos";
+    let target = "Lesser Velutaria";
     let request = PublicNationRequest::from((target, [Endorsements]));
     eprintln!("{request:?}");
     let response = client.get(request).await?;
@@ -29,6 +29,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         let response = match client.get(request.clone()).await {
             Ok(r) => Ok(r),
             Err(ClientError::RateLimitedError(t)) => {
+                eprintln!("Rate limited; sleeping until {:?}", t);
                 tokio::time::sleep_until(Instant::from(t)).await;
                 client.get(request).await
             }
@@ -37,10 +38,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
         let text = response.text().await?;
         let nation = Nation::from_xml(&text)?;
-        if nation.endorsements.unwrap().contains(&target.to_string()) {
-            n += 1;
-            continue;
-        }
+        nation
+            .endorsements
+            .unwrap()
+            .contains(&target.to_string())
+            .then(|| n += 1);
     }
     println!(
         "{} is endorsing {} of the {} nations that endorse it.",
