@@ -88,7 +88,7 @@ impl From<MaybeRelativeTime> for Option<String> {
 
 impl From<MaybeRelativeTime> for String {
     fn from(value: MaybeRelativeTime) -> Self {
-        Option::<String>::from(value).unwrap_or_else(|| "0".to_string())
+        Option::<String>::from(value).unwrap_or_else(|| String::from("0"))
     }
 }
 

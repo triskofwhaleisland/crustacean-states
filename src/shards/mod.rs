@@ -257,6 +257,12 @@ impl CensusHistoryParams {
     }
 }
 
+impl From<(NonZeroU64, NonZeroU64)> for CensusHistoryParams {
+    fn from(value: (NonZeroU64, NonZeroU64)) -> Self {
+        Self::default().before(value.0).after(value.1).to_owned()
+    }
+}
+
 //noinspection SpellCheckingInspection
 /// Describes data that can currently be found on the World Census.
 #[derive(Clone, Debug, Display, Ord, PartialOrd, Eq, PartialEq, Hash)]
@@ -319,7 +325,7 @@ mod tests {
     use crate::shards::{
         CensusCurrentMode, CensusHistoryParams, CensusModes, CensusScales, Params,
     };
-    use std::num::{NonZeroU64, NonZeroU8};
+    use std::num::{NonZeroU64, NonZeroU8, TryFromIntError};
 
     // test Params
     #[test]
@@ -392,15 +398,18 @@ mod tests {
     }
 
     #[test]
-    fn insert_mode_history_from_and_to() {
+    fn insert_mode_history_from_and_to() -> Result<(), TryFromIntError> {
         let mut params = Params::default();
-        params.insert_modes(&CensusModes::History(CensusHistoryParams::new(
-            NonZeroU64::new(6900).unwrap(),
-            NonZeroU64::new(42000).unwrap(),
-        )));
+        params.insert_modes(&CensusModes::History(
+            CensusHistoryParams::default()
+                .after(NonZeroU64::try_from(6900)?)
+                .before(NonZeroU64::try_from(42000)?)
+                .to_owned(),
+        ));
         assert_eq!(params.0.get("mode"), Some(&String::from("history")));
         assert_eq!(params.0.get("from"), Some(&6900.to_string()));
         assert_eq!(params.0.get("to"), Some(&42000.to_string()));
+        Ok(())
     }
 
     #[test]
