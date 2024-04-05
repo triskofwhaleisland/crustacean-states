@@ -1,10 +1,10 @@
 //! For public nation shard requests.
 
-use crate::shards::{CensusShard, NSRequest, Params, BASE_URL};
 use itertools::Itertools;
-use std::borrow::Cow;
 use strum::AsRefStr;
 use url::Url;
+
+use crate::shards::{CensusShard, NSRequest, Params, BASE_URL};
 
 /// A nation request available to anyone (no login required).
 ///
@@ -279,7 +279,7 @@ pub enum PublicNationShard<'a> {
 /// ```
 #[derive(Clone, Debug, PartialEq)]
 pub struct PublicNationRequest<'a> {
-    nation: Cow<'a, str>,
+    nation: &'a str,
     shards: Vec<PublicNationShard<'a>>,
 }
 
@@ -289,22 +289,16 @@ impl<'a> PublicNationRequest<'a> {
     /// If you do not modify the shards on this request,
     /// you will get a default response using the "standard public nation API shard set".
     /// See [`StandardPublicNationRequest`] for more information.
-    pub fn new<S>(nation: S) -> Self
-    where
-        S: Into<Cow<'a, str>>,
-    {
+    pub fn new<'b: 'a>(nation: &'b str) -> Self {
         Self {
-            nation: nation.into(),
+            nation,
             shards: vec![],
         }
     }
 
     /// Sets the nation for the request.
-    pub fn nation<S>(&mut self, nation: S) -> &mut Self
-    where
-        S: Into<Cow<'a, str>>,
-    {
-        self.nation = nation.into();
+    pub fn nation<'b: 'a>(&mut self, nation: &'b str) -> &mut Self {
+        self.nation = nation;
         self
     }
 
@@ -392,14 +386,14 @@ impl<'a> PublicNationRequest<'a> {
     }
 }
 
-impl<'a, S, I> From<(S, I)> for PublicNationRequest<'a>
+impl<'a, 'b, I> From<(&'b str, I)> for PublicNationRequest<'a>
 where
-    S: Into<Cow<'a, str>>,
+    'b: 'a,
     I: IntoIterator<Item = PublicNationShard<'a>>,
 {
-    fn from(value: (S, I)) -> Self {
+    fn from(value: (&'b str, I)) -> Self {
         Self {
-            nation: value.0.into(),
+            nation: value.0,
             shards: Vec::from_iter(value.1),
         }
     }
@@ -431,7 +425,7 @@ impl<'a> NSRequest for PublicNationRequest<'a> {
             BASE_URL,
             params
                 .insert_front("q", query)
-                .insert_front("nation", self.nation.clone()),
+                .insert_front("nation", self.nation),
         )
         .unwrap()
     }

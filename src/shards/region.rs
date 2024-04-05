@@ -1,11 +1,14 @@
 //! For region shard requests.
-use crate::shards::{CensusRanksShard, CensusShard, NSRequest, Params, BASE_URL};
+use std::{
+    fmt::{Display, Formatter},
+    num::{NonZeroU32, NonZeroU8},
+};
+
 use itertools::Itertools;
-use std::borrow::Cow;
-use std::fmt::{Display, Formatter};
-use std::num::{NonZeroU32, NonZeroU8};
 use strum::AsRefStr;
 use url::Url;
+
+use crate::shards::{CensusRanksShard, CensusShard, NSRequest, Params, BASE_URL};
 
 /// A request of a region.
 #[derive(AsRefStr, Clone, Debug, PartialEq)]
@@ -156,7 +159,7 @@ impl RmbShard {
 /// ```
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct RegionRequest<'a> {
-    region: Cow<'a, str>,
+    region: &'a str,
     shards: Vec<RegionShard<'a>>,
 }
 
@@ -166,16 +169,16 @@ impl<'a> RegionRequest<'a> {
     /// If you do not modify the shards on this request,
     /// you will get a default response using the "standard region API shard set".
     /// See [`StandardRegionRequest`] for more information.
-    pub fn new<S: Into<Cow<'a, str>>>(region: S) -> Self {
+    pub fn new<'b: 'a>(region: &'b str) -> Self {
         Self {
-            region: region.into(),
+            region,
             shards: vec![],
         }
     }
 
     /// Sets the region for the request.
     pub fn region(&mut self, region: &'a str) -> &mut Self {
-        self.region = region.into();
+        self.region = region;
         self
     }
 
@@ -261,14 +264,13 @@ impl<'a> RegionRequest<'a> {
     }
 }
 
-impl<'a, S, T> From<(S, T)> for RegionRequest<'a>
+impl<'a, T> From<(&'a str, T)> for RegionRequest<'a>
 where
-    S: Into<Cow<'a, str>>,
     T: IntoIterator<Item = RegionShard<'a>>,
 {
-    fn from(value: (S, T)) -> Self {
+    fn from(value: (&'a str, T)) -> Self {
         Self {
-            region: value.0.into(),
+            region: value.0,
             shards: Vec::from_iter(value.1),
         }
     }
@@ -308,7 +310,7 @@ impl<'a> NSRequest for RegionRequest<'a> {
             BASE_URL,
             params
                 .insert_front("q", query)
-                .insert_front("region", self.region.clone()),
+                .insert_front("region", self.region),
         )
         .unwrap()
     }

@@ -1,17 +1,21 @@
 //! For world shard requests.
 
-use crate::shards::world::HappeningsViewType::{ManyNations, ManyRegions, OneNation, OneRegion};
+use std::fmt::{Display, Formatter};
+
+use itertools::Itertools;
+use strum::AsRefStr;
+use url::Url;
+
 use crate::{
     impl_display_as_debug,
     models::dispatch::DispatchCategory,
     parsers::nation::BannerId,
-    shards::{region::Tag, CensusRanksShard, CensusShard, NSRequest, Params, BASE_URL},
+    shards::{
+        region::Tag,
+        world::HappeningsViewType::{ManyNations, ManyRegions, OneNation, OneRegion},
+        CensusRanksShard, CensusShard, NSRequest, Params, BASE_URL,
+    },
 };
-use itertools::Itertools;
-use std::borrow::Cow;
-use std::fmt::{Display, Formatter};
-use strum::AsRefStr;
-use url::Url;
 
 /// A request for the wide world of NationStates.
 #[derive(AsRefStr, Clone, Debug, PartialEq)]
@@ -294,44 +298,33 @@ impl<'a> HappeningsShardBuilder<'a> {
     }
 
     /// Restrict the events gathered to one nation.
-    pub fn view_nation<T>(&mut self, nation: T) -> &mut Self
-    where
-        T: Into<Cow<'a, str>>,
-    {
-        self.view = Some(OneNation(nation.into()));
+    pub fn view_nation<'b: 'a>(&mut self, nation: &'b str) -> &mut Self {
+        self.view = Some(OneNation(nation));
         self
     }
 
     /// Restrict the events gathered to several nations.
-    pub fn view_nations<I, T>(&mut self, nations: I) -> &mut Self
+    pub fn view_nations<'b, I>(&mut self, nations: I) -> &mut Self
     where
-        I: IntoIterator<Item = T>,
-        T: Into<Cow<'a, str>>,
+        'b: 'a,
+        I: IntoIterator<Item = &'b str>,
     {
-        self.view = Some(ManyNations(Vec::from_iter(
-            nations.into_iter().map(|val| val.into()),
-        )));
+        self.view = Some(ManyNations(Vec::from_iter(nations)));
         self
     }
 
     /// Restrict the events gathered to one region.
-    pub fn view_region<T>(&mut self, nation: T) -> &mut Self
-    where
-        T: Into<Cow<'a, str>>,
-    {
-        self.view = Some(OneRegion(nation.into()));
+    pub fn view_region<'b: 'a>(&mut self, nation: &'b str) -> &mut Self {
+        self.view = Some(OneRegion(nation));
         self
     }
 
     /// Restrict the events gathered to several regions.
-    pub fn view_regions<I, T>(&mut self, regions: I) -> &mut Self
+    pub fn view_regions<'b: 'a, I>(&mut self, regions: I) -> &mut Self
     where
-        I: IntoIterator<Item = T>,
-        T: Into<Cow<'a, str>>,
+        I: IntoIterator<Item = &'b str>,
     {
-        self.view = Some(ManyRegions(Vec::from_iter(
-            regions.into_iter().map(|val| val.into()),
-        )));
+        self.view = Some(ManyRegions(Vec::from_iter(regions)));
         self
     }
 
@@ -435,13 +428,13 @@ impl_display_as_debug!(DispatchSort);
 #[derive(Clone, Debug, PartialEq, AsRefStr)]
 pub enum HappeningsViewType<'a> {
     /// Targets one nation.
-    OneNation(Cow<'a, str>),
+    OneNation(&'a str),
     /// Targets one or more nations.
-    ManyNations(Vec<Cow<'a, str>>),
+    ManyNations(Vec<&'a str>),
     /// Targets one region.
-    OneRegion(Cow<'a, str>),
+    OneRegion(&'a str),
     /// Targets more than one region.
-    ManyRegions(Vec<Cow<'a, str>>),
+    ManyRegions(Vec<&'a str>),
 }
 
 impl<'a> Display for HappeningsViewType<'a> {
