@@ -7,7 +7,6 @@ use reqwest::{
 };
 use std::{
     num::ParseIntError,
-    ops::Add,
     sync::{Arc, Mutex},
     time::{Duration, Instant},
 };
@@ -67,7 +66,7 @@ impl Client {
         match self.client.get(request.as_url()).send().await {
             Ok(r) => {
                 let mut state = self.state.lock().unwrap();
-                state.rate_limiter = Some(RateLimits::new(r.headers())?);
+                state.rate_limiter = Some(RateLimits::try_from(r.headers())?);
                 state.last_sent = Some(Instant::now());
                 if let Some(ref r) = state.rate_limiter {
                     state.send_after = if r.remaining == 0 {
@@ -75,7 +74,7 @@ impl Client {
                     } else {
                         r.retry_after
                     }
-                    .map(|t| state.last_sent.unwrap().add(Duration::from_secs(t as u64)))
+                    .map(|t| state.last_sent.unwrap() + Duration::from_secs(t as u64))
                 }
                 Ok(r)
             }
@@ -151,14 +150,14 @@ pub enum ClientError {
 /// A simple tool to help with NationStates rate limits.
 #[derive(Clone, Debug)]
 pub struct RateLimits {
-    // Policy and limits are currently disabled
+    // policy and limits are currently disabled
     // because this part of the program is private and implementation will probably change.
     // ---
-    // /// The number of requests that can be sent within a timeframe,
+    // /// the number of requests that can be sent within a timeframe,
     // /// and how long that timeframe is in seconds.
     // - `policy`: (u8, u8),
-    // /// The number of requests that can be sent in this timeframe.
-    // /// Always equal to `policy.0`.
+    // /// the number of requests that can be sent in this timeframe.
+    // /// always equal to `policy.0`.
     // - `limit`: u8,
     // ---
     remaining: u8,
@@ -166,9 +165,10 @@ pub struct RateLimits {
     retry_after: Option<u8>,
 }
 
-impl RateLimits {
-    /// Creates new RateLimits.
-    fn new(headers: &HeaderMap) -> Result<Self, ClientError> {
+impl TryFrom<&HeaderMap> for RateLimits {
+    type Error = ClientError;
+
+    fn try_from(value: &HeaderMap) -> Result<Self, Self::Error> {
         // let raw_policy: Vec<u8> = headers
         //     .get("RateLimit-Policy")
         //     .ok_or_else(|| ClientError::NoRateLimitElementError("Policy".to_string()))?
@@ -190,17 +190,17 @@ impl RateLimits {
         //     .ok_or_else(|| ClientError::NoRateLimitElementError("Limit".to_string()))?
         //     .to_str()?
         //     .parse()?;
-        let remaining: u8 = headers
+        let remaining: u8 = value
             .get("RateLimit-Remaining")
-            .ok_or_else(|| ClientError::NoRateLimitElementError("Remaining".to_string()))?
+            .ok_or_else(|| ClientError::NoRateLimitElementError(String::from("Remaining")))?
             .to_str()?
             .parse()?;
-        let reset: u8 = headers
+        let reset: u8 = value
             .get("RateLimit-Reset")
-            .ok_or_else(|| ClientError::NoRateLimitElementError("Reset".to_string()))?
+            .ok_or_else(|| ClientError::NoRateLimitElementError(String::from("Reset")))?
             .to_str()?
             .parse()?;
-        let retry_after: Option<u8> = match headers.get("Retry-After") {
+        let retry_after: Option<u8> = match value.get("Retry-After") {
             Some(value) => Some(value.to_str()?.parse()?),
             None => None,
         };
@@ -213,7 +213,9 @@ impl RateLimits {
             retry_after,
         })
     }
+}
 
+impl RateLimits {
     /// The number of requests that can still be sent in this timeframe.
     pub fn remaining(&self) -> u8 {
         self.remaining
@@ -242,7 +244,7 @@ mod tests {
         headers.insert("RateLimit-Remaining", HeaderValue::from(11));
         headers.insert("RateLimit-Reset", HeaderValue::from(25));
 
-        let limits = RateLimits::new(&headers).unwrap();
+        let limits = RateLimits::try_from(&headers).unwrap();
         assert_eq!(limits.remaining(), 11);
         assert_eq!(limits.reset(), 25);
         assert_eq!(limits.retry_after(), None);
@@ -258,7 +260,7 @@ mod tests {
         headers.insert("RateLimit-Reset", HeaderValue::from(25));
         headers.insert("Retry-After", HeaderValue::from(7));
 
-        let limits = RateLimits::new(&headers).unwrap();
+        let limits = RateLimits::try_from(&headers).unwrap();
         assert_eq!(limits.remaining(), 11);
         assert_eq!(limits.reset(), 25);
         assert_eq!(limits.retry_after(), Some(7));
