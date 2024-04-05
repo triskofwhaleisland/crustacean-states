@@ -56,11 +56,11 @@ pub struct Government {
 #[allow(missing_docs)]
 pub struct Freedoms {
     // TODO make enum
-    pub civil_rights: String,
+    pub civil_rights: CivilRights,
     // TODO make enum
-    pub economy: String,
+    pub economy: Economy,
     // TODO make enum
-    pub political_freedom: String,
+    pub political_freedom: PoliticalFreedoms,
 }
 
 #[repr(u8)]
@@ -83,6 +83,34 @@ pub enum CivilRights {
     Frightening = 15,
 }
 
+impl TryFrom<String> for CivilRights {
+    type Error = IntoNationError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        match value.as_str() {
+            "Outlawed" => Ok(CivilRights::Outlawed),
+            "Unheard Of" => Ok(CivilRights::UnheardOf),
+            "Rare" => Ok(CivilRights::Rare),
+            "Few" => Ok(CivilRights::Few),
+            "Some" => Ok(CivilRights::Some),
+            "Below Average" => Ok(CivilRights::BelowAverage),
+            "Average" => Ok(CivilRights::Average),
+            "Good" => Ok(CivilRights::Good),
+            "Very Good" => Ok(CivilRights::VeryGood),
+            "Excellent" => Ok(CivilRights::Excellent),
+            "Superb" => Ok(CivilRights::Superb),
+            "World Benchmark" => Ok(CivilRights::WorldBenchmark),
+            "Excessive" => Ok(CivilRights::Excessive),
+            "WidelyAbused" => Ok(CivilRights::WidelyAbused),
+            "Frightening" => Ok(CivilRights::Frightening),
+            _ => Err(IntoNationError::BadFieldError(
+                String::from("CivilRights"),
+                value,
+            )),
+        }
+    }
+}
+
 #[repr(u8)]
 #[derive(Ord, PartialOrd, Eq, PartialEq, Copy, Clone, Debug)]
 pub enum Economy {
@@ -103,6 +131,34 @@ pub enum Economy {
     Frightening = 15,
 }
 
+impl TryFrom<String> for Economy {
+    type Error = IntoNationError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        match value.as_str() {
+            "Imploded" => Ok(Economy::Imploded),
+            "Basket Case" => Ok(Economy::BasketCase),
+            "Struggling" => Ok(Economy::Struggling),
+            "Fragile" => Ok(Economy::Fragile),
+            "Weak" => Ok(Economy::Weak),
+            "Developing" => Ok(Economy::Developing),
+            "Fair" => Ok(Economy::Fair),
+            "Reasonable" => Ok(Economy::Reasonable),
+            "Good" => Ok(Economy::Good),
+            "Strong" => Ok(Economy::Strong),
+            "Very Strong" => Ok(Economy::VeryStrong),
+            "Thriving" => Ok(Economy::Thriving),
+            "Powerhouse" => Ok(Economy::Powerhouse),
+            "All-Consuming" => Ok(Economy::AllConsuming),
+            "Frightening" => Ok(Economy::Frightening),
+            _ => Err(IntoNationError::BadFieldError(
+                String::from("Economy"),
+                value,
+            )),
+        }
+    }
+}
+
 #[repr(u8)]
 #[derive(Ord, PartialOrd, Eq, PartialEq, Copy, Clone, Debug)]
 pub enum PoliticalFreedoms {
@@ -121,6 +177,34 @@ pub enum PoliticalFreedoms {
     Excessive = 13,
     WidelyAbused = 14,
     Corrupted = 15,
+}
+
+impl TryFrom<String> for PoliticalFreedoms {
+    type Error = IntoNationError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        match value.as_str() {
+            "Outlawed" => Ok(PoliticalFreedoms::Outlawed),
+            "Unheard Of" => Ok(PoliticalFreedoms::UnheardOf),
+            "Rare" => Ok(PoliticalFreedoms::Rare),
+            "Few" => Ok(PoliticalFreedoms::Few),
+            "Some" => Ok(PoliticalFreedoms::Some),
+            "Below Average" => Ok(PoliticalFreedoms::BelowAverage),
+            "Average" => Ok(PoliticalFreedoms::Average),
+            "Good" => Ok(PoliticalFreedoms::Good),
+            "Very Good" => Ok(PoliticalFreedoms::VeryGood),
+            "Excellent" => Ok(PoliticalFreedoms::Excellent),
+            "Superb" => Ok(PoliticalFreedoms::Superb),
+            "World Benchmark" => Ok(PoliticalFreedoms::WorldBenchmark),
+            "Excessive" => Ok(PoliticalFreedoms::Excessive),
+            "WidelyAbused" => Ok(PoliticalFreedoms::WidelyAbused),
+            "Corrupted" => Ok(PoliticalFreedoms::Corrupted),
+            _ => Err(IntoNationError::BadFieldError(
+                String::from("PoliticalFreedoms"),
+                value,
+            )),
+        }
+    }
 }
 
 //noinspection SpellCheckingInspection
@@ -765,19 +849,12 @@ pub struct Policy {
 /// that can go wrong between deserialization and creating the Nation struct.
 #[derive(Debug, Error)]
 pub enum IntoNationError {
-    /// A string could not be parsed as a banner ID.
-    #[error("malformed banner id: {0}")]
-    BadBannerId(String),
+    /// A field could not be parsed as the type it should be.
+    #[error("malformed field {0} with value {1}")]
+    BadFieldError(String, String),
     /// A `u8` could not be parsed as a `bool` because it was not `0` or `1`.
     #[error("boolean cannot be derived from {0}")]
     BadBooleanError(u8),
-    /// A `String`
-    /// could not be parsed as a [`DispatchCategory`](crate::models::dispatch::DispatchCategory).
-    #[error("malformed dispatch category: {0}")]
-    BadDispatchCategory(String),
-    /// A `String` could not be parsed as a [`WAStatus`].
-    #[error("malformed WA status response: {0}")]
-    BadWAStatusError(String),
     /// A `String` could not be parsed as a [`WAVote`].
     #[error("malformed WA vote: {bad_vote} in {council:?}")]
     BadWAVote {
@@ -793,12 +870,9 @@ pub enum IntoNationError {
         #[from]
         source: DeError,
     },
-    /// There was neither an `id` attribute in the `<NATION>` root tag nor a `<NAME>` tag.
-    #[error("could not find a nation name in response")]
-    NoNameError,
-    /// No census data was created for this nation.
-    #[error("could not find any census data in response")]
-    NoCensusDataError,
+    /// A field was missing from the response.
+    #[error("could not find the field {0} in response")]
+    NoFieldError(String),
 }
 
 /// Describes a nation's vote in the World Assembly.
@@ -863,10 +937,14 @@ impl TryFrom<String> for BannerId {
     fn try_from(value: String) -> Result<Self, Self::Error> {
         let split_index = value.chars().position(|c| c.is_ascii_digit());
         if split_index.is_none() || split_index == Some(0) {
-            return Err(IntoNationError::BadBannerId(value));
+            return Err(IntoNationError::BadFieldError(
+                String::from("BannerId"),
+                value,
+            ));
         }
         let (cat, num) = value.split_at(split_index.unwrap());
-        let num = u16::from_str(num).map_err(|_| IntoNationError::BadBannerId(value.clone()))?;
+        let num = u16::from_str(num)
+            .map_err(|_| IntoNationError::BadFieldError(String::from("BannerId"), value.clone()))?;
         Ok(BannerId::new(cat, num))
     }
 }

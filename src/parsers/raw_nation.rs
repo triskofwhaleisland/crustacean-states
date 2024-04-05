@@ -52,7 +52,7 @@ struct RawNation {
     influence: Option<String>,
     freedomscores: Option<RawFreedomScores>,
     publicsector: Option<f64>,
-    deaths: Option<Deaths>,
+    deaths: Option<RawDeaths>,
     leader: Option<String>,
     capital: Option<String>,
     religion: Option<String>,
@@ -61,11 +61,11 @@ struct RawNation {
     dbid: Option<u32>,
     // END default
     admirable: Option<String>,
-    admirables: Option<Admirables>,
+    admirables: Option<RawAdmirables>,
     animaltrait: Option<String>,
     banner: Option<String>,
-    banners: Option<Banners>,
-    census: Option<Census>,
+    banners: Option<RawBanners>,
+    census: Option<RawCensus>,
     crime: Option<String>,
     dispatchlist: Option<RawDispatchList>,
     factbooklist: Option<RawFactbookList>,
@@ -73,13 +73,13 @@ struct RawNation {
     gavote: Option<String>,
     gdp: Option<u64>,
     govtdesc: Option<String>,
-    happenings: Option<Happenings>,
+    happenings: Option<RawHappenings>,
     income: Option<u32>,
     industrydesc: Option<String>,
-    legislation: Option<Legislation>,
+    legislation: Option<RawLegislation>,
     notable: Option<String>,
-    notables: Option<Notables>,
-    policies: Option<Policies>,
+    notables: Option<RawNotables>,
+    policies: Option<RawPolicies>,
     poorest: Option<u32>,
     rcensus: Option<NonZeroU16>,
     richest: Option<u32>,
@@ -124,7 +124,7 @@ struct RawStandardNation {
     influence: String,
     freedomscores: RawFreedomScores,
     publicsector: f64,
-    deaths: Deaths,
+    deaths: RawDeaths,
     leader: String,
     capital: String,
     religion: String,
@@ -134,25 +134,25 @@ struct RawStandardNation {
 }
 
 #[derive(Debug, Deserialize)]
-struct Deaths {
+struct RawDeaths {
     #[serde(rename = "CAUSE", default)]
     inner: Vec<RawCause>,
 }
 
 #[derive(Debug, Deserialize)]
-struct Admirables {
+struct RawAdmirables {
     #[serde(rename = "ADMIRABLE", default)]
     inner: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
-struct Banners {
+struct RawBanners {
     #[serde(rename = "BANNER", default)]
     inner: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
-struct Census {
+struct RawCensus {
     #[serde(rename = "SCALE", default)]
     inner: Vec<RawCensusData>,
 }
@@ -171,25 +171,25 @@ struct RawFactbookList {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
-struct Happenings {
+struct RawHappenings {
     #[serde(rename = "EVENT", default)]
     inner: Vec<RawEvent>,
 }
 
 #[derive(Debug, Deserialize)]
-struct Legislation {
+struct RawLegislation {
     #[serde(rename = "LAW", default)]
     inner: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
-struct Notables {
+struct RawNotables {
     #[serde(rename = "NOTABLE", default)]
     inner: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
-struct Policies {
+struct RawPolicies {
     #[serde(rename = "POLICY", default)]
     inner: Vec<RawPolicy>,
 }
@@ -303,15 +303,81 @@ struct RawDispatch {
     score: u32,
 }
 
+impl RawDispatch {
+    fn dispatch_category(&self) -> Result<DispatchCategory, IntoNationError> {
+        match self.category.as_str() {
+            "Factbook" => Ok(DispatchCategory::Factbook(
+                match self.subcategory.as_str() {
+                    "Overview" => Ok(FactbookCategory::Overview),
+                    "History" => Ok(FactbookCategory::History),
+                    "Geography" => Ok(FactbookCategory::Geography),
+                    "Culture" => Ok(FactbookCategory::Culture),
+                    "Politics" => Ok(FactbookCategory::Politics),
+                    "Legislation" => Ok(FactbookCategory::Legislation),
+                    "Religion" => Ok(FactbookCategory::Religion),
+                    "Military" => Ok(FactbookCategory::Military),
+                    "Economy" => Ok(FactbookCategory::Economy),
+                    "International" => Ok(FactbookCategory::International),
+                    "Trivia" => Ok(FactbookCategory::Trivia),
+                    "Miscellaneous" => Ok(FactbookCategory::Miscellaneous),
+                    other => Err(IntoNationError::BadFieldError(
+                        String::from("FactbookCategory"),
+                        String::from(other),
+                    )),
+                }?,
+            )),
+            "Bulletin" => Ok(DispatchCategory::Bulletin(
+                match self.subcategory.as_str() {
+                    "Policy" => Ok(BulletinCategory::Policy),
+                    "News" => Ok(BulletinCategory::News),
+                    "Opinion" => Ok(BulletinCategory::Opinion),
+                    "Campaign" => Ok(BulletinCategory::Campaign),
+                    other => Err(IntoNationError::BadFieldError(
+                        String::from("BulletinCategory"),
+                        String::from(other),
+                    )),
+                }?,
+            )),
+            "Account" => Ok(DispatchCategory::Account(match self.subcategory.as_str() {
+                "Military" => Ok(AccountCategory::Military),
+                "Trade" => Ok(AccountCategory::Trade),
+                "Sport" => Ok(AccountCategory::Sport),
+                "Drama" => Ok(AccountCategory::Drama),
+                "Diplomacy" => Ok(AccountCategory::Diplomacy),
+                "Science" => Ok(AccountCategory::Science),
+                "Culture" => Ok(AccountCategory::Culture),
+                "Other" => Ok(AccountCategory::Other),
+                other => Err(IntoNationError::BadFieldError(
+                    String::from("AccountCategory"),
+                    String::from(other),
+                )),
+            }?)),
+            "Meta" => Ok(DispatchCategory::Meta(match self.subcategory.as_str() {
+                "Gameplay" => Ok(MetaCategory::Gameplay),
+                "Reference" => Ok(MetaCategory::Reference),
+                other => Err(IntoNationError::BadFieldError(
+                    String::from("MetaCategory"),
+                    String::from(other),
+                )),
+            }?)),
+            other => Err(IntoNationError::BadFieldError(
+                String::from("DispatchCategory"),
+                String::from(other),
+            )),
+        }
+    }
+}
+
 impl TryFrom<RawDispatch> for Dispatch {
     type Error = IntoNationError;
 
     fn try_from(value: RawDispatch) -> Result<Self, Self::Error> {
+        let category = value.dispatch_category()?;
         Ok(Dispatch {
             id: value.id,
             title: value.title,
             author: pretty_name(value.author),
-            category: try_into_dispatch_category(&value.category, &value.subcategory)?,
+            category,
             created: value.created,
             edited: NonZeroU64::try_from(value.edited).ok(), // field is 0 if never edited
             views: value.views,
@@ -331,18 +397,20 @@ struct RawFreedoms {
     political_freedom: String,
 }
 
-impl From<RawFreedoms> for Freedoms {
-    fn from(value: RawFreedoms) -> Self {
+impl TryFrom<RawFreedoms> for Freedoms {
+    type Error = IntoNationError;
+    fn try_from(value: RawFreedoms) -> Result<Self, Self::Error> {
         let RawFreedoms {
             civil_rights,
             economy,
             political_freedom,
         } = value;
-        Self {
-            civil_rights,
-            economy,
-            political_freedom,
-        }
+
+        Ok(Self {
+            civil_rights: civil_rights.try_into()?,
+            economy: economy.try_into()?,
+            political_freedom: political_freedom.try_into()?,
+        })
     }
 }
 
@@ -455,61 +523,6 @@ impl From<RawSectors> for Sectors {
     }
 }
 
-fn try_into_dispatch_category(
-    main_category: &str,
-    sub_category: &str,
-) -> Result<DispatchCategory, IntoNationError> {
-    match main_category {
-        "Factbook" => Ok(DispatchCategory::Factbook(match sub_category {
-            "Overview" => Ok(FactbookCategory::Overview),
-            "History" => Ok(FactbookCategory::History),
-            "Geography" => Ok(FactbookCategory::Geography),
-            "Culture" => Ok(FactbookCategory::Culture),
-            "Politics" => Ok(FactbookCategory::Politics),
-            "Legislation" => Ok(FactbookCategory::Legislation),
-            "Religion" => Ok(FactbookCategory::Religion),
-            "Military" => Ok(FactbookCategory::Military),
-            "Economy" => Ok(FactbookCategory::Economy),
-            "International" => Ok(FactbookCategory::International),
-            "Trivia" => Ok(FactbookCategory::Trivia),
-            "Miscellaneous" => Ok(FactbookCategory::Miscellaneous),
-            other => Err(IntoNationError::BadDispatchCategory(format!(
-                "Factbook:{other}"
-            ))),
-        }?)),
-        "Bulletin" => Ok(DispatchCategory::Bulletin(match sub_category {
-            "Policy" => Ok(BulletinCategory::Policy),
-            "News" => Ok(BulletinCategory::News),
-            "Opinion" => Ok(BulletinCategory::Opinion),
-            "Campaign" => Ok(BulletinCategory::Campaign),
-            other => Err(IntoNationError::BadDispatchCategory(format!(
-                "Bulletin:{other}"
-            ))),
-        }?)),
-        "Account" => Ok(DispatchCategory::Account(match sub_category {
-            "Military" => Ok(AccountCategory::Military),
-            "Trade" => Ok(AccountCategory::Trade),
-            "Sport" => Ok(AccountCategory::Sport),
-            "Drama" => Ok(AccountCategory::Drama),
-            "Diplomacy" => Ok(AccountCategory::Diplomacy),
-            "Science" => Ok(AccountCategory::Science),
-            "Culture" => Ok(AccountCategory::Culture),
-            "Other" => Ok(AccountCategory::Other),
-            other => Err(IntoNationError::BadDispatchCategory(format!(
-                "Account:{other}"
-            ))),
-        }?)),
-        "Meta" => Ok(DispatchCategory::Meta(match sub_category {
-            "Gameplay" => Ok(MetaCategory::Gameplay),
-            "Reference" => Ok(MetaCategory::Reference),
-            other => Err(IntoNationError::BadDispatchCategory(format!(
-                "Meta:{other}"
-            ))),
-        }?)),
-        other => Err(IntoNationError::BadDispatchCategory(other.to_string())),
-    }
-}
-
 impl Nation {
     /// Converts the XML response from NationStates to a [`Nation`].
     pub fn from_xml(xml: &str) -> Result<Self, IntoNationError> {
@@ -524,7 +537,7 @@ impl TryFrom<RawNation> for Nation {
         let name = match (value.name, value.id) {
             (Some(n), _) => Ok(n),
             (None, Some(i)) => Ok(pretty_name(i)),
-            (None, None) => Err(IntoNationError::NoNameError),
+            (None, None) => Err(IntoNationError::NoFieldError(String::from("name"))),
         }?;
 
         let happenings = value
@@ -536,7 +549,10 @@ impl TryFrom<RawNation> for Nation {
                 "WA Delegate" => Ok(Some(WAStatus::Delegate)),
                 "WA Member" => Ok(Some(WAStatus::Member)),
                 "Non-member" => Ok(Some(WAStatus::NonMember)),
-                other => Err(IntoNationError::BadWAStatusError(other.to_string())),
+                other => Err(IntoNationError::BadFieldError(
+                    String::from("WAStatus"),
+                    String::from(other),
+                )),
             },
             None => Ok(None),
         }?;
@@ -558,14 +574,12 @@ impl TryFrom<RawNation> for Nation {
             category: value.category,
             wa_status,
             endorsements: value.endorsements.as_ref().map(|e| {
-                if !e.is_empty() {
-                    e.split(',').map(pretty_name).collect()
-                } else {
-                    vec![]
-                }
+                (!e.is_empty())
+                    .then(|| e.split(',').map(pretty_name).collect::<Vec<_>>())
+                    .unwrap_or_default()
             }),
             issues_answered: value.issues_answered,
-            freedom: value.freedom.map(Freedoms::from),
+            freedom: value.freedom.map(Freedoms::try_from).transpose()?,
             region: value.region,
             population: value.population,
             tax: value.tax,
@@ -619,7 +633,7 @@ impl TryFrom<RawNation> for Nation {
                     Some(_) => Ok(CensusData::Current(
                         c.inner.into_iter().map(CensusCurrentData::from).collect(),
                     )),
-                    None => Err(IntoNationError::NoCensusDataError),
+                    None => Err(IntoNationError::NoFieldError(String::from("census"))),
                 })
                 .transpose()?,
             crime: value.crime,
@@ -718,15 +732,22 @@ impl TryFrom<RawStandardNation> for StandardNation {
                 "WA Delegate" => Ok(WAStatus::Delegate),
                 "WA Member" => Ok(WAStatus::Member),
                 "Non-member" => Ok(WAStatus::NonMember),
-                other => Err(IntoNationError::BadWAStatusError(other.to_string())),
+                other => Err(IntoNationError::BadFieldError(
+                    String::from("WAStatus"),
+                    other.to_string(),
+                )),
             }?,
-            endorsements: if !value.endorsements.is_empty() {
-                value.endorsements.split(',').map(pretty_name).collect()
-            } else {
-                vec![]
-            },
+            endorsements: (!value.endorsements.is_empty())
+                .then(|| {
+                    value
+                        .endorsements
+                        .split(',')
+                        .map(pretty_name)
+                        .collect::<Vec<_>>()
+                })
+                .unwrap_or_default(),
             issues_answered: value.issues_answered,
-            freedom: value.freedom.into(),
+            freedom: value.freedom.try_into()?,
             region: value.region,
             population: value.population,
             tax: value.tax,
