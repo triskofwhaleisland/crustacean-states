@@ -6,6 +6,7 @@ use std::num::{NonZeroU32, NonZeroU64};
 pub mod happenings;
 pub mod nation;
 mod raw_nation;
+mod raw_region;
 
 pub(crate) const DEFAULT_LEADER: &str = "Leader";
 pub(crate) const DEFAULT_RELIGION: &str = "a major religion";
@@ -18,7 +19,7 @@ pub(super) struct RawEvent {
 }
 
 /// A value that either comes from a default or was customized.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum DefaultOrCustom {
     /// The value is the default.
     Default(String),
@@ -51,7 +52,7 @@ impl DefaultOrCustom {
 }
 
 /// A relative timestamp that may or may not have been recorded.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum MaybeRelativeTime {
     /// A known time.
     Recorded(String),
@@ -93,7 +94,7 @@ impl From<MaybeRelativeTime> for String {
 }
 
 /// An absolute Unix timestamp that may or may not have been recorded.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum MaybeSystemTime {
     /// A known time.
     Recorded(NonZeroU64),
@@ -135,8 +136,71 @@ impl From<MaybeSystemTime> for u64 {
     }
 }
 
+#[derive(Debug, Deserialize)]
+pub(crate) struct RawCensus {
+    #[serde(rename = "SCALE", default)]
+    inner: Vec<RawCensusData>,
+}
+
+//noinspection SpellCheckingInspection
+#[derive(Debug, Deserialize)]
+pub(crate) struct RawCensusData {
+    #[serde(rename = "@id")]
+    id: u8,
+    #[serde(rename = "SCORE")]
+    score: Option<f64>,
+    #[serde(rename = "RANK")]
+    world_rank: Option<NonZeroU32>,
+    #[serde(rename = "RRANK")]
+    region_rank: Option<NonZeroU32>,
+    #[serde(rename = "PRANK")]
+    percent_world_rank: Option<f64>,
+    #[serde(rename = "PRRANK")]
+    percent_region_rank: Option<f64>,
+    #[serde(rename = "TIMESTAMP")]
+    timestamp: Option<NonZeroU64>,
+}
+
+impl From<RawCensusData> for CensusCurrentData {
+    fn from(value: RawCensusData) -> Self {
+        let RawCensusData {
+            id,
+            score,
+            world_rank,
+            region_rank,
+            percent_world_rank,
+            percent_region_rank,
+            ..
+        } = value;
+        Self {
+            id,
+            score,
+            world_rank,
+            region_rank,
+            percent_world_rank,
+            percent_region_rank,
+        }
+    }
+}
+
+impl From<RawCensusData> for CensusHistoricalData {
+    fn from(value: RawCensusData) -> Self {
+        let RawCensusData {
+            id,
+            timestamp,
+            score,
+            ..
+        } = value;
+        Self {
+            id,
+            timestamp,
+            score,
+        }
+    }
+}
+
 /// World Census data about the nation. Either Current or Historical.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum CensusData {
     /// Current data.
     Current(Vec<CensusCurrentData>),
@@ -145,7 +209,7 @@ pub enum CensusData {
 }
 
 /// Current World Census data about the nation.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct CensusCurrentData {
     /// The ID used for the data point. For example,
     pub id: u8,
@@ -167,7 +231,7 @@ pub struct CensusCurrentData {
 
 /// Historical data from the World Census.
 /// Note that only scores and not rankings are available this way.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct CensusHistoricalData {
     /// The ID used for the data point. For example,
     pub id: u8,
@@ -180,7 +244,7 @@ pub struct CensusHistoricalData {
 }
 
 /// Metadata about a dispatch.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Dispatch {
     /// The numerical ID of the dispatch.
     /// This forms the URL: for example,

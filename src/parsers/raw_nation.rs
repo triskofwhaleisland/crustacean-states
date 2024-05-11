@@ -1,3 +1,7 @@
+use std::num::{NonZeroU16, NonZeroU32, NonZeroU64};
+
+use serde::Deserialize;
+
 use crate::{
     models::dispatch::{
         AccountCategory, BulletinCategory, DispatchCategory, FactbookCategory, MetaCategory,
@@ -9,22 +13,20 @@ use crate::{
             Sectors, StandardNation, WAStatus, WAVote,
         },
         CensusCurrentData, CensusData, CensusHistoricalData, DefaultOrCustom, Dispatch,
-        MaybeRelativeTime, MaybeSystemTime, RawEvent,
+        MaybeRelativeTime, MaybeSystemTime, RawCensus, RawEvent,
     },
     pretty_name,
 };
-use serde::Deserialize;
-use std::num::{NonZeroU16, NonZeroU32, NonZeroU64};
 
 //noinspection SpellCheckingInspection
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 struct RawNation {
     // default shards
-    #[serde(rename = "@id")]
+    #[serde(rename = "@id")] // attribute: "id"
     id: Option<String>,
     name: Option<String>,
-    #[serde(rename = "TYPE")]
+    #[serde(rename = "TYPE")] // why do they like this word so much :weary:
     kind: Option<String>,
     fullname: Option<String>,
     motto: Option<String>,
@@ -152,12 +154,6 @@ struct RawBanners {
 }
 
 #[derive(Debug, Deserialize)]
-struct RawCensus {
-    #[serde(rename = "SCALE", default)]
-    inner: Vec<RawCensusData>,
-}
-
-#[derive(Debug, Deserialize)]
 struct RawDispatchList {
     #[serde(rename = "DISPATCH", default)]
     inner: Vec<RawDispatch>,
@@ -218,9 +214,9 @@ impl TryFrom<RawPolicy> for Policy {
 
 #[derive(Debug, Deserialize)]
 struct RawCause {
-    #[serde(rename = "@type")]
+    #[serde(rename = "@type")] // attribute: "type"
     kind: String,
-    #[serde(rename = "$value")]
+    #[serde(rename = "$value")] // extract inner text
     frequency: f64,
 }
 
@@ -228,63 +224,6 @@ impl From<RawCause> for Cause {
     fn from(value: RawCause) -> Self {
         let RawCause { kind, frequency } = value;
         Self { kind, frequency }
-    }
-}
-
-//noinspection SpellCheckingInspection
-#[derive(Debug, Deserialize)]
-struct RawCensusData {
-    #[serde(rename = "@id")]
-    id: u8,
-    #[serde(rename = "SCORE")]
-    score: Option<f64>,
-    #[serde(rename = "RANK")]
-    world_rank: Option<NonZeroU32>,
-    #[serde(rename = "RRANK")]
-    region_rank: Option<NonZeroU32>,
-    #[serde(rename = "PRANK")]
-    percent_world_rank: Option<f64>,
-    #[serde(rename = "PRRANK")]
-    percent_region_rank: Option<f64>,
-    #[serde(rename = "TIMESTAMP")]
-    timestamp: Option<NonZeroU64>,
-}
-
-impl From<RawCensusData> for CensusCurrentData {
-    fn from(value: RawCensusData) -> Self {
-        let RawCensusData {
-            id,
-            score,
-            world_rank,
-            region_rank,
-            percent_world_rank,
-            percent_region_rank,
-            ..
-        } = value;
-        Self {
-            id,
-            score,
-            world_rank,
-            region_rank,
-            percent_world_rank,
-            percent_region_rank,
-        }
-    }
-}
-
-impl From<RawCensusData> for CensusHistoricalData {
-    fn from(value: RawCensusData) -> Self {
-        let RawCensusData {
-            id,
-            timestamp,
-            score,
-            ..
-        } = value;
-        Self {
-            id,
-            timestamp,
-            score,
-        }
     }
 }
 
@@ -557,15 +496,6 @@ impl TryFrom<RawNation> for Nation {
             None => Ok(None),
         }?;
 
-        let ga_vote = match wa_status {
-            Some(WAStatus::NonMember) => None,
-            _ => value.gavote.map(WAVote::try_from).transpose()?,
-        };
-        let sc_vote = match wa_status {
-            Some(WAStatus::NonMember) => None,
-            _ => value.scvote.map(WAVote::try_from).transpose()?,
-        };
-
         Ok(Self {
             name,
             kind: value.kind,
@@ -656,7 +586,10 @@ impl TryFrom<RawNation> for Nation {
                 })
                 .transpose()?,
             founded_time: value.foundedtime.map(MaybeSystemTime::from),
-            ga_vote,
+            ga_vote: match wa_status {
+                Some(WAStatus::NonMember) => None,
+                _ => value.gavote.map(WAVote::try_from).transpose()?,
+            },
             gdp: value.gdp,
             govt_desc: value.govtdesc,
             happenings,
@@ -683,7 +616,10 @@ impl TryFrom<RawNation> for Nation {
             poorest: value.poorest,
             regional_census: value.rcensus,
             richest: value.richest,
-            sc_vote,
+            sc_vote: match wa_status {
+                Some(WAStatus::NonMember) => None,
+                _ => value.scvote.map(WAVote::try_from).transpose()?,
+            },
             sectors: value.sectors.map(Sectors::from),
             sensibilities: value.sensibilities,
             // .map(|s| {

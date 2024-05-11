@@ -16,7 +16,7 @@ use std::{
 use thiserror::Error;
 
 /// The status of a nation in the World Assembly.
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum WAStatus {
     /// The nation is the delegate of a region.
     Delegate,
@@ -30,7 +30,7 @@ pub enum WAStatus {
 /// Each field represents a category.
 /// All fields *should* add up to 100.0,
 /// but expect it to not be exact due to floating-point arithmetic and on-site rounding error.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[allow(missing_docs)]
 pub struct Government {
     pub administration: f64,
@@ -52,7 +52,7 @@ pub struct Government {
 /// Note:
 /// in a future release,
 /// the fields in this struct will be converted from `String`s to enum variants.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 #[allow(missing_docs)]
 pub struct Freedoms {
     // TODO make enum
@@ -305,7 +305,7 @@ impl From<CategoryRanking> for (i8, i8, i8) {
 
 /// Gives a score out of 100 for the three types of national freedom.
 // TODO restrict type from 0 to 100
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 #[allow(missing_docs)]
 pub struct FreedomScores {
     pub civil_rights: u8,
@@ -315,7 +315,7 @@ pub struct FreedomScores {
 
 /// Causes of death in a nation.
 /// Note: at some point, the field `kind` in this struct will be converted to enum variants.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Cause {
     /// The way in which citizens die.
     // TODO make enum
@@ -325,7 +325,7 @@ pub struct Cause {
 }
 
 /// A breakdown of the nation's relative economic power in each economic sector.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[allow(missing_docs)] // TODO learn economics so I can explain this :P
 pub struct Sectors {
     pub black_market: f64,
@@ -341,7 +341,7 @@ pub struct Sectors {
 /// depending on the [`PublicNationShard`](crate::shards::nation::PublicNationShard)s used
 /// to make the request,
 /// only certain fields will be returned.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[non_exhaustive]
 pub struct Nation {
     /// The name of the nation.
@@ -831,7 +831,7 @@ pub struct StandardNation {
 }
 
 /// Describes a national policy.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Policy {
     /// The name of the policy.
     pub name: String,
@@ -876,7 +876,7 @@ pub enum IntoNationError {
 }
 
 /// Describes a nation's vote in the World Assembly.
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum WAVote {
     /// The nation votes for the proposed resolution.
     For,

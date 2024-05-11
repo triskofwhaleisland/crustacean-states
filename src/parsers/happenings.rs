@@ -6,7 +6,7 @@ use regex::{Regex, RegexSet};
 use crate::{parsers::RawEvent, regex};
 
 /// A line of `happenings`.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 #[non_exhaustive]
 pub struct Event {
     /// The Unix timestamp when the event happened.
@@ -23,7 +23,7 @@ pub struct Event {
     pub kind: Option<EventKind>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 #[non_exhaustive]
 /// The kind of event. Not currently implemented.
 pub enum EventKind {
