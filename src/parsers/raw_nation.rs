@@ -13,7 +13,7 @@ use crate::{
             Sectors, StandardNation, WAStatus, WAVote,
         },
         CensusCurrentData, CensusData, CensusHistoricalData, DefaultOrCustom, Dispatch,
-        MaybeRelativeTime, MaybeSystemTime, RawCensus, RawEvent,
+        MaybeRelativeTime, MaybeSystemTime, RawCensus, RawHappenings,
     },
     pretty_name,
 };
@@ -163,13 +163,6 @@ struct RawDispatchList {
 struct RawFactbookList {
     #[serde(rename = "FACTBOOK", default)]
     inner: Vec<RawDispatch>, // only containing factbooks!
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "UPPERCASE")]
-struct RawHappenings {
-    #[serde(rename = "EVENT", default)]
-    inner: Vec<RawEvent>,
 }
 
 #[derive(Debug, Deserialize)]

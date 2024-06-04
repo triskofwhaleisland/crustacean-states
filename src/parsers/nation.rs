@@ -55,11 +55,8 @@ pub struct Government {
 #[derive(Clone, Debug)]
 #[allow(missing_docs)]
 pub struct Freedoms {
-    // TODO make enum
     pub civil_rights: CivilRights,
-    // TODO make enum
     pub economy: Economy,
-    // TODO make enum
     pub political_freedom: PoliticalFreedoms,
 }
 

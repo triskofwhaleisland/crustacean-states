@@ -5,6 +5,7 @@ use std::num::{NonZeroU32, NonZeroU64};
 
 pub mod happenings;
 pub mod nation;
+pub mod region;
 mod raw_nation;
 mod raw_region;
 
@@ -197,6 +198,34 @@ impl From<RawCensusData> for CensusHistoricalData {
             score,
         }
     }
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub(crate) struct RawCensusRanks {
+    #[serde(rename = "@id")]
+    scale: u8,
+    #[serde(rename = "NATIONS")]
+    nations: RawCensusRanksNations,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub(crate) struct RawCensusRanksNations {
+    #[serde(rename = "NATION", default)]
+    inner: Vec<RawCensusRanksNation>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub(crate) struct RawCensusRanksNation {
+    name: String,
+    rank: u32,
+    score: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "UPPERCASE")]
+struct RawHappenings {
+    #[serde(rename = "EVENT", default)]
+    inner: Vec<RawEvent>,
 }
 
 /// World Census data about the nation. Either Current or Historical.
