@@ -1,9 +1,8 @@
-use quick_xml::utils::Bytes;
 use serde::Deserialize;
 
 use crate::parsers::{
-    region::{IntoRegionError, Region},
-    RawCensus, RawCensusRanks, RawHappenings,
+    RawCensus,
+    RawCensusRanks, RawHappenings, region::{IntoRegionError, Region},
 };
 
 //noinspection SpellCheckingInspection
@@ -13,18 +12,18 @@ struct RawRegion {
     // default shards
     name: Option<String>,          // nice name
     factbook: Option<String>,      // contains factbook
-    numnations: Option<String>, // u32       // number of nations inside
+    numnations: Option<u32>,       // number of nations inside
     nations: Option<String>,       // colon-separated list of nations
     delegate: Option<String>,      // internal name of delegate
-    delegatevotes: Option<String>, // u32    // number of votes delegate has in World Assembly
+    delegatevotes: Option<u32>,    // number of votes delegate has in World Assembly
     delegateauth: Option<String>,  // authorities that delegate has
-    frontier: Option<String>, // u8          // TODO understand
+    frontier: Option<u8>, // TODO understand
     founder: Option<String>,       // name of the nation that founded the region
     governor: Option<String>,      // name of the nation that is governor
     officers: Option<RawOfficers>, // list of officers
     power: Option<String>,         // regional power level
     flag: Option<String>,          // URL to region's flag
-    banner: Option<String>, // u32           // region's banner ID
+    banner: Option<u32>,           // region's banner ID
     bannerurl: Option<String>,     // incomplete URL to banner.
     // appears to not have nationstates.net at the beginning
     embassies: Option<RawEmbassies>, // list of region's embassies
@@ -33,20 +32,20 @@ struct RawRegion {
     bannerby: Option<String>, // who made the banner?
     census: Option<RawCensus>,
     censusranks: Option<RawCensusRanks>,
-    dbid: Option<String>, // u32
+    dbid: Option<u32>,
     dispatches: Option<String>, // list of IDs of pinned dispatches, comma separated
     embassyrmb: Option<String>, // permissions given for embassies posting on the RMB TODO find all
     founded: Option<String>,    // relative time since the region was founded
-    foundedtime: Option<String>, // u64   // UNIX timestamp when the region was founded
+    foundedtime: Option<u64>, // UNIX timestamp when the region was founded
     gavote: Option<RawRegionWAVote>,
     happenings: Option<RawHappenings>,
     history: Option<RawHappenings>,
-    lastupdate: Option<String>, // u64
-    lastmajorupdate: Option<String>, // u64
-    lastminorupdate: Option<String>, // u64
+    lastupdate: Option<u64>,
+    lastmajorupdate: Option<u64>,
+    lastminorupdate: Option<u64>,
     messages: Option<RawMessages>,
     unnations: Option<String>, // comma-separated list of nations, only those in the WA
-    numunnations: Option<String>, // u32 // number of WA nations
+    numunnations: Option<u32>, // number of WA nations
     poll: Option<RawPoll>,
     scvote: Option<RawRegionWAVote>,
     tags: Option<RawRegionTags>,
@@ -71,9 +70,9 @@ struct RawOfficer {
     nation: String,
     office: String,
     authority: String,
-    time: String, // u64
+    time: u64,
     by: String,
-    order: String, // u64
+    order: i16,
 }
 
 #[derive(Debug, Deserialize)]
@@ -87,9 +86,9 @@ struct RawEmbassy {
 #[derive(Debug, Deserialize)]
 struct RawRegionWAVote {
     #[serde(rename = "FOR")]
-    for_vote: String, // u16
+    for_vote: u16,
     #[serde(rename = "AGAINST")]
-    against_vote: String, // u16
+    against_vote: u16,
 }
 
 #[derive(Debug, Deserialize)]
@@ -103,13 +102,13 @@ struct RawMessages {
 #[serde(rename_all = "UPPERCASE")]
 struct RawMessage {
     #[serde(rename = "@id")]
-    id: String, // u32
-    timestamp: String, // u64
+    id: u32,
+    timestamp: u64,
     nation: String,
-    status: String, // u8                // 0, 1, 2, 9
+    status: u8,                // 0, 1, 2, 9
     suppressor: Option<String>, // nation
-    edited: Option<String>, // u64        // timestamp
-    likes: String, // u16                // number of likes
+    edited: Option<u64>,        // timestamp
+    likes: u16,                // number of likes
     likers: Option<String>,     // list of nations that liked
     embassy: Option<String>,    // embassy region that nation posted from, if applicable
     message: String,            // the actual contents (thank god)
@@ -119,12 +118,12 @@ struct RawMessage {
 #[serde(rename_all = "UPPERCASE")]
 struct RawPoll {
     #[serde(rename = "@id")]
-    id: String, // u32
+    id: u32,
     title: String,
     text: Option<String>,
     region: String,
-    start: String, // u64
-    stop: String, // u64
+    start: u64,
+    stop: u64,
     author: String,
     options: RawPollOptions,
 }
@@ -140,9 +139,9 @@ struct RawPollOptions {
 #[serde(rename_all = "UPPERCASE")]
 struct RawPollOption {
     #[serde(rename = "@id")]
-    id: String, // u32
+    id: u32,
     optiontext: String,
-    votes: String, // u32
+    votes: u32,
     voters: String,
 }
 
@@ -163,7 +162,7 @@ struct RawRegionWABadge {
     #[serde(rename = "@type")]
     kind: String,
     #[serde(rename = "$text")]
-    resolution: String, // u16
+    resolution: u16,
 }
 
 impl Region {

@@ -3,7 +3,7 @@ use thiserror::Error;
 
 #[derive(Debug)]
 pub struct Region {
-    pub(crate) inner: String,
+    pub inner: String,
 }
 
 #[derive(Debug, Error)]

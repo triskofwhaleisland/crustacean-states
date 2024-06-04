@@ -23,7 +23,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     println!("{response:?}");
     println!("\n---\n");
     let region = Region::from_xml(&response)?;
-    println!("{region:?}");
+    println!("{}", region.inner);
     let response_struct_made = Instant::now();
 
     eprintln!("Creation time: {:?}", request_struct_made - start);
