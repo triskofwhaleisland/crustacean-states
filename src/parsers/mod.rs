@@ -5,9 +5,9 @@ use std::num::{NonZeroU32, NonZeroU64};
 
 pub mod happenings;
 pub mod nation;
-pub mod region;
 mod raw_nation;
 mod raw_region;
+pub mod region;
 
 pub(crate) const DEFAULT_LEADER: &str = "Leader";
 pub(crate) const DEFAULT_RELIGION: &str = "a major religion";
