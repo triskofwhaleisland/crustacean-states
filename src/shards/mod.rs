@@ -1,16 +1,17 @@
 //! A shard is a tiny request, composed of two parts: the query and the extra parameters.
-//! You add multiple shards together to get the most efficient response.
-//! Remember: 50 requests per 30 seconds is both a lot and very little at the same time!
+//!   You add multiple shards together to get the most efficient response.
+//!   Remember: 50 requests per 30 seconds is both a lot and very little at the same time!
 //!
 //! There are two very important restrictions for shards:
-//! first, you can only combine shards that are
+//!   first, you can only combine shards that are
 //! - for the same nation, or
 //! - for the same region, or
 //! - for the same World Assembly council, or
 //! - for the world.
+//!
 //! Second, it is not possible to make two requests that use extra parameters with the same name.
-//! Right now, `crustacean-states` allows for parameters to be overwritten.
-//! In the future, it may be possible to create a series of requests that do not overlap.
+//!   Right now, `crustacean-states` allows for parameters to be overwritten.
+//!   In the future, it may be possible to create a series of requests that do not overlap.
 
 pub mod nation;
 pub mod region;
@@ -21,7 +22,7 @@ use itertools::Itertools;
 use reqwest::Url;
 use std::{
     collections::HashMap,
-    fmt::Debug,
+    fmt::{Debug, Display},
     hash::Hash,
     num::{NonZeroU32, NonZeroU64, NonZeroU8},
 };
@@ -38,24 +39,27 @@ pub(crate) struct Params<'a>(HashMap<&'a str, String>, Vec<&'a str>);
 impl<'a> Params<'a> {
     pub(crate) fn insert_on<T>(&mut self, k: &'a str, v: &Option<T>) -> &mut Self
     where
-        T: ToString,
+        T: Display,
     {
-        if let Some(s) = v {
-            self.0.insert(k, s.to_string());
-            self.1.push(k);
-        }
+        v.as_ref().map(|s| self.insert(k, s));
         self
     }
     pub(crate) fn insert<T>(&mut self, k: &'a str, v: T) -> &mut Self
     where
-        T: ToString,
+        T: Display,
     {
-        Self::insert_on(self, k, &Some(v))
+        if self.0.contains_key(k) {
+            self.0.remove(k);
+            self.1.retain(|k1| *k1 != k);
+        }
+        self.0.insert(k, v.to_string());
+        self.1.push(k);
+        self
     }
 
     pub(crate) fn insert_front<T>(&mut self, k: &'a str, v: T) -> &mut Self
     where
-        T: ToString,
+        T: Display,
     {
         self.0.insert(k, v.to_string());
         self.1.insert(0, k);
@@ -241,7 +245,10 @@ impl CensusHistoryParams {
     /// This terminology was changed because both `from` and `to` are very ambiguous, and `from`
     /// should be reserved for converting from other types into this one.
     pub fn new(after: NonZeroU64, before: NonZeroU64) -> Self {
-        Self::default().before(before).after(after).to_owned()
+        Self {
+            from: Some(after),
+            to: Some(before),
+        }
     }
 
     /// Restricts the data to be after/from a certain timestamp.
@@ -259,7 +266,7 @@ impl CensusHistoryParams {
 
 impl From<(NonZeroU64, NonZeroU64)> for CensusHistoryParams {
     fn from(value: (NonZeroU64, NonZeroU64)) -> Self {
-        Self::default().before(value.0).after(value.1).to_owned()
+        Self::new(value.0, value.1)
     }
 }
 
@@ -292,13 +299,15 @@ pub struct CensusRanksShard {
 impl CensusRanksShard {
     /// Create a new shard.
     /// - `scale`:
-    /// The World Census statistic to use.
-    /// (If you want the World Census daily scale,
-    /// start with [`CensusRanksShard::default`] and use [`CensusRanksShard::daily_scale`].)
+    ///   The World Census statistic to use.
+    ///   (If you want the World Census daily scale,
+    ///   start with [`CensusRanksShard::default`] and use [`CensusRanksShard::daily_scale`].)
     /// - `start`: The ranking to start with
-    /// (e.g. `5` would indicate starting at the fifth nation).
+    ///   (e.g. `5` would indicate starting at the fifth nation).
     pub fn new(scale: u8, start: NonZeroU32) -> Self {
-        Self::default().scale(scale).start(start).to_owned()
+        let mut shard = Self::default();
+        shard.scale(scale).start(start);
+        shard
     }
 
     /// Set the World Census scale being requested to an ID.
@@ -339,6 +348,18 @@ mod tests {
             Params::default().insert("this", "that").0.get("this"),
             Some(&String::from("that"))
         );
+    }
+
+    #[test]
+    fn replace_param() {
+        assert_eq!(
+            Params::default()
+                .insert("this", "that")
+                .insert("this", "the other thing")
+                .0
+                .get("this"),
+            Some(&String::from("the other thing"))
+        )
     }
 
     #[test]
