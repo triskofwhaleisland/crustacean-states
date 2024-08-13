@@ -1,7 +1,7 @@
 //! National, regional, and world happenings.
 
-use once_cell::sync::Lazy;
 use regex::{Regex, RegexSet};
+use std::sync::LazyLock;
 
 use crate::{parsers::RawEvent, regex};
 
@@ -42,10 +42,10 @@ pub enum EventKind {
     // can you tell where this is going?
 }
 
-static NATION_RE: Lazy<&Regex> = Lazy::new(|| regex!(r"@@[a-zA-Z0-9-]+@@"));
-static REGION_RE: Lazy<&Regex> = Lazy::new(|| regex!(r"%%[a-zA-Z0-9-]+%%"));
-static ALL_EXPRESSIONS: Lazy<RegexSet> =
-    Lazy::new(|| RegexSet::new([NATION_RE.as_str(), REGION_RE.as_str()]).unwrap());
+static NATION_RE: LazyLock<&Regex> = LazyLock::new(|| regex!(r"@@[a-zA-Z0-9-]+@@"));
+static REGION_RE: LazyLock<&Regex> = LazyLock::new(|| regex!(r"%%[a-zA-Z0-9-]+%%"));
+static ALL_EXPRESSIONS: LazyLock<RegexSet> =
+    LazyLock::new(|| RegexSet::new([NATION_RE.as_str(), REGION_RE.as_str()]).unwrap());
 
 impl From<RawEvent> for Event {
     fn from(value: RawEvent) -> Self {
