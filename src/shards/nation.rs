@@ -77,21 +77,11 @@ pub enum PublicNationShard<'a> {
     DbId,
     /// Causes of death and their frequencies as a percentage.
     Deaths,
-    /// Adjective used to describe citizens of the nation: e.g., I’m French.
+    /// Adjectival used to describe citizens of the nation: e.g., I’m Dutch.
     Demonym,
-    /// Singular noun used to describe a citizen of the nation: e.g., I’m a Frenchman.
+    /// Singular noun used to describe a citizen of the nation: e.g., I’m a Dutchman.
     Demonym2,
-    /// Plural noun used to describe citizens of the nation: e.g., They’re (some) Frenchmen.
-    ///
-    /// *Note that in the English language,
-    /// the word "some" (plural indefinite article) is not normally used in that way;
-    /// however, it would be more inaccurate to use "the" (plural definite article).
-    /// Other languages use articles differently than English.*
-    ///
-    /// *It should also be noted that the words "Frenchman" and "Frenchmen"
-    /// are no longer the preferred English words to describe French people;
-    /// the adjectival demonym with the words "person" or "people" is now preferred:
-    /// e.g., I am a French (adj.) person.*
+    /// Plural noun used to describe citizens of the nation: e.g., They’re Dutchmen.
     Demonym2Plural,
     /// The number of dispatches published by this nation.
     ///
