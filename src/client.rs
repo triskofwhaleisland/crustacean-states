@@ -7,15 +7,22 @@ use reqwest::{
 };
 use std::{
     num::ParseIntError,
-    sync::{Arc, Mutex},
+    sync::Arc,
     time::{Duration, Instant},
 };
 use thiserror::Error;
+use tokio::sync::Mutex;
 
 /// A client helper. Uses [`reqwest`] under the surface.
+// contains two "locks": state and permit
+// - state is in a mutex
+//   so that we can modify the client state
+//   while not requiring the entire client to be mutable.
+// - permit is in a mutex to force any interactions with the API to happen one-at-a-time.
 pub struct Client {
     client: reqwest::Client,
     state: Arc<Mutex<ClientState>>,
+    permit: Arc<Mutex<()>>,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -27,9 +34,6 @@ struct ClientState {
 
 impl Client {
     /// Creates a new client.
-    /// `user_agent` needs to be [`TryInto`]<[`HeaderValue`]>,
-    /// which, as of [`reqwest`] 0.11.18, is implemented for `&[u8]`, `&String`, `&str`,
-    /// `String`, and `Vec<u8>`.
     pub fn new<V>(user_agent: V) -> Self
     where
         V: TryInto<HeaderValue>,
@@ -41,7 +45,18 @@ impl Client {
                 .build()
                 .unwrap(),
             state: Arc::new(Mutex::new(ClientState::default())),
+            permit: Arc::new(Mutex::new(())),
         }
+    }
+
+    // locks: state
+    pub async fn last_sent(&self) -> Option<Instant> {
+        self.state.lock().await.last_sent
+    }
+
+    // locks: state
+    pub async fn send_after(&self) -> Option<Instant> {
+        self.state.lock().await.send_after
     }
 
     /// Make a request of the API.
@@ -50,33 +65,36 @@ impl Client {
     ///
     /// If there was an error in the [`reqwest`] crate, return [`ClientError::ReqwestError`].
     // Note: this function cannot be tested because it is `async`.
+    // locks: state, permit; writes on: state
     pub async fn get<U: NSRequest>(&self, request: U) -> Result<Response, ClientError> {
-        // If the client was told that it should not send until some time after now,
-        if let Some(t) = self
-            .state
-            .lock()
-            .unwrap()
-            .send_after
-            .filter(|t| *t > Instant::now())
-        {
-            // Raise an error detailing when the request should have been sent.
-            return Err(ClientError::RateLimitedError(t));
+        // If the client was told that it should not send the request until some time after now,
+        if let Some(t) = self.state.lock().await.send_after {
+            if t > Instant::now() {
+                // Raise an error detailing when the request should be sent.
+                return Err(ClientError::RateLimitedError(t));
+            }
         }
+
+        let _permit = self.permit.lock().await; // requires only one request to be made at a time
 
         match self.client.get(request.as_url()).send().await {
             Ok(r) => {
-                let mut state = self.state.lock().unwrap();
+                // state lock begins
+                let mut state = self.state.lock().await;
                 state.rate_limiter = Some(RateLimits::try_from(r.headers())?);
                 state.last_sent = Some(Instant::now());
-                if let Some(ref r) = state.rate_limiter {
-                    state.send_after = if r.remaining == 0 {
-                        Some(r.reset)
-                    } else {
-                        r.retry_after
+                if let Some(r) = &state.rate_limiter {
+                    let wait_duration = (r.remaining == 0)
+                        .then_some(r.reset)
+                        .or(r.retry_after)
+                        .map(u64::from)
+                        .map(Duration::from_secs);
+                    if let Some(t) = wait_duration {
+                        state.send_after = Some(state.last_sent.unwrap() + t)
                     }
-                    .map(|t| state.last_sent.unwrap() + Duration::from_secs(t as u64))
                 }
                 Ok(r)
+                // state lock ends
             }
             Err(e) => Err(ClientError::ReqwestError { source: e }),
         }
@@ -84,10 +102,11 @@ impl Client {
 
     /// Estimates the length of time to wait between each request to avoid a
     /// 429 Too Many Requests error.
-    pub fn wait_duration(&self) -> Option<Duration> {
+    /// `None` means that there is no estimate, usually because a request has not yet been received.
+    pub async fn wait_duration(&self) -> Option<Duration> {
         self.state
             .lock()
-            .unwrap()
+            .await
             .rate_limiter
             .as_ref()
             .map(|r| Duration::from_secs_f64(r.remaining as f64 / r.reset as f64))
@@ -105,7 +124,8 @@ pub enum ClientError {
         #[from]
         source: reqwest::Error,
     },
-    /// An error relating to converting raw [`HeaderValue`]s to `&str`s. This happens if a `HeaderValue`
+    /// An error relating to converting raw [`HeaderValue`]s to `&str`s.
+    /// This happens if a [`HeaderValue`]
     /// is not made solely of visible ASCII characters.
     ///
     /// If you get this,

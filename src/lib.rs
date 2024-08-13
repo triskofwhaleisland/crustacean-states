@@ -44,6 +44,7 @@
 #[doc(hidden)]
 mod macros;
 
+#[cfg(feature = "client")]
 pub mod client;
 pub mod models;
 pub mod parsers;

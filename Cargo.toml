@@ -7,16 +7,21 @@ license = "MIT OR Apache-2.0"
 description = "A NationStates API wrapper designed for ease of use"
 repository = "https://github.com/triskofwhaleisland/crustacean-states"
 
+[features]
+default = []
+client = ["dep:reqwest", "dep:tokio"]
+
 [dependencies]
 http = { version = "^1" }  # depends on reqwest
 itertools = { version = "~0.13" }
 quick-xml = { version = "~0.36", features = ["serialize"] }
 regex = { version = "^1.8", default-features = false, features = ["std"] }
-reqwest = { version = "~0.12" }
+reqwest = { version = "~0.12", optional = true }
 serde = { version = "~1", features = ["derive"] }
 strum = { version = "~0.26", features = ["derive"] }
 thiserror = { version = "~1" }
-url = { version = "^2.2" }  # depends on reqwest
+tokio = { version = "~1", default-features = false, features = ["sync"], optional = true }
+url = { version = "^2.2" }
 
 [dev-dependencies]
 dotenvy = "^0.15"
