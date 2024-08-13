@@ -2,8 +2,10 @@
 
 use std::fmt::{Display, Formatter};
 
+use strum::AsRefStr;
+
 /// The categories of dispatches.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, AsRefStr)]
 pub enum DispatchCategory {
     /// Factbooks officially describe a nation.
     Factbook(FactbookCategory),
@@ -15,7 +17,7 @@ pub enum DispatchCategory {
     Meta(MetaCategory),
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, AsRefStr)]
 #[allow(missing_docs)]
 #[non_exhaustive]
 /// The subcategories of factbooks.
@@ -41,7 +43,7 @@ pub enum FactbookCategory {
     Any,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, AsRefStr)]
 #[allow(missing_docs)]
 #[non_exhaustive]
 /// The subcategories of bulletins.
@@ -59,7 +61,7 @@ pub enum BulletinCategory {
     Any,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, AsRefStr)]
 #[allow(missing_docs)]
 #[non_exhaustive]
 /// The subcategories of accounts.
@@ -81,7 +83,7 @@ pub enum AccountCategory {
     Any,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, AsRefStr)]
 #[allow(missing_docs)]
 #[non_exhaustive]
 /// The subcategories of meta-category dispatches.
@@ -97,96 +99,18 @@ pub enum MetaCategory {
     Any,
 }
 
-impl Display for FactbookCategory {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                FactbookCategory::Any => String::new(),
-                c => format!("{c:?}"),
-            }
-        )
-    }
-}
-
-impl Display for BulletinCategory {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                BulletinCategory::Any => String::new(),
-                c => format!("{c:?}"),
-            }
-        )
-    }
-}
-
-impl Display for AccountCategory {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                AccountCategory::Any => String::new(),
-                c => format!("{c:?}"),
-            }
-        )
-    }
-}
-
-impl Display for MetaCategory {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                MetaCategory::Any => String::new(),
-                c => format!("{c:?}"),
-            }
-        )
-    }
-}
-
 impl Display for DispatchCategory {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", {
-            let c: (&str, Option<String>) = match self {
-                DispatchCategory::Factbook(subcategory) => (
-                    "Factbook",
-                    match subcategory {
-                        FactbookCategory::Any => None,
-                        other => Some(other.to_string()),
-                    },
-                ),
-                DispatchCategory::Bulletin(subcategory) => (
-                    "Bulletin",
-                    match subcategory {
-                        BulletinCategory::Any => None,
-                        other => Some(other.to_string()),
-                    },
-                ),
-                DispatchCategory::Account(subcategory) => (
-                    "Account",
-                    match subcategory {
-                        AccountCategory::Any => None,
-                        other => Some(other.to_string()),
-                    },
-                ),
-                DispatchCategory::Meta(subcategory) => (
-                    "Meta",
-                    match subcategory {
-                        MetaCategory::Any => None,
-                        other => Some(other.to_string()),
-                    },
-                ),
-            };
-            format!(
-                "{}{}",
-                c.0,
-                c.1.map(|x| format!(": {x}")).unwrap_or_default(),
-            )
-        })
+        write!(
+            f,
+            "{}: {}",
+            self.as_ref(),
+            match self {
+                DispatchCategory::Factbook(cat) => cat.as_ref(),
+                DispatchCategory::Bulletin(cat) => cat.as_ref(),
+                DispatchCategory::Account(cat) => cat.as_ref(),
+                DispatchCategory::Meta(cat) => cat.as_ref(),
+            }
+        )
     }
 }

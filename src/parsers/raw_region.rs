@@ -1,8 +1,8 @@
 use serde::Deserialize;
 
 use crate::parsers::{
-    RawCensus,
-    RawCensusRanks, RawHappenings, region::{IntoRegionError, Region},
+    region::{IntoRegionError, Officer, OfficerAuthority},
+    RawCensus, RawCensusRanks, RawHappenings,
 };
 
 //noinspection SpellCheckingInspection
@@ -17,7 +17,7 @@ struct RawRegion {
     delegate: Option<String>,      // internal name of delegate
     delegatevotes: Option<u32>,    // number of votes delegate has in World Assembly
     delegateauth: Option<String>,  // authorities that delegate has
-    frontier: Option<u8>, // TODO understand
+    frontier: Option<u8>,          // TODO understand
     founder: Option<String>,       // name of the nation that founded the region
     governor: Option<String>,      // name of the nation that is governor
     officers: Option<RawOfficers>, // list of officers
@@ -36,7 +36,7 @@ struct RawRegion {
     dispatches: Option<String>, // list of IDs of pinned dispatches, comma separated
     embassyrmb: Option<String>, // permissions given for embassies posting on the RMB TODO find all
     founded: Option<String>,    // relative time since the region was founded
-    foundedtime: Option<u64>, // UNIX timestamp when the region was founded
+    foundedtime: Option<u64>,   // UNIX timestamp when the region was founded
     gavote: Option<RawRegionWAVote>,
     happenings: Option<RawHappenings>,
     history: Option<RawHappenings>,
@@ -75,6 +75,32 @@ struct RawOfficer {
     order: i16,
 }
 
+impl TryFrom<RawOfficer> for Officer {
+    type Error = IntoRegionError;
+
+    fn try_from(value: RawOfficer) -> Result<Self, Self::Error> {
+        let RawOfficer {
+            nation,
+            office,
+            authority,
+            time,
+            by,
+            order,
+        } = value;
+        Ok(Officer {
+            nation,
+            office,
+            authority: authority
+                .chars()
+                .map(OfficerAuthority::try_from)
+                .collect::<Result<Vec<_>, _>>()?,
+            time,
+            by,
+            order,
+        })
+    }
+}
+
 #[derive(Debug, Deserialize)]
 struct RawEmbassy {
     #[serde(rename = "@type")] // attribute: "type"
@@ -105,10 +131,10 @@ struct RawMessage {
     id: u32,
     timestamp: u64,
     nation: String,
-    status: u8,                // 0, 1, 2, 9
+    status: u8,                 // 0, 1, 2, 9
     suppressor: Option<String>, // nation
     edited: Option<u64>,        // timestamp
-    likes: u16,                // number of likes
+    likes: u16,                 // number of likes
     likers: Option<String>,     // list of nations that liked
     embassy: Option<String>,    // embassy region that nation posted from, if applicable
     message: String,            // the actual contents (thank god)
@@ -151,6 +177,7 @@ struct RawRegionTags {
     inner: Vec<String>,
 }
 
+//noinspection SpellCheckingInspection
 #[derive(Debug, Deserialize)]
 struct RawRegionWABadges {
     #[serde(rename = "WABADGE", default)]
@@ -165,17 +192,19 @@ struct RawRegionWABadge {
     resolution: u16,
 }
 
-impl Region {
-    /// Converts the XML response from NationStates to a [`Region`].
-    pub fn from_xml(xml: &[u8]) -> Result<Self, IntoRegionError> {
-        Self::try_from(quick_xml::de::from_reader::<&[u8], RawRegion>(xml)?)
-    }
-}
+// impl Region {
+//     /// Converts the XML response from NationStates to a [`Region`].
+//     pub fn from_xml(xml: &[u8]) -> Result<Self, IntoRegionError> {
+//         Self::try_from(quick_xml::de::from_reader::<&[u8], RawRegion>(xml)?)
+//     }
+// }
 
-impl TryFrom<RawRegion> for Region {
-    type Error = IntoRegionError;
-
-    fn try_from(value: RawRegion) -> Result<Self, Self::Error> {
-        Ok(Region { inner: format!("{value:?}") })
-    }
-}
+// impl TryFrom<RawRegion> for Region {
+//     type Error = IntoRegionError;
+//
+//     fn try_from(value: RawRegion) -> Result<Self, Self::Error> {
+//         Ok(Region {
+//             inner: format!("{value:?}"),
+//         })
+//     }
+// }
