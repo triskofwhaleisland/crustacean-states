@@ -8,7 +8,7 @@ description = "A NationStates API wrapper designed for ease of use"
 repository = "https://github.com/triskofwhaleisland/crustacean-states"
 
 [features]
-default = []
+default = ["client"]
 client = ["dep:reqwest", "dep:tokio"]
 
 [dependencies]
