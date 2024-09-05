@@ -5,10 +5,10 @@
 
 use crate::shards::NSRequest;
 use reqwest::{
-    Response,
     header::{HeaderMap, HeaderValue},
+    Response,
 };
-use std::sync::{Arc};
+use std::sync::Arc;
 use std::{
     num::ParseIntError,
     sync::LazyLock,
@@ -104,7 +104,9 @@ impl Client {
     /// 429 Too Many Requests error.
     /// `None` means that there is no estimate, usually because a request has not yet been received.
     pub async fn wait_duration(&self) -> Option<Duration> {
-        CLIENT_STATE.lock().await
+        CLIENT_STATE
+            .lock()
+            .await
             .rate_limiter
             .as_ref()
             .map(|r| Duration::from_secs_f64(r.remaining as f64 / r.reset as f64))

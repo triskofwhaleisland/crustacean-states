@@ -1,5 +1,7 @@
 //! Contains the modules that parse responses from the NationStates API.
+
 use crate::models::dispatch::DispatchCategory;
+use crate::parsers::nation::IntoNationError;
 use serde::Deserialize;
 use std::num::{NonZeroU32, NonZeroU64};
 
@@ -222,7 +224,6 @@ pub(crate) struct RawCensusRanksNation {
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(rename_all = "UPPERCASE")]
 struct RawHappenings {
     #[serde(rename = "EVENT", default)]
     inner: Vec<RawEvent>,
@@ -294,4 +295,43 @@ pub struct Dispatch {
     pub views: u32,
     /// The score of the dispatch
     pub score: u32,
+}
+
+pub struct CensusRegionRanks {
+    pub id: u8,
+    pub nations: [CensusCurrentData; 20],
+}
+
+impl TryFrom<RawCensusRanks> for CensusRegionRanks {
+    type Error = IntoNationError;
+    fn try_from(value: RawCensusRanks) -> Result<Self, Self::Error> {
+        Ok(Self {
+            id: value.scale,
+            nations: value
+                .nations
+                .inner
+                .into_iter()
+                .map(|nation| {
+                    Ok(CensusCurrentData {
+                        id: value.scale,
+                        score: Some(str::parse::<f64>(&*nation.score).map_err(|e| {
+                            IntoNationError::BadFieldError(
+                                String::from("CensusRegionRanks"),
+                                e.to_string(),
+                            )
+                        }))
+                        .transpose()?,
+                        world_rank: None,
+                        region_rank: nation.rank.try_into().ok(),
+                        percent_world_rank: None,
+                        percent_region_rank: None,
+                    })
+                })
+                .collect::<Result<Vec<CensusCurrentData>, Self::Error>>()?
+                .try_into()
+                .map_err(|_| {
+                    IntoNationError::WrongLengthError(String::from("CensusRegionRanks"), 20)
+                })?,
+        })
+    }
 }

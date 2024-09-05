@@ -1,7 +1,12 @@
 use serde::Deserialize;
 
 use crate::parsers::region::{Embassy, EmbassyKind, Region};
-use crate::parsers::{region::{IntoRegionError, Officer, OfficerAuthority}, MaybeRelativeTime, MaybeSystemTime, RawCensus, RawCensusRanks, RawHappenings};
+use crate::parsers::{
+    region::{IntoRegionError, Officer, OfficerAuthority},
+    CensusCurrentData, CensusData, CensusHistoricalData, MaybeRelativeTime, MaybeSystemTime,
+    RawCensus, RawCensusRanks, RawHappenings,
+};
+use crate::pretty_name;
 
 //noinspection SpellCheckingInspection
 #[derive(Debug, Deserialize)]
@@ -250,22 +255,56 @@ impl TryFrom<RawRegion> for Region {
             name: value.name,
             factbook: value.factbook,
             num_nations: value.numnations,
-            nations: value.nations.map(|nations| nations.split(":").map(String::from).collect::<Vec<_>>()),
-            delegate: value.delegate,
+            nations: value
+                .nations
+                .map(|nations| nations.split(":").map(String::from).collect::<Vec<_>>()),
+            delegate: value.delegate.map(pretty_name),
             delegate_votes: value.delegatevotes,
             delegate_authority: value.delegateauth,
             frontier: value.frontier.map(|f| f != 0),
             founder: value.founder,
             governor: value.governor,
-            officers: value.officers.map(|officers| officers.inner.into_iter().map(Officer::try_from).collect::<Result<Vec<_>, _>>()).transpose()?,
+            officers: value
+                .officers
+                .map(|officers| {
+                    officers
+                        .inner
+                        .into_iter()
+                        .map(Officer::try_from)
+                        .collect::<Result<Vec<_>, _>>()
+                })
+                .transpose()?,
             power: value.power,
             flag: value.flag,
             banner: value.banner,
             banner_url: value.bannerurl,
-            embassies: value.embassies.map(|embassies| embassies.inner.into_iter().map(Embassy::try_from).collect::<Result<Vec<_>, _>>()).transpose()?,
+            embassies: value
+                .embassies
+                .map(|embassies| {
+                    embassies
+                        .inner
+                        .into_iter()
+                        .map(Embassy::try_from)
+                        .collect::<Result<Vec<_>, _>>()
+                })
+                .transpose()?,
             banned: value.banned,
             banner_by: value.bannerby,
-            census: value.census,
+            census: value
+                .census
+                .map(|c| match c.inner.first() {
+                    Some(f) if f.timestamp.is_some() => Ok(CensusData::Historical(
+                        c.inner
+                            .into_iter()
+                            .map(CensusHistoricalData::from)
+                            .collect(),
+                    )),
+                    Some(_) => Ok(CensusData::Current(
+                        c.inner.into_iter().map(CensusCurrentData::from).collect(),
+                    )),
+                    None => Err(IntoRegionError::NoFieldError(String::from("census"))),
+                })
+                .transpose()?,
             census_ranks: value.census_ranks,
             dbid: value.dbid,
             dispatches: value.dispatches,

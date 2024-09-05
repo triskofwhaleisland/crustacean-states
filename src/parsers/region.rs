@@ -1,3 +1,4 @@
+use crate::parsers::CensusData;
 use crate::{
     parsers::{MaybeRelativeTime, MaybeSystemTime},
     shards::region::Tag,
@@ -52,12 +53,6 @@ pub enum EmbassyKind {
 }
 
 #[derive(Debug)]
-pub struct Census;
-
-#[derive(Debug)]
-pub struct CensusRanks;
-
-#[derive(Debug)]
 pub struct RegionWAVote;
 
 #[derive(Debug)]
@@ -75,27 +70,27 @@ pub struct Happenings;
 #[derive(Debug)]
 pub struct Region {
     // default shards
-    pub name: Option<String>,               // nice name
-    pub factbook: Option<String>,           // contains factbook
-    pub num_nations: Option<u32>,           // number of nations inside
-    pub nations: Option<Vec<String>>,       // list of nations
-    pub delegate: Option<String>,           // internal name of delegate
-    pub delegate_votes: Option<u32>,        // number of votes delegate has in World Assembly
-    pub delegate_authority: Option<String>, // authorities that delegate has
-    pub frontier: Option<bool>,             // 0 = not a frontier, 1 = frontier
-    pub founder: Option<String>,            // name of the nation that founded the region
-    pub governor: Option<String>,           // name of the nation that is governor
-    pub officers: Option<Vec<Officer>>,     // list of officers
-    pub power: Option<String>,              // regional power level
-    pub flag: Option<String>,               // URL to region's flag
-    pub banner: Option<u32>,                // region's banner ID
-    pub banner_url: Option<String>,         // incomplete URL to banner.
+    pub name: Option<String>,                              // nice name
+    pub factbook: Option<String>,                          // contains factbook TODO make not String
+    pub num_nations: Option<u32>,                          // number of nations inside
+    pub nations: Option<Vec<String>>,                      // list of nations
+    pub delegate: Option<String>,                          // internal name of delegate
+    pub delegate_votes: Option<u32>, // number of votes delegate has in World Assembly
+    pub delegate_authority: Option<Vec<OfficerAuthority>>, // authorities that delegate has
+    pub frontier: Option<bool>,      // 0 = not a frontier, 1 = frontier
+    pub founder: Option<String>,     // name of the nation that founded the region
+    pub governor: Option<String>,    // name of the nation that is governor
+    pub officers: Option<Vec<Officer>>, // list of officers
+    pub power: Option<String>,       // regional power level
+    pub flag: Option<String>,        // URL to region's flag
+    pub banner: Option<u32>,         // region's banner ID
+    pub banner_url: Option<String>,  // incomplete URL to banner.
     // appears to not have https://www.nationstates.net at the beginning
     pub embassies: Option<Vec<Embassy>>, // list of region's embassies
     // END default
     pub banned: Option<String>, // who is banned? separated by colons, internal name
     pub banner_by: Option<String>, // who made the banner?
-    pub census: Option<Census>,
+    pub census: Option<CensusData>,
     pub census_ranks: Option<CensusRanks>,
     pub dbid: Option<u32>,
     pub dispatches: Option<String>, // list of IDs of pinned dispatches, comma separated

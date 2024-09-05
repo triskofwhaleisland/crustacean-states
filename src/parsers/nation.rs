@@ -48,10 +48,6 @@ pub struct Government {
 }
 
 /// Describes national freedoms as explained on-site.
-///
-/// Note:
-/// in a future release,
-/// the fields in this struct will be converted from `String`s to enum variants.
 #[derive(Clone, Debug)]
 #[allow(missing_docs)]
 pub struct Freedoms {
@@ -870,6 +866,9 @@ pub enum IntoNationError {
     /// A field was missing from the response.
     #[error("could not find the field {0} in response")]
     NoFieldError(String),
+
+    #[error("field {0} is the wrong length (should be {1})")]
+    WrongLengthError(String, usize),
 }
 
 /// Describes a nation's vote in the World Assembly.
