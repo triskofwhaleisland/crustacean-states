@@ -7,7 +7,8 @@ use dotenvy::dotenv;
 use std::error::Error;
 use tokio::time::Instant;
 
-fn main() -> Result<(), Box<dyn Error>> {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn Error>> {
     let begin1 = Instant::now();
     dotenv()?;
     let user_agent = std::env::var("USER_AGENT")?;
@@ -18,7 +19,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let request = PublicNationRequest::from((target_nation, [DispatchList]));
     let end1 = Instant::now();
     // eprintln!("{request}");
-    let text = client.get(request)?.text()?;
+    let text = client.get(request).await?.text().await?;
     let begin2 = Instant::now();
     // eprintln!("{text}");
     let response = Nation::from_xml(&text)?;
