@@ -18,27 +18,6 @@ pub enum OfficerAuthority {
     Polls,
 }
 
-impl TryFrom<char> for OfficerAuthority {
-    type Error = IntoRegionError;
-
-    fn try_from(value: char) -> Result<Self, Self::Error> {
-        match value {
-            'X' => Ok(OfficerAuthority::Executive),
-            'W' => Ok(OfficerAuthority::WorldAssembly),
-            'S' => Ok(OfficerAuthority::Succession),
-            'A' => Ok(OfficerAuthority::Appearance),
-            'B' => Ok(OfficerAuthority::BorderControl),
-            'C' => Ok(OfficerAuthority::Communications),
-            'E' => Ok(OfficerAuthority::Embassies),
-            'P' => Ok(OfficerAuthority::Polls),
-            c => Err(IntoRegionError::BadFieldError(
-                String::from("OfficerAuthority"),
-                String::from(c),
-            )),
-        }
-    }
-}
-
 #[derive(Debug)]
 pub struct Officer {
     pub nation: String,
@@ -50,7 +29,27 @@ pub struct Officer {
 }
 
 #[derive(Debug)]
-pub struct Embassy;
+pub struct Embassy {
+    pub region_name: String,
+    pub kind: EmbassyKind,
+}
+
+#[derive(Debug, Default)]
+pub enum EmbassyKind {
+    /// The default status of an embassy.
+    #[default]
+    Established,
+    /// The embassy is being built.
+    Pending,
+    /// The embassy has been proposed by this region.
+    Requested,
+    /// The embassy has been proposed by the other region.
+    Invited,
+    /// The embassy proposal was rejected.
+    Rejected,
+    /// The embassy is closing.
+    Closing,
+}
 
 #[derive(Debug)]
 pub struct Census;

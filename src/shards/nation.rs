@@ -77,7 +77,8 @@ pub enum PublicNationShard<'a> {
     DbId,
     /// Causes of death and their frequencies as a percentage.
     Deaths,
-    /// Adjectival used to describe citizens of the nation: e.g., I’m Dutch.
+    /// Adjectival form used to describe citizens of the nation: e.g., I’m Dutch.
+    // Well, I'm not Dutch. I'm American. Anyway.
     Demonym,
     /// Singular noun used to describe a citizen of the nation: e.g., I’m a Dutchman.
     Demonym2,

@@ -19,7 +19,6 @@ pub mod wa;
 pub mod world;
 
 use itertools::Itertools;
-use reqwest::Url;
 use std::{
     collections::HashMap,
     fmt::{Debug, Display},
@@ -27,6 +26,7 @@ use std::{
     num::{NonZeroU32, NonZeroU64, NonZeroU8},
 };
 use strum::Display;
+use url::Url;
 
 pub(crate) const BASE_URL: &str = "https://www.nationstates.net/cgi-bin/api.cgi?";
 
@@ -110,10 +110,10 @@ impl<'a> Iterator for Params<'a> {
     type Item = (&'a str, String);
 
     fn next(&mut self) -> Option<Self::Item> {
-        if !self.1.is_empty() {
-            Some(self.0.remove_entry(self.1.remove(0)).unwrap())
-        } else {
+        if self.1.is_empty() {
             None
+        } else {
+            self.0.remove_entry(self.1.remove(0))
         }
     }
 }

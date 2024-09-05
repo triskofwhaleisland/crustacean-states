@@ -1,5 +1,6 @@
 use serde::Deserialize;
 
+use crate::parsers::region::{Embassy, EmbassyKind, Region};
 use crate::parsers::{
     region::{IntoRegionError, Officer, OfficerAuthority},
     RawCensus, RawCensusRanks, RawHappenings,
@@ -101,12 +102,57 @@ impl TryFrom<RawOfficer> for Officer {
     }
 }
 
+impl TryFrom<char> for OfficerAuthority {
+    type Error = IntoRegionError;
+
+    fn try_from(value: char) -> Result<Self, Self::Error> {
+        match value {
+            'X' => Ok(OfficerAuthority::Executive),
+            'W' => Ok(OfficerAuthority::WorldAssembly),
+            'S' => Ok(OfficerAuthority::Succession),
+            'A' => Ok(OfficerAuthority::Appearance),
+            'B' => Ok(OfficerAuthority::BorderControl),
+            'C' => Ok(OfficerAuthority::Communications),
+            'E' => Ok(OfficerAuthority::Embassies),
+            'P' => Ok(OfficerAuthority::Polls),
+            c => Err(IntoRegionError::BadFieldError(
+                String::from("OfficerAuthority"),
+                String::from(c),
+            )),
+        }
+    }
+}
+
 #[derive(Debug, Deserialize)]
 struct RawEmbassy {
     #[serde(rename = "@type")] // attribute: "type"
     kind: Option<String>,
     #[serde(rename = "$value")] // extract inner text
     region: String,
+}
+
+impl TryFrom<RawEmbassy> for Embassy {
+    type Error = IntoRegionError;
+    fn try_from(value: RawEmbassy) -> Result<Self, Self::Error> {
+        Ok(Self {
+            region_name: value.region,
+            kind: value
+                .kind
+                .map(|kind| match kind.as_str() {
+                    "pending" => Ok(EmbassyKind::Pending),
+                    "requested" => Ok(EmbassyKind::Requested),
+                    "invited" => Ok(EmbassyKind::Invited),
+                    "rejected" => Ok(EmbassyKind::Rejected),
+                    "closing" => Ok(EmbassyKind::Closing),
+                    _ => Err(IntoRegionError::BadFieldError(
+                        String::from("EmbassyKind"),
+                        kind,
+                    )),
+                })
+                .transpose()?
+                .unwrap_or_default(),
+        })
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -192,19 +238,56 @@ struct RawRegionWABadge {
     resolution: u16,
 }
 
-// impl Region {
-//     /// Converts the XML response from NationStates to a [`Region`].
-//     pub fn from_xml(xml: &[u8]) -> Result<Self, IntoRegionError> {
-//         Self::try_from(quick_xml::de::from_reader::<&[u8], RawRegion>(xml)?)
-//     }
-// }
+impl Region {
+    /// Converts the XML response from NationStates to a [`Region`].
+    pub fn from_xml(xml: &[u8]) -> Result<Self, IntoRegionError> {
+        Self::try_from(quick_xml::de::from_reader::<&[u8], RawRegion>(xml)?)
+    }
+}
 
-// impl TryFrom<RawRegion> for Region {
-//     type Error = IntoRegionError;
-//
-//     fn try_from(value: RawRegion) -> Result<Self, Self::Error> {
-//         Ok(Region {
-//             inner: format!("{value:?}"),
-//         })
-//     }
-// }
+impl TryFrom<RawRegion> for Region {
+    type Error = IntoRegionError;
+
+    fn try_from(value: RawRegion) -> Result<Self, Self::Error> {
+        Ok(Region {
+            name: value.name,
+            factbook: value.factbook,
+            num_nations: None,
+            nations: None,
+            delegate: None,
+            delegate_votes: None,
+            delegate_authority: None,
+            frontier: None,
+            founder: None,
+            governor: None,
+            officers: None,
+            power: None,
+            flag: None,
+            banner: None,
+            banner_url: None,
+            embassies: None,
+            banned: None,
+            banner_by: None,
+            census: None,
+            census_ranks: None,
+            dbid: None,
+            dispatches: None,
+            embassy_rmb: None,
+            founded: None,
+            founded_time: None,
+            ga_vote: None,
+            happenings: None,
+            history: None,
+            last_update: None,
+            last_major_update: None,
+            last_minor_update: None,
+            messages: None,
+            wa_nations: None,
+            num_wa_nations: None,
+            poll: None,
+            sc_vote: None,
+            tags: None,
+            wa_badges: None,
+        })
+    }
+}
