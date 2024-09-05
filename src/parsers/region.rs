@@ -78,7 +78,7 @@ pub struct Region {
     pub name: Option<String>,               // nice name
     pub factbook: Option<String>,           // contains factbook
     pub num_nations: Option<u32>,           // number of nations inside
-    pub nations: Option<String>,            // colon-separated list of nations
+    pub nations: Option<Vec<String>>,       // list of nations
     pub delegate: Option<String>,           // internal name of delegate
     pub delegate_votes: Option<u32>,        // number of votes delegate has in World Assembly
     pub delegate_authority: Option<String>, // authorities that delegate has
