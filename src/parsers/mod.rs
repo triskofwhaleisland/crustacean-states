@@ -2,6 +2,7 @@
 
 use crate::models::dispatch::DispatchCategory;
 use crate::parsers::nation::IntoNationError;
+use crate::parsers::region::IntoRegionError;
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use std::num::{NonZeroI64, NonZeroU32, NonZeroU64};
@@ -53,6 +54,10 @@ impl DefaultOrCustom {
             DefaultOrCustom::Custom(r)
         }
     }
+}
+
+pub(crate) fn into_datetime(t: i64) -> Option<DateTime<Utc>> {
+    DateTime::from_timestamp(t, 0)
 }
 
 /// A relative timestamp that may or may not have been recorded.
@@ -117,12 +122,7 @@ impl From<Option<DateTime<Utc>>> for MaybeSystemTime {
 
 impl From<Option<NonZeroI64>> for MaybeSystemTime {
     fn from(value: Option<NonZeroI64>) -> Self {
-        MaybeSystemTime::from(
-            value
-                .map(i64::from)
-                .map(|t| DateTime::from_timestamp(t, 0))
-                .unwrap(),
-        )
+        MaybeSystemTime::from(value.map(i64::from).map(into_datetime).unwrap())
     }
 }
 
@@ -150,6 +150,29 @@ impl From<MaybeSystemTime> for Option<NonZeroI64> {
 pub(crate) struct RawCensus {
     #[serde(rename = "SCALE", default)]
     inner: Vec<RawCensusData>,
+}
+
+impl TryFrom<RawCensus> for CensusData {
+    type Error = IntoNationError;
+    fn try_from(value: RawCensus) -> Result<Self, Self::Error> {
+        match value.inner.first() {
+            Some(f) if f.timestamp.is_some() => Ok(CensusData::Historical(
+                value
+                    .inner
+                    .into_iter()
+                    .map(CensusHistoricalData::from)
+                    .collect(),
+            )),
+            Some(_) => Ok(CensusData::Current(
+                value
+                    .inner
+                    .into_iter()
+                    .map(CensusCurrentData::from)
+                    .collect(),
+            )),
+            None => Err(IntoNationError::NoFieldError(String::from("census"))),
+        }
+    }
 }
 
 //noinspection SpellCheckingInspection
@@ -311,7 +334,7 @@ pub struct CensusRegionRanks {
 }
 
 impl TryFrom<RawCensusRanks> for CensusRegionRanks {
-    type Error = IntoNationError;
+    type Error = IntoRegionError;
     fn try_from(value: RawCensusRanks) -> Result<Self, Self::Error> {
         Ok(Self {
             id: value.scale,
@@ -323,7 +346,7 @@ impl TryFrom<RawCensusRanks> for CensusRegionRanks {
                     Ok(CensusCurrentData {
                         id: value.scale,
                         score: Some(str::parse::<f64>(&*nation.score).map_err(|e| {
-                            IntoNationError::BadFieldError(
+                            IntoRegionError::BadFieldError(
                                 String::from("CensusRegionRanks"),
                                 e.to_string(),
                             )

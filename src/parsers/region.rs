@@ -1,9 +1,8 @@
-use crate::parsers::{CensusData, CensusRegionRanks};
 use crate::{
-    parsers::{MaybeRelativeTime, MaybeSystemTime},
+    parsers::{CensusData, CensusRegionRanks, MaybeRelativeTime, MaybeSystemTime},
     shards::region::Tag,
 };
-use chrono::{DateTime, NaiveDateTime};
+use chrono::{DateTime, Utc};
 use quick_xml::DeError;
 use thiserror::Error;
 
@@ -18,6 +17,27 @@ pub enum OfficerAuthority {
     Communications,
     Embassies,
     Polls,
+}
+
+impl TryFrom<char> for OfficerAuthority {
+    type Error = IntoRegionError;
+
+    fn try_from(value: char) -> Result<Self, Self::Error> {
+        match value {
+            'X' => Ok(OfficerAuthority::Executive),
+            'W' => Ok(OfficerAuthority::WorldAssembly),
+            'S' => Ok(OfficerAuthority::Succession),
+            'A' => Ok(OfficerAuthority::Appearance),
+            'B' => Ok(OfficerAuthority::BorderControl),
+            'C' => Ok(OfficerAuthority::Communications),
+            'E' => Ok(OfficerAuthority::Embassies),
+            'P' => Ok(OfficerAuthority::Polls),
+            c => Err(IntoRegionError::BadFieldError(
+                String::from("OfficerAuthority"),
+                String::from(c),
+            )),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -102,9 +122,9 @@ pub struct Region {
     pub ga_vote: Option<RegionWAVote>,
     pub happenings: Option<Happenings>,
     pub history: Option<Happenings>,
-    pub last_update: Option<NaiveDateTime>,
-    pub last_major_update: Option<NaiveDateTime>,
-    pub last_minor_update: Option<NaiveDateTime>,
+    pub last_update: Option<DateTime<Utc>>,
+    pub last_major_update: Option<DateTime<Utc>>,
+    pub last_minor_update: Option<DateTime<Utc>>,
     pub messages: Option<Vec<Message>>,
     pub wa_nations: Option<String>, // comma-separated list of nations, only those in the WA
     pub num_wa_nations: Option<u32>, // number of WA nations

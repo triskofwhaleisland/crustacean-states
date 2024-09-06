@@ -1,10 +1,11 @@
+use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
 use crate::parsers::region::{Embassy, EmbassyKind, Region};
 use crate::parsers::{
     region::{IntoRegionError, Officer, OfficerAuthority},
-    CensusCurrentData, CensusData, CensusHistoricalData, MaybeRelativeTime, MaybeSystemTime,
-    RawCensus, RawCensusRanks, RawHappenings,
+    CensusCurrentData, CensusData, CensusHistoricalData, CensusRegionRanks, MaybeRelativeTime,
+    MaybeSystemTime, RawCensus, RawCensusRanks, RawHappenings,
 };
 use crate::pretty_name;
 
@@ -39,13 +40,13 @@ struct RawRegion {
     dispatches: Option<String>, // list of IDs of pinned dispatches, comma separated
     embassyrmb: Option<String>, // permissions given for embassies posting on the RMB TODO find all
     founded: Option<String>,    // relative time since the region was founded
-    foundedtime: Option<u64>,   // UNIX timestamp when the region was founded
+    foundedtime: Option<i64>,   // UNIX timestamp when the region was founded
     gavote: Option<RawRegionWAVote>,
     happenings: Option<RawHappenings>,
     history: Option<RawHappenings>,
-    lastupdate: Option<u64>,
-    lastmajorupdate: Option<u64>,
-    lastminorupdate: Option<u64>,
+    lastupdate: Option<i64>,
+    lastmajorupdate: Option<i64>,
+    lastminorupdate: Option<i64>,
     messages: Option<RawMessages>,
     unnations: Option<String>, // comma-separated list of nations, only those in the WA
     numunnations: Option<u32>, // number of WA nations
@@ -101,27 +102,6 @@ impl TryFrom<RawOfficer> for Officer {
             by,
             order,
         })
-    }
-}
-
-impl TryFrom<char> for OfficerAuthority {
-    type Error = IntoRegionError;
-
-    fn try_from(value: char) -> Result<Self, Self::Error> {
-        match value {
-            'X' => Ok(OfficerAuthority::Executive),
-            'W' => Ok(OfficerAuthority::WorldAssembly),
-            'S' => Ok(OfficerAuthority::Succession),
-            'A' => Ok(OfficerAuthority::Appearance),
-            'B' => Ok(OfficerAuthority::BorderControl),
-            'C' => Ok(OfficerAuthority::Communications),
-            'E' => Ok(OfficerAuthority::Embassies),
-            'P' => Ok(OfficerAuthority::Polls),
-            c => Err(IntoRegionError::BadFieldError(
-                String::from("OfficerAuthority"),
-                String::from(c),
-            )),
-        }
     }
 }
 
@@ -313,9 +293,24 @@ impl TryFrom<RawRegion> for Region {
                     None => Err(IntoRegionError::NoFieldError(String::from("census"))),
                 })
                 .transpose()?,
-            census_ranks: value.census_ranks,
+            census_ranks: value
+                .censusranks
+                .map(CensusRegionRanks::try_from)
+                .transpose()?,
             dbid: value.dbid,
-            dispatches: value.dispatches,
+            dispatches: value
+                .dispatches
+                .map(|s| {
+                    s.split(',')
+                        .map(str::parse::<u32>)
+                        .map(|e| {
+                            e.map_err(|_| {
+                                IntoRegionError::BadFieldError(String::from("Region.dispatches"), s)
+                            })
+                        })
+                        .collect::<Result<Vec<_>, _>>()
+                })
+                .transpose()?,
             embassy_rmb: value.embassyrmb,
             founded: value.founded.map(MaybeRelativeTime::from),
             founded_time: value.foundedtime.map(MaybeSystemTime::from),

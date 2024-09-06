@@ -5,9 +5,10 @@ use crate::{
         happenings::Event, CensusData, DefaultOrCustom, Dispatch, MaybeRelativeTime,
         MaybeSystemTime,
     },
+    pretty_name,
     shards::wa::WACouncil,
 };
-use chrono::NaiveDateTime;
+use chrono::{DateTime, Utc};
 use quick_xml::DeError;
 use std::{
     fmt::{Debug, Display, Formatter},
@@ -25,6 +26,22 @@ pub enum WAStatus {
     Member,
     /// The nation is not part of the World Assembly.
     NonMember,
+}
+
+impl TryFrom<String> for WAStatus {
+    type Error = IntoNationError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        match value.as_str() {
+            "WA Delegate" => Ok(WAStatus::Delegate),
+            "WA Member" => Ok(WAStatus::Member),
+            "Non-member" => Ok(WAStatus::NonMember),
+            _ => Err(IntoNationError::BadFieldError(
+                String::from("WAStatus"),
+                value,
+            )),
+        }
+    }
 }
 
 /// Describes the nation's government spending as percentages.
@@ -307,6 +324,15 @@ pub struct FreedomScores {
     pub political_freedom: u8,
 }
 
+#[derive(Clone, Debug)]
+pub struct Endorsements(Vec<String>);
+
+impl From<String> for Endorsements {
+    fn from(value: String) -> Self {
+        Endorsements(value.split(',').map(pretty_name).collect())
+    }
+}
+
 /// Causes of death in a nation.
 /// Note: at some point, the field `kind` in this struct will be converted to enum variants.
 #[derive(Clone, Debug)]
@@ -376,7 +402,7 @@ pub struct Nation {
     ///
     /// Requested by using
     /// [`PublicNationShard::Endorsements`](crate::shards::nation::PublicNationShard::Endorsements).
-    pub endorsements: Option<Vec<String>>,
+    pub endorsements: Option<Endorsements>,
     /// The number of issues answered by the nation.
     ///
     /// Requested by using
@@ -460,12 +486,12 @@ pub struct Nation {
     ///
     /// Requested by using
     /// [`PublicNationShard::FirstLogin`](crate::shards::nation::PublicNationShard::FirstLogin).
-    pub first_login: Option<NaiveDateTime>,
+    pub first_login: Option<DateTime<Utc>>,
     /// The Unix timestamp of when the nation most recently logged in.
     ///
     /// Requested by using
     /// [`PublicNationShard::LastLogin`](crate::shards::nation::PublicNationShard::LastLogin).
-    pub last_login: Option<NaiveDateTime>,
+    pub last_login: Option<DateTime<Utc>>,
     /// When the nation was last active as a relative timestamp.
     ///
     /// Requested by using
@@ -741,7 +767,7 @@ pub struct StandardNation {
     /// The WA status of the nation.
     pub wa_status: WAStatus,
     /// A list of nations that endorse the nation.
-    pub endorsements: Vec<String>,
+    pub endorsements: Endorsements,
     /// The number of issues answered by the nation.
     pub issues_answered: u32,
     /// The freedom statistics of the nation.
@@ -781,9 +807,9 @@ pub struct StandardNation {
     /// A nation founded more recently would be [`MaybeRelativeTime::Recorded`].
     pub founded: MaybeRelativeTime,
     /// The Unix timestamp of when the nation first logged in.
-    pub first_login: u64,
+    pub first_login: DateTime<Utc>,
     /// The Unix timestamp of when the nation most recently logged in.
-    pub last_login: u64,
+    pub last_login: DateTime<Utc>,
     /// When the nation was last active as a relative timestamp.
     pub last_activity: String,
     /// The influence of the nation in its region using qualitative descriptors.

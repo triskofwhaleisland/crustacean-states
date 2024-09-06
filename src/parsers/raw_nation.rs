@@ -1,7 +1,5 @@
-use std::num::{NonZeroU16, NonZeroU32, NonZeroU64};
-
-use serde::Deserialize;
-
+use crate::parsers::into_datetime;
+use crate::parsers::nation::Endorsements;
 use crate::{
     models::dispatch::{
         AccountCategory, BulletinCategory, DispatchCategory, FactbookCategory, MetaCategory,
@@ -17,6 +15,9 @@ use crate::{
     },
     pretty_name,
 };
+use chrono::{DateTime, Utc};
+use serde::Deserialize;
+use std::num::{NonZeroI64, NonZeroU16, NonZeroU32, NonZeroU64};
 
 //noinspection SpellCheckingInspection
 #[derive(Debug, Deserialize)]
@@ -48,8 +49,8 @@ struct RawNation {
     govtpriority: Option<String>,
     govt: Option<RawGovernment>,
     founded: Option<String>,
-    firstlogin: Option<u64>,
-    lastlogin: Option<u64>,
+    firstlogin: Option<i64>,
+    lastlogin: Option<i64>,
     lastactivity: Option<String>,
     influence: Option<String>,
     freedomscores: Option<RawFreedomScores>,
@@ -71,7 +72,7 @@ struct RawNation {
     crime: Option<String>,
     dispatchlist: Option<RawDispatchList>,
     factbooklist: Option<RawFactbookList>,
-    foundedtime: Option<u64>,
+    foundedtime: Option<i64>,
     gavote: Option<String>,
     gdp: Option<u64>,
     govtdesc: Option<String>,
@@ -120,8 +121,8 @@ struct RawStandardNation {
     govtpriority: String,
     govt: RawGovernment,
     founded: String,
-    firstlogin: u64,
-    lastlogin: u64,
+    firstlogin: i64,
+    lastlogin: i64,
     lastactivity: String,
     influence: String,
     freedomscores: RawFreedomScores,
@@ -153,16 +154,51 @@ struct RawBanners {
     inner: Vec<String>,
 }
 
+impl TryFrom<RawBanners> for Vec<BannerId> {
+    type Error = IntoNationError;
+    fn try_from(value: RawBanners) -> Result<Self, Self::Error> {
+        value
+            .inner
+            .into_iter()
+            .map(BannerId::try_from)
+            .collect::<Result<Vec<_>, _>>()
+    }
+}
+
 #[derive(Debug, Deserialize)]
 struct RawDispatchList {
     #[serde(rename = "DISPATCH", default)]
     inner: Vec<RawDispatch>,
 }
 
+impl TryFrom<RawDispatchList> for Vec<Dispatch> {
+    type Error = IntoNationError;
+
+    fn try_from(value: RawDispatchList) -> Result<Self, Self::Error> {
+        value
+            .inner
+            .into_iter()
+            .map(Dispatch::try_from)
+            .collect::<Result<Vec<_>, _>>()
+    }
+}
+
 #[derive(Debug, Deserialize)]
 struct RawFactbookList {
     #[serde(rename = "FACTBOOK", default)]
     inner: Vec<RawDispatch>, // only containing factbooks!
+}
+
+impl TryFrom<RawFactbookList> for Vec<Dispatch> {
+    type Error = IntoNationError;
+
+    fn try_from(value: RawFactbookList) -> Result<Self, Self::Error> {
+        value
+            .inner
+            .into_iter()
+            .map(Dispatch::try_from)
+            .collect::<Result<Vec<_>, _>>()
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -181,6 +217,18 @@ struct RawNotables {
 struct RawPolicies {
     #[serde(rename = "POLICY", default)]
     inner: Vec<RawPolicy>,
+}
+
+impl TryFrom<RawPolicies> for Vec<Policy> {
+    type Error = IntoNationError;
+
+    fn try_from(value: RawPolicies) -> Result<Self, Self::Error> {
+        value
+            .inner
+            .into_iter()
+            .map(Policy::try_from)
+            .collect::<Result<Vec<_>, _>>()
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -455,6 +503,18 @@ impl From<RawSectors> for Sectors {
     }
 }
 
+fn into_datetime_or_bad_field(t: i64, field: String) -> Result<DateTime<Utc>, IntoNationError> {
+    into_datetime(t).ok_or(IntoNationError::BadFieldError(field, t.to_string()))
+}
+
+fn try_into_bool(x: u8) -> Result<bool, IntoNationError> {
+    match x {
+        0 => Ok(false),
+        1 => Ok(true),
+        e => Err(IntoNationError::BadBooleanError(e)),
+    }
+}
+
 impl Nation {
     /// Converts the XML response from NationStates to a [`Nation`].
     pub fn from_xml(xml: &str) -> Result<Self, IntoNationError> {
@@ -476,18 +536,7 @@ impl TryFrom<RawNation> for Nation {
             .happenings
             .map(|h| h.inner.into_iter().map(Event::from).collect());
 
-        let wa_status = match value.unstatus {
-            Some(s) => match s.as_str() {
-                "WA Delegate" => Ok(Some(WAStatus::Delegate)),
-                "WA Member" => Ok(Some(WAStatus::Member)),
-                "Non-member" => Ok(Some(WAStatus::NonMember)),
-                other => Err(IntoNationError::BadFieldError(
-                    String::from("WAStatus"),
-                    String::from(other),
-                )),
-            },
-            None => Ok(None),
-        }?;
+        let wa_status = value.unstatus.map(WAStatus::try_from).transpose()?;
 
         Ok(Self {
             name,
@@ -496,11 +545,7 @@ impl TryFrom<RawNation> for Nation {
             motto: value.motto,
             category: value.category,
             wa_status,
-            endorsements: value.endorsements.as_ref().map(|e| {
-                (!e.is_empty())
-                    .then(|| e.split(',').map(pretty_name).collect::<Vec<_>>())
-                    .unwrap_or_default()
-            }),
+            endorsements: value.endorsements.map(Endorsements::from),
             issues_answered: value.issues_answered,
             freedom: value.freedom.map(Freedoms::try_from).transpose()?,
             region: value.region,
@@ -516,8 +561,14 @@ impl TryFrom<RawNation> for Nation {
             government_priority: value.govtpriority,
             government: value.govt.map(Government::from),
             founded: value.founded.map(MaybeRelativeTime::from),
-            first_login: value.firstlogin,
-            last_login: value.lastlogin,
+            first_login: value
+                .firstlogin
+                .map(|t| into_datetime_or_bad_field(t, String::from("Nation.first_login")))
+                .transpose()?,
+            last_login: value
+                .lastlogin
+                .map(|t| into_datetime_or_bad_field(t, String::from("Nation.last_login")))
+                .transpose()?,
             last_activity: value.lastactivity,
             influence: value.influence,
             freedom_scores: value.freedomscores.map(FreedomScores::from),
@@ -535,50 +586,21 @@ impl TryFrom<RawNation> for Nation {
             admirables: value.admirables.map(|a| a.inner),
             animal_trait: value.animaltrait,
             banner: value.banner.map(BannerId::try_from).transpose()?,
-            banners: value
-                .banners
-                .map(|a| {
-                    a.inner
-                        .into_iter()
-                        .map(BannerId::try_from)
-                        .collect::<Result<Vec<_>, _>>()
-                })
-                .transpose()?,
-            census: value
-                .census
-                .map(|c| match c.inner.first() {
-                    Some(f) if f.timestamp.is_some() => Ok(CensusData::Historical(
-                        c.inner
-                            .into_iter()
-                            .map(CensusHistoricalData::from)
-                            .collect(),
-                    )),
-                    Some(_) => Ok(CensusData::Current(
-                        c.inner.into_iter().map(CensusCurrentData::from).collect(),
-                    )),
-                    None => Err(IntoNationError::NoFieldError(String::from("census"))),
-                })
-                .transpose()?,
+            banners: value.banners.map(Vec::<BannerId>::try_from).transpose()?,
+            census: value.census.map(CensusData::try_from).transpose()?,
             crime: value.crime,
             dispatch_list: value
                 .dispatchlist
-                .map(|v| {
-                    v.inner
-                        .into_iter()
-                        .map(Dispatch::try_from)
-                        .collect::<Result<Vec<_>, _>>()
-                })
+                .map(Vec::<Dispatch>::try_from)
                 .transpose()?,
             factbook_list: value
                 .factbooklist
-                .map(|v| {
-                    v.inner
-                        .into_iter()
-                        .map(Dispatch::try_from)
-                        .collect::<Result<Vec<_>, _>>()
-                })
+                .map(Vec::<Dispatch>::try_from)
                 .transpose()?,
-            founded_time: value.foundedtime.map(MaybeSystemTime::from),
+            founded_time: value
+                .foundedtime
+                .map(into_datetime)
+                .map(MaybeSystemTime::from),
             ga_vote: match wa_status {
                 Some(WAStatus::NonMember) => None,
                 _ => value.gavote.map(WAVote::try_from).transpose()?,
@@ -597,15 +619,7 @@ impl TryFrom<RawNation> for Nation {
             //     [first.to_string(), second.to_string(), third.to_string()]
             // })
             notables: value.notables.map(|n| n.inner),
-            policies: value
-                .policies
-                .map(|v| {
-                    v.inner
-                        .into_iter()
-                        .map(Policy::try_from)
-                        .collect::<Result<Vec<_>, _>>()
-                })
-                .transpose()?,
+            policies: value.policies.map(Vec::<Policy>::try_from).transpose()?,
             poorest: value.poorest,
             regional_census: value.rcensus,
             richest: value.richest,
@@ -619,22 +633,8 @@ impl TryFrom<RawNation> for Nation {
             //     let v = s.split(", ").collect::<Vec<_>>();
             //     [v[0].to_string(), v[1].to_string()]
             // })
-            tg_can_recruit: value
-                .tgcanrecruit
-                .map(|x| match x {
-                    0 => Ok(false),
-                    1 => Ok(true),
-                    e => Err(IntoNationError::BadBooleanError(e)),
-                })
-                .transpose()?,
-            tg_can_campaign: value
-                .tgcancampaign
-                .map(|x| match x {
-                    0 => Ok(false),
-                    1 => Ok(true),
-                    e => Err(IntoNationError::BadBooleanError(e)),
-                })
-                .transpose()?,
+            tg_can_recruit: value.tgcanrecruit.map(try_into_bool).transpose()?,
+            tg_can_campaign: value.tgcancampaign.map(try_into_bool).transpose()?,
             world_census: value.wcensus,
         })
     }
@@ -657,24 +657,8 @@ impl TryFrom<RawStandardNation> for StandardNation {
             full_name: value.fullname,
             motto: value.motto,
             category: value.category,
-            wa_status: match value.unstatus.as_str() {
-                "WA Delegate" => Ok(WAStatus::Delegate),
-                "WA Member" => Ok(WAStatus::Member),
-                "Non-member" => Ok(WAStatus::NonMember),
-                other => Err(IntoNationError::BadFieldError(
-                    String::from("WAStatus"),
-                    other.to_string(),
-                )),
-            }?,
-            endorsements: (!value.endorsements.is_empty())
-                .then(|| {
-                    value
-                        .endorsements
-                        .split(',')
-                        .map(pretty_name)
-                        .collect::<Vec<_>>()
-                })
-                .unwrap_or_default(),
+            wa_status: value.unstatus.try_into()?,
+            endorsements: Endorsements::from(value.endorsements),
             issues_answered: value.issues_answered,
             freedom: value.freedom.try_into()?,
             region: value.region,
@@ -690,8 +674,14 @@ impl TryFrom<RawStandardNation> for StandardNation {
             government_priority: value.govtpriority,
             government: value.govt.into(),
             founded: value.founded.into(),
-            first_login: value.firstlogin,
-            last_login: value.lastlogin,
+            first_login: into_datetime_or_bad_field(
+                value.firstlogin,
+                String::from("StandardNation.first_login"),
+            )?,
+            last_login: into_datetime_or_bad_field(
+                value.lastlogin,
+                String::from("StandardNation.last_login"),
+            )?,
             last_activity: value.lastactivity,
             influence: value.influence,
             freedom_scores: value.freedomscores.into(),
