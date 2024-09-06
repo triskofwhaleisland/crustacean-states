@@ -1,4 +1,4 @@
-use crate::parsers::CensusData;
+use crate::parsers::{CensusData, CensusRegionRanks};
 use crate::{
     parsers::{MaybeRelativeTime, MaybeSystemTime},
     shards::region::Tag,
@@ -91,7 +91,7 @@ pub struct Region {
     pub banned: Option<String>, // who is banned? separated by colons, internal name
     pub banner_by: Option<String>, // who made the banner?
     pub census: Option<CensusData>,
-    pub census_ranks: Option<CensusRanks>,
+    pub census_ranks: Option<CensusRegionRanks>,
     pub dbid: Option<u32>,
     pub dispatches: Option<String>, // list of IDs of pinned dispatches, comma separated
     pub embassy_rmb: Option<String>, // permissions given for embassies

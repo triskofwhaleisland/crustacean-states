@@ -297,9 +297,10 @@ pub struct Dispatch {
     pub score: u32,
 }
 
+#[derive(Clone, Debug)]
 pub struct CensusRegionRanks {
     pub id: u8,
-    pub nations: [CensusCurrentData; 20],
+    pub nations: Vec<CensusCurrentData>,
 }
 
 impl TryFrom<RawCensusRanks> for CensusRegionRanks {
@@ -327,11 +328,7 @@ impl TryFrom<RawCensusRanks> for CensusRegionRanks {
                         percent_region_rank: None,
                     })
                 })
-                .collect::<Result<Vec<CensusCurrentData>, Self::Error>>()?
-                .try_into()
-                .map_err(|_| {
-                    IntoNationError::WrongLengthError(String::from("CensusRegionRanks"), 20)
-                })?,
+                .collect::<Result<Vec<CensusCurrentData>, Self::Error>>()?,
         })
     }
 }
