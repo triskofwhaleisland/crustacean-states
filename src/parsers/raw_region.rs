@@ -260,7 +260,15 @@ impl TryFrom<RawRegion> for Region {
                 .map(|nations| nations.split(":").map(String::from).collect::<Vec<_>>()),
             delegate: value.delegate.map(pretty_name),
             delegate_votes: value.delegatevotes,
-            delegate_authority: value.delegateauth,
+            delegate_authority: value
+                .delegateauth
+                .map(|perms| {
+                    perms
+                        .chars()
+                        .map(OfficerAuthority::try_from)
+                        .collect::<Result<Vec<_>, _>>()
+                })
+                .transpose()?,
             frontier: value.frontier.map(|f| f != 0),
             founder: value.founder,
             governor: value.governor,

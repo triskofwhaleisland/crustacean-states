@@ -12,6 +12,7 @@ default = ["client"]
 client = ["dep:reqwest", "dep:tokio"]
 
 [dependencies]
+chrono = { version = "~0.4", features = ["std", "clock"] }
 http = { version = "^1" }  # depends on reqwest
 itertools = { version = "~0.13" }
 quick-xml = { version = "~0.36", features = ["serialize"] }

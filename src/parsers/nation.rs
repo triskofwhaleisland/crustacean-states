@@ -7,6 +7,7 @@ use crate::{
     },
     shards::wa::WACouncil,
 };
+use chrono::NaiveDateTime;
 use quick_xml::DeError;
 use std::{
     fmt::{Debug, Display, Formatter},
@@ -459,12 +460,12 @@ pub struct Nation {
     ///
     /// Requested by using
     /// [`PublicNationShard::FirstLogin`](crate::shards::nation::PublicNationShard::FirstLogin).
-    pub first_login: Option<u64>,
+    pub first_login: Option<NaiveDateTime>,
     /// The Unix timestamp of when the nation most recently logged in.
     ///
     /// Requested by using
     /// [`PublicNationShard::LastLogin`](crate::shards::nation::PublicNationShard::LastLogin).
-    pub last_login: Option<u64>,
+    pub last_login: Option<NaiveDateTime>,
     /// When the nation was last active as a relative timestamp.
     ///
     /// Requested by using

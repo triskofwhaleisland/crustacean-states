@@ -2,8 +2,9 @@
 
 use crate::models::dispatch::DispatchCategory;
 use crate::parsers::nation::IntoNationError;
+use chrono::{DateTime, Utc};
 use serde::Deserialize;
-use std::num::{NonZeroU32, NonZeroU64};
+use std::num::{NonZeroI64, NonZeroU32, NonZeroU64};
 
 pub mod happenings;
 pub mod nation;
@@ -99,43 +100,49 @@ impl From<MaybeRelativeTime> for String {
 /// An absolute Unix timestamp that may or may not have been recorded.
 #[derive(Clone, Debug)]
 pub enum MaybeSystemTime {
-    /// A known time.
-    Recorded(NonZeroU64),
-    /// A prehistoric time.
+    /// A known time. Mirrors `Some(DateTime<Utc>)`.
+    Recorded(DateTime<Utc>),
+    /// A prehistoric time. Mirrors `None`.
     Antiquity,
 }
 
-impl From<u64> for MaybeSystemTime {
-    fn from(value: u64) -> Self {
-        NonZeroU64::try_from(value)
-            .map(MaybeSystemTime::Recorded)
-            .unwrap_or_else(|_| MaybeSystemTime::Antiquity)
-    }
-}
-
-impl From<Option<NonZeroU64>> for MaybeSystemTime {
-    fn from(value: Option<NonZeroU64>) -> Self {
+impl From<Option<DateTime<Utc>>> for MaybeSystemTime {
+    fn from(value: Option<DateTime<Utc>>) -> Self {
         match value {
-            Some(x) => MaybeSystemTime::Recorded(x),
+            Some(dt) => MaybeSystemTime::Recorded(dt),
             None => MaybeSystemTime::Antiquity,
         }
     }
 }
 
-impl From<MaybeSystemTime> for Option<NonZeroU64> {
+impl From<Option<NonZeroI64>> for MaybeSystemTime {
+    fn from(value: Option<NonZeroI64>) -> Self {
+        MaybeSystemTime::from(
+            value
+                .map(i64::from)
+                .map(|t| DateTime::from_timestamp(t, 0))
+                .unwrap(),
+        )
+    }
+}
+
+impl From<MaybeSystemTime> for Option<DateTime<Utc>> {
     fn from(value: MaybeSystemTime) -> Self {
         match value {
-            MaybeSystemTime::Recorded(x) => Some(x),
+            MaybeSystemTime::Recorded(dt) => Some(dt),
             MaybeSystemTime::Antiquity => None,
         }
     }
 }
 
-impl From<MaybeSystemTime> for u64 {
+impl From<MaybeSystemTime> for Option<NonZeroI64> {
     fn from(value: MaybeSystemTime) -> Self {
-        Option::<NonZeroU64>::from(value)
-            .map(u64::from)
-            .unwrap_or_default()
+        Option::<DateTime<Utc>>::from(value)
+            .as_ref()
+            .map(DateTime::timestamp)
+            .map(NonZeroI64::try_from)
+            .transpose()
+            .unwrap()
     }
 }
 

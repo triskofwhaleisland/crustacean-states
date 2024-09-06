@@ -3,6 +3,7 @@ use crate::{
     parsers::{MaybeRelativeTime, MaybeSystemTime},
     shards::region::Tag,
 };
+use chrono::{DateTime, NaiveDateTime};
 use quick_xml::DeError;
 use thiserror::Error;
 
@@ -93,17 +94,17 @@ pub struct Region {
     pub census: Option<CensusData>,
     pub census_ranks: Option<CensusRegionRanks>,
     pub dbid: Option<u32>,
-    pub dispatches: Option<String>, // list of IDs of pinned dispatches, comma separated
-    pub embassy_rmb: Option<String>, // permissions given for embassies
+    pub dispatches: Option<Vec<u32>>, // list of IDs of pinned dispatches, comma separated
+    pub embassy_rmb: Option<String>,  // permissions given for embassies
     // posting on the RMB TODO find all
     pub founded: Option<MaybeRelativeTime>, // relative time since the region was founded
     pub founded_time: Option<MaybeSystemTime>, // UNIX timestamp when the region was founded
     pub ga_vote: Option<RegionWAVote>,
     pub happenings: Option<Happenings>,
     pub history: Option<Happenings>,
-    pub last_update: Option<u64>,
-    pub last_major_update: Option<u64>,
-    pub last_minor_update: Option<u64>,
+    pub last_update: Option<NaiveDateTime>,
+    pub last_major_update: Option<NaiveDateTime>,
+    pub last_minor_update: Option<NaiveDateTime>,
     pub messages: Option<Vec<Message>>,
     pub wa_nations: Option<String>, // comma-separated list of nations, only those in the WA
     pub num_wa_nations: Option<u32>, // number of WA nations
