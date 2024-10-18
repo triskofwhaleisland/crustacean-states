@@ -1,13 +1,9 @@
-use chrono::{DateTime, Utc};
+use crate::models::dispatch::DispatchId;
+use crate::parsers::region::{Embassy, EmbassyKind, Region, RegionWAVote};
+use crate::parsers::{into_datetime, region::{IntoRegionError, Officer, OfficerAuthority}, CensusCurrentData, CensusData, CensusHistoricalData, CensusRegionRanks, MaybeRelativeTime, MaybeSystemTime, ParsingError, RawCensus, RawCensusRanks, RawHappenings};
+use itertools::Itertools;
 use serde::Deserialize;
-
-use crate::parsers::region::{Embassy, EmbassyKind, Region};
-use crate::parsers::{
-    region::{IntoRegionError, Officer, OfficerAuthority},
-    CensusCurrentData, CensusData, CensusHistoricalData, CensusRegionRanks, MaybeRelativeTime,
-    MaybeSystemTime, RawCensus, RawCensusRanks, RawHappenings,
-};
-use crate::pretty_name;
+use crate::parsers::happenings::Happenings;
 
 //noinspection SpellCheckingInspection
 #[derive(Debug, Deserialize)]
@@ -62,10 +58,34 @@ struct RawOfficers {
     inner: Vec<RawOfficer>,
 }
 
+impl TryFrom<RawOfficers> for Vec<Officer> {
+    type Error = IntoRegionError;
+
+    fn try_from(value: RawOfficers) -> Result<Self, Self::Error> {
+        value
+            .inner
+            .into_iter()
+            .map(Officer::try_from)
+            .collect::<Result<Vec<_>, _>>()
+    }
+}
+
 #[derive(Debug, Deserialize)]
 struct RawEmbassies {
     #[serde(rename = "EMBASSY", default)]
     inner: Vec<RawEmbassy>,
+}
+
+impl TryFrom<RawEmbassies> for Vec<Embassy> {
+    type Error = IntoRegionError;
+
+    fn try_from(value: RawEmbassies) -> Result<Self, Self::Error> {
+        value
+            .inner
+            .into_iter()
+            .map(Embassy::try_from)
+            .collect::<Result<Vec<_>, _>>()
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -145,6 +165,19 @@ struct RawRegionWAVote {
     against_vote: u16,
 }
 
+impl From<RawRegionWAVote> for RegionWAVote {
+    fn from(value: RawRegionWAVote) -> Self {
+        let RawRegionWAVote {
+            for_vote,
+            against_vote,
+        } = value;
+        RegionWAVote {
+            for_vote,
+            against_vote,
+        }
+    }
+}
+
 #[derive(Debug, Deserialize)]
 struct RawMessages {
     #[serde(rename = "POST", default)]
@@ -220,6 +253,26 @@ struct RawRegionWABadge {
     resolution: u16,
 }
 
+fn parse_dispatches(dispatch_list: String) -> Result<Vec<DispatchId>, IntoRegionError> {
+    dispatch_list
+        .split(',')
+        .map(str::trim)
+        .map(str::parse::<u32>)
+        .map_ok(DispatchId)
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| {
+            IntoRegionError::BadFieldError(String::from("Region.dispatches"), e.to_string())
+        })
+}
+
+fn try_into_bool(x: u8) -> Result<bool, IntoRegionError> {
+    match x {
+        0 => Ok(false),
+        1 => Ok(true),
+        e => Err(IntoRegionError::BadBooleanError(e)),
+    }
+}
+
 impl Region {
     /// Converts the XML response from NationStates to a [`Region`].
     pub fn from_xml(xml: &[u8]) -> Result<Self, IntoRegionError> {
@@ -238,84 +291,42 @@ impl TryFrom<RawRegion> for Region {
             nations: value
                 .nations
                 .map(|nations| nations.split(":").map(String::from).collect::<Vec<_>>()),
-            delegate: value.delegate.map(pretty_name),
+            delegate: value.delegate,
             delegate_votes: value.delegatevotes,
             delegate_authority: value
                 .delegateauth
-                .map(|perms| {
-                    perms
-                        .chars()
-                        .map(OfficerAuthority::try_from)
-                        .collect::<Result<Vec<_>, _>>()
-                })
+                .map(OfficerAuthority::vec_from_raw)
                 .transpose()?,
-            frontier: value.frontier.map(|f| f != 0),
+            frontier: value.frontier.map(try_into_bool).transpose()?,
             founder: value.founder,
             governor: value.governor,
-            officers: value
-                .officers
-                .map(|officers| {
-                    officers
-                        .inner
-                        .into_iter()
-                        .map(Officer::try_from)
-                        .collect::<Result<Vec<_>, _>>()
-                })
-                .transpose()?,
+            officers: value.officers.map(RawOfficers::try_into).transpose()?,
             power: value.power,
             flag: value.flag,
             banner: value.banner,
             banner_url: value.bannerurl,
-            embassies: value
-                .embassies
-                .map(|embassies| {
-                    embassies
-                        .inner
-                        .into_iter()
-                        .map(Embassy::try_from)
-                        .collect::<Result<Vec<_>, _>>()
-                })
-                .transpose()?,
+            embassies: value.embassies.map(RawEmbassies::try_into).transpose()?,
             banned: value.banned,
             banner_by: value.bannerby,
             census: value
                 .census
-                .map(|c| match c.inner.first() {
-                    Some(f) if f.timestamp.is_some() => Ok(CensusData::Historical(
-                        c.inner
-                            .into_iter()
-                            .map(CensusHistoricalData::from)
-                            .collect(),
-                    )),
-                    Some(_) => Ok(CensusData::Current(
-                        c.inner.into_iter().map(CensusCurrentData::from).collect(),
-                    )),
-                    None => Err(IntoRegionError::NoFieldError(String::from("census"))),
-                })
-                .transpose()?,
+                .map(CensusData::try_from)
+                .transpose()
+                .map_err(ParsingError::bad_field_for_region)?,
             census_ranks: value
                 .censusranks
                 .map(CensusRegionRanks::try_from)
                 .transpose()?,
             dbid: value.dbid,
-            dispatches: value
-                .dispatches
-                .map(|s| {
-                    s.split(',')
-                        .map(str::parse::<u32>)
-                        .map(|e| {
-                            e.map_err(|_| {
-                                IntoRegionError::BadFieldError(String::from("Region.dispatches"), s)
-                            })
-                        })
-                        .collect::<Result<Vec<_>, _>>()
-                })
-                .transpose()?,
+            dispatches: value.dispatches.map(parse_dispatches).transpose()?,
             embassy_rmb: value.embassyrmb,
             founded: value.founded.map(MaybeRelativeTime::from),
-            founded_time: value.foundedtime.map(MaybeSystemTime::from),
-            ga_vote: value.gavote,
-            happenings: value.happenings,
+            founded_time: value
+                .foundedtime
+                .map(into_datetime)
+                .map(MaybeSystemTime::from),
+            ga_vote: value.gavote.map(RegionWAVote::from),
+            happenings: value.happenings.map(),
             history: value.history,
             last_update: value.lastupdate,
             last_major_update: value.lastmajorupdate,
@@ -324,7 +335,7 @@ impl TryFrom<RawRegion> for Region {
             wa_nations: value.unnations,
             num_wa_nations: value.numunnations,
             poll: value.poll,
-            sc_vote: value.scvote,
+            sc_vote: value.scvote.map(RegionWAVote::from),
             tags: value.tags,
             wa_badges: value.wabadges,
         })

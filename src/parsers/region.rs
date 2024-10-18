@@ -1,3 +1,4 @@
+use crate::parsers::happenings::Happenings;
 use crate::{
     parsers::{CensusData, CensusRegionRanks, MaybeRelativeTime, MaybeSystemTime},
     shards::region::Tag,
@@ -40,6 +41,12 @@ impl TryFrom<char> for OfficerAuthority {
     }
 }
 
+impl OfficerAuthority {
+    pub(super) fn vec_from_raw(auth_str: String) -> Result<Vec<Self>, IntoRegionError> {
+        auth_str.chars().map(OfficerAuthority::try_from).collect()
+    }
+}
+
 #[derive(Debug)]
 pub struct Officer {
     pub nation: String,
@@ -49,6 +56,8 @@ pub struct Officer {
     pub by: String,
     pub order: i16,
 }
+
+impl Officer {}
 
 #[derive(Debug)]
 pub struct Embassy {
@@ -74,7 +83,10 @@ pub enum EmbassyKind {
 }
 
 #[derive(Debug)]
-pub struct RegionWAVote;
+pub struct RegionWAVote {
+    pub for_vote: u16,
+    pub against_vote: u16,
+}
 
 #[derive(Debug)]
 pub struct Message;
@@ -84,9 +96,6 @@ pub struct Poll;
 
 #[derive(Debug)]
 pub struct RegionWABadge;
-
-#[derive(Debug)]
-pub struct Happenings;
 
 #[derive(Debug)]
 pub struct Region {
@@ -114,8 +123,8 @@ pub struct Region {
     pub census: Option<CensusData>,
     pub census_ranks: Option<CensusRegionRanks>,
     pub dbid: Option<u32>,
-    pub dispatches: Option<Vec<u32>>, // list of IDs of pinned dispatches, comma separated
-    pub embassy_rmb: Option<String>,  // permissions given for embassies
+    pub dispatches: Option<Vec<DispatchId>>, // list of IDs of pinned dispatches, comma separated
+    pub embassy_rmb: Option<String>,         // permissions given for embassies
     // posting on the RMB TODO find all
     pub founded: Option<MaybeRelativeTime>, // relative time since the region was founded
     pub founded_time: Option<MaybeSystemTime>, // UNIX timestamp when the region was founded

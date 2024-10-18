@@ -5,10 +5,10 @@ use crate::{
         happenings::Event, CensusData, DefaultOrCustom, Dispatch, MaybeRelativeTime,
         MaybeSystemTime,
     },
-    pretty_name,
     shards::wa::WACouncil,
 };
 use chrono::{DateTime, Utc};
+use itertools::zip_eq;
 use quick_xml::DeError;
 use std::{
     fmt::{Debug, Display, Formatter},
@@ -16,6 +16,69 @@ use std::{
     str::FromStr,
 };
 use thiserror::Error;
+
+#[derive(Clone, Debug)]
+pub struct NationName(pub String);
+
+impl NationName {
+    /// Takes a nation name with capital letters and spaces
+    /// and turns it into a safe-to-send, lowercase name.
+    pub fn safe_name<S: ToString>(unsafe_name: S) -> String {
+        unsafe_name
+            .to_string()
+            .to_ascii_lowercase()
+            .replace(' ', "_")
+            .to_ascii_lowercase()
+    }
+
+    pub fn to_safe_name(&self) -> String {
+        Self::safe_name(&self)
+    }
+
+    /// Takes a lowercase, web-safe name and replaces it with a name
+    /// that should match the real name on NationStates.
+    ///
+    /// Note: this will not always result in a name
+    /// that is capitalized the same way as it is on NationStates.
+    pub fn pretty_name<S: ToString>(safe_name: S) -> String {
+        safe_name
+            .to_string()
+            .replace('_', " ")
+            .chars()
+            .fold(String::new(), |s, c| {
+                format!(
+                    "{s}{}",
+                    if s.ends_with(' ') || s.is_empty() {
+                        c.to_ascii_uppercase()
+                    } else {
+                        c
+                    }
+                )
+            })
+    }
+
+    pub fn to_pretty_name(&self) -> String {
+        Self::pretty_name(&self)
+    }
+}
+
+impl Display for NationName {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl PartialEq for NationName {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.len() == other.0.len()
+            && zip_eq(self.0.chars(), other.0.chars()).all(|(c1, c2)| {
+                !(c1.eq_ignore_ascii_case(&c2)
+                    || (c1 == '_' && c2 == ' ')
+                    || (c1 == ' ' && c2 == ' '))
+            })
+    }
+}
+impl Eq for NationName {}
 
 /// The status of a nation in the World Assembly.
 #[derive(Debug, Copy, Clone)]
@@ -122,6 +185,28 @@ impl TryFrom<String> for CivilRights {
     }
 }
 
+impl Display for CivilRights {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", match self {
+            CivilRights::Outlawed => "Outlawed",
+            CivilRights::UnheardOf => "Unheard Of",
+            CivilRights::Rare => "Rare",
+            CivilRights::Few => "Few",
+            CivilRights::Some => "Some",
+            CivilRights::BelowAverage => "Below Average",
+            CivilRights::Average => "Average",
+            CivilRights::Good => "Good",
+            CivilRights::VeryGood => "Very Good",
+            CivilRights::Excellent => "Excellent",
+            CivilRights::Superb => "Superb",
+            CivilRights::WorldBenchmark => "World Benchmark",
+            CivilRights::Excessive => "Excessive",
+            CivilRights::WidelyAbused => "Widely Abused",
+            CivilRights::Frightening => "Frightening",
+        })
+    }
+}
+
 #[repr(u8)]
 #[derive(Ord, PartialOrd, Eq, PartialEq, Copy, Clone, Debug)]
 pub enum Economy {
@@ -167,6 +252,28 @@ impl TryFrom<String> for Economy {
                 value,
             )),
         }
+    }
+}
+
+impl Display for Economy {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", match self {
+            Economy::Imploded => "Imploded",
+            Economy::BasketCase => "Basket Case",
+            Economy::Struggling => "Struggling",
+            Economy::Fragile => "Fragile",
+            Economy::Weak => "Weak",
+            Economy::Developing => "Developing",
+            Economy::Fair => "Fair",
+            Economy::Reasonable => "Reasonable",
+            Economy::Good => "Good",
+            Economy::Strong => "Strong",
+            Economy::VeryStrong => "Very Strong",
+            Economy::Thriving => "Thriving",
+            Economy::Powerhouse => "Powerhouse",
+            Economy::AllConsuming => "All-Consuming",
+            Economy::Frightening => "Frightening",
+        })
     }
 }
 
@@ -218,6 +325,28 @@ impl TryFrom<String> for PoliticalFreedoms {
     }
 }
 
+impl Display for PoliticalFreedoms {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", match self {
+            PoliticalFreedoms::Outlawed => "Outlawed",
+            PoliticalFreedoms::UnheardOf => "Unheard Of",
+            PoliticalFreedoms::Rare => "Rare",
+            PoliticalFreedoms::Few => "Few",
+            PoliticalFreedoms::Some => "Some",
+            PoliticalFreedoms::BelowAverage => "Below Average",
+            PoliticalFreedoms::Average => "Average",
+            PoliticalFreedoms::Good => "Good",
+            PoliticalFreedoms::VeryGood => "Very Good",
+            PoliticalFreedoms::Excellent => "Excellent",
+            PoliticalFreedoms::Superb => "Superb",
+            PoliticalFreedoms::WorldBenchmark => "World Benchmark",
+            PoliticalFreedoms::Excessive => "Excessive",
+            PoliticalFreedoms::WidelyAbused => "Widely Abused",
+            PoliticalFreedoms::Corrupted => "Corrupted",
+        })
+    }
+}
+
 //noinspection SpellCheckingInspection
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum GovernmentCategory {
@@ -231,7 +360,7 @@ pub enum GovernmentCategory {
     ConservativeDemocracy,
     FreeMarketParadise,
     CorruptDictatorship,
-    FatherKnowsBestState,
+    FatherKnowsBestState(bool), // father = true; mother = false
     CompulsoryConsumeristState,
     DemocraticSocialists,
     InoffensiveCentristDemocracy,
@@ -249,6 +378,7 @@ pub enum GovernmentCategory {
     CivilRightsLovefest,
     Anarchy,
 }
+
 /// personal, economic, political
 pub struct CategoryRanking(i8, i8, i8);
 
@@ -265,7 +395,7 @@ impl GovernmentCategory {
             GovernmentCategory::ConservativeDemocracy => CategoryRanking(-1, 1, 0),
             GovernmentCategory::FreeMarketParadise => CategoryRanking(-1, 1, 1),
             GovernmentCategory::CorruptDictatorship => CategoryRanking(0, -1, -1),
-            GovernmentCategory::FatherKnowsBestState => CategoryRanking(0, 0, -1),
+            GovernmentCategory::FatherKnowsBestState(_) => CategoryRanking(0, 0, -1),
             GovernmentCategory::CompulsoryConsumeristState => CategoryRanking(0, 1, -1),
             GovernmentCategory::DemocraticSocialists => CategoryRanking(0, -1, 0),
             GovernmentCategory::InoffensiveCentristDemocracy => CategoryRanking(0, 0, 0),
@@ -288,6 +418,79 @@ impl GovernmentCategory {
         let (CategoryRanking(x1, y1, z1), CategoryRanking(x2, y2, z2)) =
             (self.cmp_absolute(), other.cmp_absolute());
         CategoryRanking((x2 - x1).signum(), (y2 - y1).signum(), (z2 - z1).signum())
+    }
+}
+
+impl TryFrom<String> for GovernmentCategory {
+    type Error = IntoNationError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        match value.as_str() {
+            "Psychotic Dictatorship" => Ok(GovernmentCategory::PsychoticDictatorship),
+            "Iron Fist Consumerists" => Ok(GovernmentCategory::IronFistConsumerists),
+            "Corporate Police State" => Ok(GovernmentCategory::CorporatePoliceState),
+            "Authoritarian Democracy" => Ok(GovernmentCategory::AuthoritarianDemocracy),
+            "Moralistic Democracy" => Ok(GovernmentCategory::MoralisticDemocracy),
+            "Right-Wing Utopia" => Ok(GovernmentCategory::RightWingUtopia),
+            "Tyranny By Majority" => Ok(GovernmentCategory::TyrannyByMajority),
+            "Conservative Democracy" => Ok(GovernmentCategory::ConservativeDemocracy),
+            "Free Market Paradise" => Ok(GovernmentCategory::FreeMarketParadise),
+            "Corrupt Dictatorship" => Ok(GovernmentCategory::CorruptDictatorship),
+            "Father Knows Best State" => Ok(GovernmentCategory::FatherKnowsBestState(true)),
+            "Mother Knows Best State" => Ok(GovernmentCategory::FatherKnowsBestState(false)),
+            "Compulsory Consumerist State" => Ok(GovernmentCategory::CompulsoryConsumeristState),
+            "Democratic Socialists" => Ok(GovernmentCategory::DemocraticSocialists),
+            "Inoffensive Centrist Democracy" => Ok(GovernmentCategory::InoffensiveCentristDemocracy),
+            "Capitalist Paradise" => Ok(GovernmentCategory::CapitalistParadise),
+            "Liberal Democratic Socialists" => Ok(GovernmentCategory::LiberalDemocraticSocialists),
+            "New York Times Democracy" => Ok(GovernmentCategory::NewYorkTimesDemocracy),
+            "Corporate Bordello" => Ok(GovernmentCategory::CorporateBordello),
+            "Iron Fist Socialists" => Ok(GovernmentCategory::IronFistSocialists),
+            "Libertarian Police State" => Ok(GovernmentCategory::LibertarianPoliceState),
+            "Benevolent Dictatorship" => Ok(GovernmentCategory::BenevolentDictatorship),
+            "Scandinavian Liberal Paradise" => Ok(GovernmentCategory::ScandinavianLiberalParadise),
+            "Left-Leaning College State" => Ok(GovernmentCategory::LeftLeaningCollegeState),
+            "Capitalizt" => Ok(GovernmentCategory::Capitalizt),
+            "Left-Wing Utopia" => Ok(GovernmentCategory::LeftWingUtopia),
+            "Civil Rights Lovefest" => Ok(GovernmentCategory::CivilRightsLovefest),
+            "Anarchy" => Ok(GovernmentCategory::Anarchy),
+            _ => Err(IntoNationError::BadFieldError(String::from("GovernmentCategory"), value))
+        }
+    }
+}
+
+impl Display for GovernmentCategory {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", match self {
+            GovernmentCategory::PsychoticDictatorship => "Psychotic Dictatorship",
+            GovernmentCategory::IronFistConsumerists => "Iron Fist Consumerists",
+            GovernmentCategory::CorporatePoliceState => "Corporate Police State",
+            GovernmentCategory::AuthoritarianDemocracy => "Authoritarian Democracy",
+            GovernmentCategory::MoralisticDemocracy => "Moralistic Democracy",
+            GovernmentCategory::RightWingUtopia => "Right-Wing Utopia",
+            GovernmentCategory::TyrannyByMajority => "Tyranny By Majority",
+            GovernmentCategory::ConservativeDemocracy => "Conservative Democracy",
+            GovernmentCategory::FreeMarketParadise => "Free Market Paradise",
+            GovernmentCategory::CorruptDictatorship => "Corrupt Dictatorship",
+            GovernmentCategory::FatherKnowsBestState(true) => "Father Knows Best State",
+            GovernmentCategory::FatherKnowsBestState(false) => "Mother Knows Best State",
+            GovernmentCategory::CompulsoryConsumeristState => "Compulsory Consumerist State",
+            GovernmentCategory::DemocraticSocialists => "Democratic Socialists",
+            GovernmentCategory::InoffensiveCentristDemocracy => "Inoffensive Centrist Democracy",
+            GovernmentCategory::CapitalistParadise => "Capitalist Paradise",
+            GovernmentCategory::LiberalDemocraticSocialists => "Liberal Democratic Socialists",
+            GovernmentCategory::NewYorkTimesDemocracy => "",
+            GovernmentCategory::CorporateBordello => "",
+            GovernmentCategory::IronFistSocialists => "",
+            GovernmentCategory::LibertarianPoliceState => "",
+            GovernmentCategory::BenevolentDictatorship => "",
+            GovernmentCategory::ScandinavianLiberalParadise => "",
+            GovernmentCategory::LeftLeaningCollegeState => "",
+            GovernmentCategory::Capitalizt => "",
+            GovernmentCategory::LeftWingUtopia => "",
+            GovernmentCategory::CivilRightsLovefest => "",
+            GovernmentCategory::Anarchy => "",
+        })
     }
 }
 
@@ -325,11 +528,18 @@ pub struct FreedomScores {
 }
 
 #[derive(Clone, Debug)]
-pub struct Endorsements(Vec<String>);
+pub struct Endorsements(pub Vec<NationName>);
 
-impl From<String> for Endorsements {
-    fn from(value: String) -> Self {
-        Endorsements(value.split(',').map(pretty_name).collect())
+impl<T: AsRef<str>> From<T> for Endorsements {
+    fn from(value: T) -> Self {
+        Endorsements(
+            value
+                .as_ref()
+                .split(',')
+                .map(String::from)
+                .map(NationName)
+                .collect(),
+        )
     }
 }
 
@@ -366,11 +576,12 @@ pub struct Sectors {
 pub struct Nation {
     /// The name of the nation.
     /// This is the only field guaranteed to be filled in.
+    pub raw_name: NationName,
     /// Note that because of limitations to the way the name is sent by NationStates,
     /// it may not be capitalized properly by the "pretty name" function.
     /// The only way to get the accurate capitalization is
     /// to request [`PublicNationShard::Name`](crate::shards::nation::PublicNationShard).
-    pub name: String,
+    pub nice_name: Option<String>,
     /// The pre-title of the nation.
     /// (`type` is a reserved word in Rust, so `kind` is used in its place.)
     ///
@@ -969,5 +1180,53 @@ impl TryFrom<String> for BannerId {
         let num = u16::from_str(num)
             .map_err(|_| IntoNationError::BadFieldError(String::from("BannerId"), value.clone()))?;
         Ok(BannerId::new(cat, num))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn safe_name_unchanged() {
+        assert_eq!(super::NationName::safe_name("wow1"), String::from("wow1"));
+    }
+
+    #[test]
+    fn safe_name_lowercase() {
+        assert_eq!(
+            super::NationName::safe_name("Exciting"),
+            String::from("exciting")
+        );
+    }
+
+    #[test]
+    fn safe_name_underscore() {
+        assert_eq!(
+            super::NationName::safe_name("wow1 exciting"),
+            String::from("wow1_exciting")
+        );
+    }
+
+    #[test]
+    fn safe_name_underscore_and_lowercase() {
+        assert_eq!(
+            super::NationName::safe_name("Wow1 Exciting"),
+            String::from("wow1_exciting")
+        );
+    }
+
+    #[test]
+    fn pretty_name_uppercase() {
+        assert_eq!(
+            super::NationName::pretty_name("aramos"),
+            String::from("Aramos")
+        )
+    }
+
+    #[test]
+    fn pretty_name_multiword() {
+        assert_eq!(
+            super::NationName::pretty_name("the_greater_low_countries"),
+            String::from("The Greater Low Countries")
+        )
     }
 }

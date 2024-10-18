@@ -16,6 +16,50 @@ pub mod region;
 pub(crate) const DEFAULT_LEADER: &str = "Leader";
 pub(crate) const DEFAULT_RELIGION: &str = "a major religion";
 
+pub enum ParsingError {
+    Nation(IntoNationError),
+    Region(IntoRegionError),
+    // field, value
+    BadFieldError(String, String),
+    NoFieldError(String),
+}
+
+impl ParsingError {
+    /// Tread carefully: if this is not a BadFieldError, you will panic
+    fn bad_field_for_nation(self) -> IntoNationError {
+        match self {
+            ParsingError::BadFieldError(field, value) => {
+                IntoNationError::BadFieldError(field, value)
+            }
+            _ => unreachable!(),
+        }
+    }
+    /// Tread carefully: if this is not a BadFieldError, you will panic
+    fn bad_field_for_region(self) -> IntoRegionError {
+        match self {
+            ParsingError::BadFieldError(field, value) => {
+                IntoRegionError::BadFieldError(field, value)
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    /// Tread carefully: if this is not a BadFieldError, you will panic
+    fn no_field_for_nation(self) -> IntoNationError {
+        match self {
+            ParsingError::NoFieldError(field) => IntoNationError::NoFieldError(field),
+            _ => unreachable!(),
+        }
+    }
+    /// Tread carefully: if this is not a BadFieldError, you will panic
+    fn no_field_for_region(self) -> IntoRegionError {
+        match self {
+            ParsingError::NoFieldError(field) => IntoRegionError::NoFieldError(field),
+            _ => unreachable!(),
+        }
+    }
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 pub(super) struct RawEvent {
@@ -153,7 +197,7 @@ pub(crate) struct RawCensus {
 }
 
 impl TryFrom<RawCensus> for CensusData {
-    type Error = IntoNationError;
+    type Error = ParsingError;
     fn try_from(value: RawCensus) -> Result<Self, Self::Error> {
         match value.inner.first() {
             Some(f) if f.timestamp.is_some() => Ok(CensusData::Historical(
@@ -170,7 +214,7 @@ impl TryFrom<RawCensus> for CensusData {
                     .map(CensusCurrentData::from)
                     .collect(),
             )),
-            None => Err(IntoNationError::NoFieldError(String::from("census"))),
+            None => Err(ParsingError::NoFieldError(String::from("census"))),
         }
     }
 }

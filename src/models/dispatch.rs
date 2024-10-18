@@ -4,6 +4,8 @@ use std::fmt::{Display, Formatter};
 
 use strum::AsRefStr;
 
+pub struct DispatchId(pub u32);
+
 /// The categories of dispatches.
 #[derive(Clone, Debug, PartialEq, AsRefStr)]
 pub enum DispatchCategory {
@@ -106,6 +108,7 @@ impl Display for DispatchCategory {
             "{}: {}",
             self.as_ref(),
             match self {
+                // Nope, these cases can't fold because `cat` is a different type every time :(
                 DispatchCategory::Factbook(cat) => cat.as_ref(),
                 DispatchCategory::Bulletin(cat) => cat.as_ref(),
                 DispatchCategory::Account(cat) => cat.as_ref(),

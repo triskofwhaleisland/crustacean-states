@@ -5,6 +5,9 @@ use std::sync::LazyLock;
 
 use crate::{parsers::RawEvent, regex};
 
+#[derive(Clone, Debug)]
+pub struct Happenings(pub Vec<Event>);
+
 /// A line of `happenings`.
 #[derive(Clone, Debug)]
 #[non_exhaustive]

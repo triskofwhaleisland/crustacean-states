@@ -1,5 +1,5 @@
-use crate::parsers::into_datetime;
-use crate::parsers::nation::Endorsements;
+use crate::parsers::nation::{Endorsements, NationName};
+use crate::parsers::{into_datetime, ParsingError};
 use crate::{
     models::dispatch::{
         AccountCategory, BulletinCategory, DispatchCategory, FactbookCategory, MetaCategory,
@@ -10,14 +10,14 @@ use crate::{
             BannerId, Cause, FreedomScores, Freedoms, Government, IntoNationError, Nation, Policy,
             Sectors, StandardNation, WAStatus, WAVote,
         },
-        CensusCurrentData, CensusData, CensusHistoricalData, DefaultOrCustom, Dispatch,
-        MaybeRelativeTime, MaybeSystemTime, RawCensus, RawHappenings,
+        CensusData, DefaultOrCustom, Dispatch, MaybeRelativeTime, MaybeSystemTime, RawCensus,
+        RawHappenings,
     },
     pretty_name,
 };
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
-use std::num::{NonZeroI64, NonZeroU16, NonZeroU32, NonZeroU64};
+use std::num::{NonZeroU16, NonZeroU32, NonZeroU64};
 
 //noinspection SpellCheckingInspection
 #[derive(Debug, Deserialize)]
@@ -356,7 +356,7 @@ impl TryFrom<RawDispatch> for Dispatch {
         Ok(Dispatch {
             id: value.id,
             title: value.title,
-            author: pretty_name(value.author),
+            author: value.author,
             category,
             created: value.created,
             edited: NonZeroU64::try_from(value.edited).ok(), // field is 0 if never edited
@@ -526,11 +526,11 @@ impl TryFrom<RawNation> for Nation {
     type Error = IntoNationError;
 
     fn try_from(value: RawNation) -> Result<Self, Self::Error> {
-        let name = match (value.name, value.id) {
-            (Some(n), _) => Ok(n),
-            (None, Some(i)) => Ok(pretty_name(i)),
-            (None, None) => Err(IntoNationError::NoFieldError(String::from("name"))),
-        }?;
+        // let name = match (value.name, value.id) {
+        //     (Some(n), _) => Ok(n),
+        //     (None, Some(i)) => Ok(pretty_name(i)),
+        //     (None, None) => Err(IntoNationError::NoFieldError(String::from("name"))),
+        // }?;
 
         let happenings = value
             .happenings
@@ -539,7 +539,8 @@ impl TryFrom<RawNation> for Nation {
         let wa_status = value.unstatus.map(WAStatus::try_from).transpose()?;
 
         Ok(Self {
-            name,
+            raw_name: NationName(value.id.unwrap_or_else(|| value.name.clone().unwrap())),
+            nice_name: value.name,
             kind: value.kind,
             full_name: value.fullname,
             motto: value.motto,
@@ -587,15 +588,24 @@ impl TryFrom<RawNation> for Nation {
             animal_trait: value.animaltrait,
             banner: value.banner.map(BannerId::try_from).transpose()?,
             banners: value.banners.map(Vec::<BannerId>::try_from).transpose()?,
-            census: value.census.map(CensusData::try_from).transpose()?,
+            census: value
+                .census
+                .map(CensusData::try_from)
+                .transpose()
+                .map_err(|e| match e {
+                    ParsingError::BadFieldError(field, value) => {
+                        IntoNationError::BadFieldError(field, value)
+                    }
+                    _ => unreachable!(),
+                })?,
             crime: value.crime,
             dispatch_list: value
                 .dispatchlist
-                .map(Vec::<Dispatch>::try_from)
+                .map(RawDispatchList::try_into)
                 .transpose()?,
             factbook_list: value
                 .factbooklist
-                .map(Vec::<Dispatch>::try_from)
+                .map(RawFactbookList::try_into)
                 .transpose()?,
             founded_time: value
                 .foundedtime
