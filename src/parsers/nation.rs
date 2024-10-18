@@ -1,5 +1,6 @@
 //! The nation parser module.
 
+use crate::parsers::region::RegionName;
 use crate::{
     parsers::{
         happenings::Event, CensusData, DefaultOrCustom, Dispatch, MaybeRelativeTime,
@@ -486,17 +487,17 @@ impl Display for GovernmentCategory {
                     "Inoffensive Centrist Democracy",
                 GovernmentCategory::CapitalistParadise => "Capitalist Paradise",
                 GovernmentCategory::LiberalDemocraticSocialists => "Liberal Democratic Socialists",
-                GovernmentCategory::NewYorkTimesDemocracy => "",
-                GovernmentCategory::CorporateBordello => "",
-                GovernmentCategory::IronFistSocialists => "",
-                GovernmentCategory::LibertarianPoliceState => "",
-                GovernmentCategory::BenevolentDictatorship => "",
-                GovernmentCategory::ScandinavianLiberalParadise => "",
-                GovernmentCategory::LeftLeaningCollegeState => "",
-                GovernmentCategory::Capitalizt => "",
-                GovernmentCategory::LeftWingUtopia => "",
-                GovernmentCategory::CivilRightsLovefest => "",
-                GovernmentCategory::Anarchy => "",
+                GovernmentCategory::NewYorkTimesDemocracy => "New York Times Democracy",
+                GovernmentCategory::CorporateBordello => "Corporate Bordello",
+                GovernmentCategory::IronFistSocialists => "Iron Fist Socialists",
+                GovernmentCategory::LibertarianPoliceState => "Libertarian Police State",
+                GovernmentCategory::BenevolentDictatorship => "Benevolent Dictatorship",
+                GovernmentCategory::ScandinavianLiberalParadise => "Scandinavian Liberal Paradise",
+                GovernmentCategory::LeftLeaningCollegeState => "Left-Leaning College State",
+                GovernmentCategory::Capitalizt => "Capitalizt",
+                GovernmentCategory::LeftWingUtopia => "Left-Wing Utopia",
+                GovernmentCategory::CivilRightsLovefest => "Civil Rights Lovefest",
+                GovernmentCategory::Anarchy => "Anarchy",
             }
         )
     }
@@ -612,7 +613,7 @@ pub struct Nation {
     ///
     /// Requested by using
     /// [`PublicNationShard::Category`](crate::shards::nation::PublicNationShard::Category).
-    pub category: Option<String>,
+    pub category: Option<GovernmentCategory>,
     /// The WA status of the nation.
     ///
     /// Requested by using [`PublicNationShard::WA`](crate::shards::nation::PublicNationShard::WA).
@@ -636,7 +637,7 @@ pub struct Nation {
     ///
     /// Requested by using
     /// [`PublicNationShard::Region`](crate::shards::nation::PublicNationShard::Region).
-    pub region: Option<String>,
+    pub region: Option<RegionName>,
     /// The population of the nation in millions of people.
     ///
     /// Requested by using
@@ -675,6 +676,7 @@ pub struct Nation {
     /// [`PublicNationShard::Demonym2Plural`](crate::shards::nation::PublicNationShard::Demonym2Plural).
     pub demonym_plural: Option<String>,
     /// The URL to the flag of the nation.
+    /// TODO make struct
     ///
     /// Requested by using [`PublicNationShard::Flag`](crate::shards::nation::PublicNationShard::Flag).
     pub flag: Option<String>,
@@ -971,7 +973,7 @@ pub struct Nation {
 #[non_exhaustive]
 pub struct StandardNation {
     /// The name of the nation.
-    pub name: String,
+    pub name: NationName,
     /// The pre-title of the nation.
     /// (`type` is a reserved word in Rust, so `kind` is used in its place.)
     pub kind: String,
@@ -982,7 +984,7 @@ pub struct StandardNation {
     /// The category of the nation.
     /// Note that this is currently a `String` representation,
     /// but will eventually become its own type.
-    pub category: String,
+    pub category: GovernmentCategory,
     /// The WA status of the nation.
     pub wa_status: WAStatus,
     /// A list of nations that endorse the nation.
@@ -992,7 +994,7 @@ pub struct StandardNation {
     /// The freedom statistics of the nation.
     pub freedom: Freedoms,
     /// The region that the nation resides in.
-    pub region: String,
+    pub region: RegionName,
     /// The population of the nation in millions of people.
     pub population: u32,
     /// The effective tax rate of the nation.
@@ -1087,6 +1089,7 @@ pub struct Policy {
 /// Represents any one of the errors
 /// that can go wrong between deserialization and creating the Nation struct.
 #[derive(Clone, Debug, Error)]
+#[non_exhaustive]
 pub enum IntoNationError {
     /// A field could not be parsed as the type it should be.
     #[error("malformed field {0} with value {1}")]
@@ -1113,9 +1116,8 @@ pub enum IntoNationError {
     #[error("could not find the field {0} in response")]
     NoFieldError(&'static str),
 
-    #[error("field {0} is the wrong length (should be {1})")]
-    WrongLengthError(String, usize),
-
+    // #[error("field {0} is the wrong length (should be {1})")]
+    // WrongLengthError(String, usize),
     #[error("{0:?} cannot be converted into {1}")]
     WrongGeneric(ParsingError, &'static str),
 }

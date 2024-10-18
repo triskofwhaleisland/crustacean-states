@@ -1,18 +1,23 @@
+use std::str::FromStr;
 use crate::models::dispatch::DispatchId;
 use crate::parsers::happenings::Happenings;
-use crate::parsers::nation::IntoNationError;
+use crate::parsers::nation::{BannerId, IntoNationError, NationName};
 use crate::parsers::region::{
-    Embassy, EmbassyKind, MaybeMessageContents, Message, Region, RegionWAVote,
+    Embassy, EmbassyKind, EmbassyRmbPerms, MaybeMessageContents, Message, Poll, PollOption, Region,
+    RegionBannerId, RegionName, RegionWAVote,
 };
 use crate::parsers::{
     into_datetime,
     region::{IntoRegionError, Officer, OfficerAuthority},
     CensusCurrentData, CensusData, CensusHistoricalData, CensusRegionRanks, MaybeRelativeTime,
-    MaybeSystemTime, ParsingError, RawCensus, RawCensusRanks, RawHappenings,
+    MaybeSystemTime, NumNations, ParsingError, RawCensus, RawCensusRanks, RawHappenings,
 };
+use crate::shards::region::Tag;
 use chrono::{DateTime, Utc};
 use itertools::Itertools;
 use serde::Deserialize;
+use std::str::pattern::Pattern;
+use url::Url;
 
 //noinspection SpellCheckingInspection
 #[derive(Debug, Deserialize)]
@@ -39,6 +44,7 @@ struct RawRegion {
     // END default
     banned: Option<String>, // who is banned? separated by colons, internal name
     bannerby: Option<String>, // who made the banner?
+    banners: Option<String>,
     census: Option<RawCensus>,
     censusranks: Option<RawCensusRanks>,
     dbid: Option<u32>,
@@ -127,7 +133,10 @@ impl TryFrom<RawOfficer> for Officer {
                 .chars()
                 .map(OfficerAuthority::try_from)
                 .collect::<Result<Vec<_>, _>>()?,
-            time,
+            time: into_datetime(time as i64).ok_or(IntoRegionError::BadFieldError(
+                "Officer.time",
+                time.to_string(),
+            ))?,
             by,
             order,
         })
@@ -243,12 +252,7 @@ impl TryFrom<RawMessage> for Message {
             likes,
             likers,
             embassy,
-            message: match message.as_str() {
-                "Message suppressed by a moderator" | "Message deleted by author" => {
-                    MaybeMessageContents::NoContents
-                }
-                _ => MaybeMessageContents::Contents(message),
-            },
+            message,
         })
     }
 }
@@ -284,10 +288,87 @@ struct RawPollOption {
     voters: String,
 }
 
+impl TryFrom<RawPollOption> for PollOption {
+    type Error = IntoRegionError;
+
+    //noinspection SpellCheckingInspection
+    fn try_from(value: RawPollOption) -> Result<Self, Self::Error> {
+        let RawPollOption {
+            id,
+            optiontext,
+            votes,
+            voters,
+        } = value;
+        Ok(PollOption {
+            id,
+            text: optiontext,
+            votes,
+            voters: into_nation_list(voters),
+        })
+    }
+}
+
+impl TryFrom<RawPollOptions> for Vec<PollOption> {
+    type Error = IntoRegionError;
+
+    fn try_from(value: RawPollOptions) -> Result<Self, Self::Error> {
+        value
+            .inner
+            .into_iter()
+            .map(PollOption::try_from)
+            .collect::<Result<Vec<_>, _>>()
+    }
+}
+
+impl TryFrom<RawPoll> for Poll {
+    type Error = IntoRegionError;
+
+    fn try_from(value: RawPoll) -> Result<Self, Self::Error> {
+        let RawPoll {
+            id,
+            title,
+            text,
+            region,
+            start,
+            stop,
+            author,
+            options,
+        } = value;
+        Ok(Poll {
+            id,
+            title,
+            text,
+            region: RegionName(region),
+            start: into_datetime(start as i64).ok_or(IntoRegionError::BadFieldError(
+                "Poll.start",
+                start.to_string(),
+            ))?,
+            stop: into_datetime(stop as i64).ok_or(IntoRegionError::BadFieldError(
+                "Poll.stop",
+                stop.to_string(),
+            ))?,
+            author: NationName(author),
+            options: options.try_into()?,
+        })
+    }
+}
+
 #[derive(Debug, Deserialize)]
 struct RawRegionTags {
     #[serde(rename = "TAG", default)]
     inner: Vec<String>,
+}
+
+impl TryFrom<RawRegionTags> for Vec<Tag> {
+    type Error = IntoRegionError;
+
+    fn try_from(value: RawRegionTags) -> Result<Self, Self::Error> {
+        value
+            .inner
+            .into_iter()
+            .map(|t| Tag::from_str(t.as_str()).map_err(|e| IntoRegionError::StrumParseError { source: e }))
+            .collect::<Result<Vec<_>, _>>()
+    }
 }
 
 //noinspection SpellCheckingInspection
@@ -336,6 +417,14 @@ fn try_into_datetime(
     }
 }
 
+fn into_nation_list(list: String) -> Vec<NationName> {
+    let delimiter = if list.contains(',') { ',' } else { ':' };
+    list.split(delimiter)
+        .map(String::from)
+        .map(NationName)
+        .collect()
+}
+
 impl Region {
     /// Converts the XML response from NationStates to a [`Region`].
     pub fn from_xml(xml: &[u8]) -> Result<Self, IntoRegionError> {
@@ -348,29 +437,39 @@ impl TryFrom<RawRegion> for Region {
 
     fn try_from(value: RawRegion) -> Result<Self, Self::Error> {
         Ok(Region {
-            name: value.name,
+            name: value.name.map(RegionName),
             factbook: value.factbook,
             num_nations: value.numnations,
-            nations: value
-                .nations
-                .map(|nations| nations.split(":").map(String::from).collect::<Vec<_>>()),
-            delegate: value.delegate,
+            nations: value.nations.map(|nations| {
+                nations
+                    .split(":")
+                    .map(String::from)
+                    .map(NationName)
+                    .collect::<Vec<_>>()
+            }),
+            delegate: value.delegate.map(NationName),
             delegate_votes: value.delegatevotes,
             delegate_authority: value
                 .delegateauth
                 .map(OfficerAuthority::vec_from_raw)
                 .transpose()?,
             frontier: value.frontier.map(try_into_bool).transpose()?,
-            founder: value.founder,
-            governor: value.governor,
+            founder: value.founder.map(NationName),
+            governor: value.governor.map(NationName),
             officers: value.officers.map(RawOfficers::try_into).transpose()?,
             power: value.power,
             flag: value.flag,
-            banner: value.banner,
-            banner_url: value.bannerurl,
+            banner: value.banner.map(RegionBannerId),
+            banner_url: value
+                .bannerurl
+                .map(|u| {
+                    Url::parse(&format!("https://www.nationstates.net{u}"))
+                        .map_err(|_| IntoRegionError::BadFieldError("Region.banner_url", u))
+                })
+                .transpose()?,
             embassies: value.embassies.map(RawEmbassies::try_into).transpose()?,
-            banned: value.banned,
-            banner_by: value.bannerby,
+            banned: value.banned.map(|l| into_nation_list(l)),
+            banner_by: value.bannerby.map(NationName),
             census: value
                 .census
                 .map(CensusData::try_from)
@@ -382,7 +481,10 @@ impl TryFrom<RawRegion> for Region {
                 .transpose()?,
             dbid: value.dbid,
             dispatches: value.dispatches.map(parse_dispatches).transpose()?,
-            embassy_rmb: value.embassyrmb,
+            embassy_rmb: value
+                .embassyrmb
+                .map(EmbassyRmbPerms::try_from)
+                .transpose()?,
             founded: value.founded.map(MaybeRelativeTime::from),
             founded_time: value
                 .foundedtime
@@ -409,11 +511,11 @@ impl TryFrom<RawRegion> for Region {
                         .collect::<Result<Vec<_>, _>>()
                 })
                 .transpose()?,
-            wa_nations: value.unnations,
+            wa_nations: value.unnations.map(|l| into_nation_list(l)),
             num_wa_nations: value.numunnations,
-            poll: value.poll,
+            poll: value.poll.map(Poll::try_from).transpose()?,
             sc_vote: value.scvote.map(RegionWAVote::from),
-            tags: value.tags,
+            tags: value.tags.map(RawRegionTags::try_into).transpose()?,
             wa_badges: value.wabadges,
         })
     }

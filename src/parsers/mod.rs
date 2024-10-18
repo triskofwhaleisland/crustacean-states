@@ -18,54 +18,21 @@ pub mod region;
 pub(crate) const DEFAULT_LEADER: &str = "Leader";
 pub(crate) const DEFAULT_RELIGION: &str = "a major religion";
 
+pub type NumNations = u32;
+
 #[derive(Clone, Debug, Error)]
+#[non_exhaustive]
 pub enum ParsingError {
     #[error("{0:?}")]
     Nation(Box<IntoNationError>),
     #[error("{0:?}")]
     Region(Box<IntoRegionError>),
     // field, value
-    #[error("{0:?}")]
+    #[error("{0:?}, {1:?}")]
     BadFieldError(&'static str, String),
     #[error("{0:?}")]
     NoFieldError(&'static str),
 }
-
-// impl ParsingError {
-//     /// Tread carefully: if this is not a BadFieldError, you will panic
-//     fn bad_field_for_nation(self) -> IntoNationError {
-//         match self {
-//             ParsingError::BadFieldError(field, value) => {
-//                 IntoNationError::BadFieldError(field, value)
-//             }
-//             _ => unreachable!(),
-//         }
-//     }
-//     /// Tread carefully: if this is not a BadFieldError, you will panic
-//     fn bad_field_for_region(self) -> IntoRegionError {
-//         match self {
-//             ParsingError::BadFieldError(field, value) => {
-//                 IntoRegionError::BadFieldError(field, value)
-//             }
-//             _ => unreachable!(),
-//         }
-//     }
-//
-//     /// Tread carefully: if this is not a BadFieldError, you will panic
-//     fn no_field_for_nation(self) -> IntoNationError {
-//         match self {
-//             ParsingError::NoFieldError(field) => IntoNationError::NoFieldError(field),
-//             _ => unreachable!(),
-//         }
-//     }
-//     /// Tread carefully: if this is not a BadFieldError, you will panic
-//     fn no_field_for_region(self) -> IntoRegionError {
-//         match self {
-//             ParsingError::NoFieldError(field) => IntoRegionError::NoFieldError(field),
-//             _ => unreachable!(),
-//         }
-//     }
-// }
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]

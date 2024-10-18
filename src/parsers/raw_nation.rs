@@ -1,19 +1,19 @@
-use crate::parsers::nation::{Endorsements, NationName};
-use crate::parsers::{into_datetime, ParsingError};
+use crate::parsers::nation::GovernmentCategory;
+use crate::parsers::region::RegionName;
 use crate::{
     models::dispatch::{
         AccountCategory, BulletinCategory, DispatchCategory, FactbookCategory, MetaCategory,
     },
     parsers::{
         happenings::Event,
+        into_datetime,
         nation::{
-            BannerId, Cause, FreedomScores, Freedoms, Government, IntoNationError, Nation, Policy,
-            Sectors, StandardNation, WAStatus, WAVote,
+            BannerId, Cause, Endorsements, FreedomScores, Freedoms, Government, IntoNationError,
+            Nation, NationName, Policy, Sectors, StandardNation, WAStatus, WAVote,
         },
         CensusData, DefaultOrCustom, Dispatch, MaybeRelativeTime, MaybeSystemTime, RawCensus,
         RawHappenings,
     },
-    pretty_name,
 };
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
@@ -547,12 +547,15 @@ impl TryFrom<RawNation> for Nation {
             kind: value.kind,
             full_name: value.fullname,
             motto: value.motto,
-            category: value.category,
+            category: value
+                .category
+                .map(GovernmentCategory::try_from)
+                .transpose()?,
             wa_status,
             endorsements: value.endorsements.map(Endorsements::from),
             issues_answered: value.issues_answered,
             freedom: value.freedom.map(Freedoms::try_from).transpose()?,
-            region: value.region,
+            region: value.region.map(RegionName),
             population: value.population,
             tax: value.tax,
             animal: value.animal,
@@ -660,16 +663,16 @@ impl TryFrom<RawStandardNation> for StandardNation {
 
     fn try_from(value: RawStandardNation) -> Result<Self, Self::Error> {
         Ok(StandardNation {
-            name: value.name,
+            name: NationName(value.name),
             kind: value.kind,
             full_name: value.fullname,
             motto: value.motto,
-            category: value.category,
+            category: value.category.try_into()?,
             wa_status: value.unstatus.try_into()?,
             endorsements: Endorsements::from(value.endorsements),
             issues_answered: value.issues_answered,
             freedom: value.freedom.try_into()?,
-            region: value.region,
+            region: RegionName(value.region),
             population: value.population,
             tax: value.tax,
             animal: value.animal,

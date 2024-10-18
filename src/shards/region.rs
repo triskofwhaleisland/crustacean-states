@@ -5,7 +5,7 @@ use std::{
 };
 
 use itertools::Itertools;
-use strum::AsRefStr;
+use strum::{AsRefStr, EnumString};
 use url::Url;
 
 use crate::shards::{CensusRanksShard, CensusShard, NSRequest, Params, BASE_URL};
@@ -360,25 +360,32 @@ impl<'a> NSRequest for StandardRegionRequest<'a> {
 /// Some tags have been given added clarity in their variant name, and in those cases,
 /// their original name is also documented.
 //noinspection SpellCheckingInspection
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, EnumString)]
 #[non_exhaustive]
 #[allow(missing_docs)]
+#[strum(ascii_case_insensitive)]
 pub enum Tag {
     /// (self-tag)
     Anarchist,
     /// (self-tag)
     Anime,
     /// (self-tag)
+    #[strum(serialize = "anti-capitalist")]
     AntiCapitalist,
     /// (self-tag)
+    #[strum(serialize = "anti-communist")]
     AntiCommunist,
     /// (self-tag)
+    #[strum(serialize = "anti-fascist")]
     AntiFascist,
     /// (self-tag)
+    #[strum(serialize = "anti-general_assembly")]
     AntiGeneralAssembly,
     /// (self-tag)
+    #[strum(serialize = "anti-security_council")]
     AntiSecurityCouncil,
     /// (self-tag)
+    #[strum(serialize = "anti-world_assembly")]
     AntiWorldAssembly,
     /// (self-tag)
     Capitalist,
@@ -407,16 +414,19 @@ pub enum Tag {
     /// (self-tag)
     Democratic,
     /// (self-tag)
+    #[strum(serialize = "eco-friendly")]
     EcoFriendly,
     /// (self-tag)
     Egalitarian,
     /// (self-tag)
+    #[strum(serialize = "embassy_collector")]
     EmbassyCollector,
     /// Has 101-500 nations.
     Enormous,
     /// (self-tag)
     Fandom,
     /// (self-tag)
+    #[strum(serialize = "fantasy_tech")]
     FantasyTech,
     /// (self-tag) Eww.
     Fascist,
@@ -433,26 +443,34 @@ pub enum Tag {
     /// (self-tag)
     Feminist,
     /// (self-tag) NationStates Forums, F7 section.
+    #[strum(serialize = "f7er")]
     ForumSevener,
     /// Has a founder that ceased to exist.
     Founderless,
     /// (self-tag)
+    #[strum(serialize = "free_trade")]
     FreeTrade,
     /// New nations may spawn (although not as fast as in a [`Feeder`](Tag::Feeder)).
     Frontier,
     /// (self-tag)
+    #[strum(serialize = "future_tech")]
     FutureTech,
     /// (self-tag) Shortened to FT: FTL on-site.
+    #[strum(serialize = "ft_ftl")]
     FutureTechFasterThanLight,
     /// (self-tag) Shortened to FT: FTLi on-site.
+    #[strum(serialize = "ft_ftli")]
     FutureTechFasterThanLightInhibited,
     /// (self-tag) Shortened to FT: STL on-site.
+    #[strum(serialize = "ft_stl")]
     FutureTechSlowerThanLight,
     /// (self-tag)
+    #[strum(serialize = "game_player")]
     GamePlayer,
     /// Has 501+ nations.
     Gargantuan,
     /// (self-tag)
+    #[strum(serialize = "general_assembly")]
     GeneralAssembly,
     /// (self-tag) NationStates Forums, General section.
     Generalite,
@@ -460,6 +478,7 @@ pub enum Tag {
     /// Regions in this state will always have an executive World Assembly Delegate.
     Governorless,
     /// (self-tag)
+    #[strum(serialize = "human-only")]
     HumanOnly,
     /// (self-tag)
     Imperialist,
@@ -470,6 +489,7 @@ pub enum Tag {
     /// Forbidden to convert to or from a Frontier, as resolved by the World Assembly Security Council.
     Injuncted,
     /// (self-tag)
+    #[strum(serialize = "international_federalist")]
     InternationalFederalist,
     /// (self-tag)
     Invader,
@@ -500,26 +520,34 @@ pub enum Tag {
     /// Has 1-5 nations.
     Miniscule,
     /// (self-tag)
+    #[strum(serialize = "modern_tech")]
     ModernTech,
     /// (self-tag)
     Monarchist,
     /// (self-tag)
+    #[strum(serialize = "multi-species")]
     MultiSpecies,
     /// (self-tag)
+    #[strum(serialize = "national_sovereigntist")]
     NationalSovereigntist,
     /// (self-tag)
     Neutral,
     /// Created in the last week.
     New,
     /// (self-tag)
+    #[strum(serialize = "non-english")]
     NonEnglish,
     /// (self-tag)
+    #[strum(serialize = "offsite_chat")]
     OffsiteChat,
     /// (self-tag)
+    #[strum(serialize = "offsite_forums")]
     OffsiteForums,
     /// (self-tag)
+    #[strum(serialize = "outer_space")]
     OuterSpace,
     /// (self-tag) NationStates Forums, Portal To The Multiverse section.
+    #[strum(serialize = "p2tm")]
     PortalToTheMultiverse,
     /// (self-tag)
     Pacifist,
@@ -528,16 +556,21 @@ pub enum Tag {
     /// Has a password preventing free entry into the region.
     Password,
     /// (self-tag)
+    #[strum(serialize = "past_tech")]
     PastTech,
     /// (self-tag)
     Patriarchal,
     /// (self-tag)
+    #[strum(serialize = "post_apocalyptic")]
     PostApocalyptic,
     /// (self-tag)
+    #[strum(serialize = "post-modern_tech")]
     PostModernTech,
     /// (self-tag)
+    #[strum(serialize = "puppet_storage")]
     PuppetStorage,
     /// (self-tag)
+    #[strum(serialize = "regional_government")]
     RegionalGovernment,
     /// (self-tag)
     Religious,
@@ -547,8 +580,10 @@ pub enum Tag {
     /// and [Osiris](https://www.nationstates.net/region=osiris).
     Restorer,
     /// (self-tag)
+    #[strum(serialize = "role_player")]
     RolePlayer,
     /// (self-tag)
+    #[strum(serialize = "security_council")]
     SecurityCouncil,
     /// (self-tag)
     Serious,
@@ -578,8 +613,10 @@ pub enum Tag {
     /// (self-tag)
     Totalitarian,
     /// (self-tag)
+    #[strum(serialize = "trading_cards")]
     TradingCards,
     /// (self-tag)
+    #[strum(serialize = "video_game")]
     VideoGame,
     /// Game-created region where the bans are temporary and the coups are plenty.
     /// Currently, there are seven such regions:
@@ -592,120 +629,6 @@ pub enum Tag {
     /// and [Warzone Trinidad](https://www.nationstates.net/region=warzone_trinidad).
     Warzone,
     /// (self-tag)
+    #[strum(serialize = "world_assembly")]
     WorldAssembly,
-}
-
-impl Display for Tag {
-    //noinspection SpellCheckingInspection
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Tag::Anarchist => "anarchist",
-                Tag::Anime => "anime",
-                Tag::AntiCapitalist => "anti-capitalist",
-                Tag::AntiCommunist => "anti-communist",
-                Tag::AntiFascist => "anti-fascist",
-                Tag::AntiGeneralAssembly => "anti-general_assembly",
-                Tag::AntiSecurityCouncil => "anti-security_council",
-                Tag::AntiWorldAssembly => "anti-world_assembly",
-                Tag::Capitalist => "capitalist",
-                Tag::Casual => "casual",
-                Tag::Catcher => "catcher",
-                Tag::Class => "class",
-                Tag::Colony => "colony",
-                Tag::Commended => "commended",
-                Tag::Communist => "communist",
-                Tag::Condemned => "condemned",
-                Tag::Conservative => "conservative",
-                Tag::Cyberpunk => "cyberpunk",
-                Tag::Defender => "defender",
-                Tag::Democratic => "democratic",
-                Tag::EcoFriendly => "eco-friendly",
-                Tag::Egalitarian => "egalitarian",
-                Tag::EmbassyCollector => "embassy_collector",
-                Tag::Enormous => "enormous",
-                Tag::ForumSevener => "f7er",
-                Tag::FutureTechFasterThanLight => "ft_ftl",
-                Tag::FutureTechFasterThanLightInhibited => "ft_ftli",
-                Tag::FutureTechSlowerThanLight => "ft_stl",
-                Tag::Fandom => "fandom",
-                Tag::FantasyTech => "fantasy_tech",
-                Tag::Fascist => "fascist",
-                Tag::Featured => "featured",
-                Tag::Feeder => "feeder",
-                Tag::Feminist => "feminist",
-                Tag::Founderless => "founderless",
-                Tag::FreeTrade => "free_trade",
-                Tag::Frontier => "frontier",
-                Tag::FutureTech => "future_tech",
-                Tag::GamePlayer => "game_player",
-                Tag::Gargantuan => "gargantuan",
-                Tag::GeneralAssembly => "general_assembly",
-                Tag::Generalite => "generalite",
-                Tag::Governorless => "governorless",
-                Tag::HumanOnly => "human-only",
-                Tag::Imperialist => "imperialist",
-                Tag::Independent => "independent",
-                Tag::Industrial => "industrial",
-                Tag::Injuncted => "injuncted",
-                Tag::InternationalFederalist => "international_federalist",
-                Tag::Invader => "invader",
-                Tag::Isolationist => "isolationist",
-                Tag::IssuesPlayer => "issues_player",
-                Tag::JumpPoint => "jump_point",
-                Tag::Lgbt => "lgbt",
-                Tag::Large => "large",
-                Tag::Liberal => "liberal",
-                Tag::Liberated => "liberated",
-                Tag::Libertarian => "libertarian",
-                Tag::Magical => "magical",
-                Tag::Map => "map",
-                Tag::Medium => "medium",
-                Tag::Mercenary => "mercenary",
-                Tag::Miniscule => "minuscule",
-                Tag::ModernTech => "modern_tech",
-                Tag::Monarchist => "monarchist",
-                Tag::MultiSpecies => "multi-species",
-                Tag::NationalSovereigntist => "national_sovereigntist",
-                Tag::Neutral => "neutral",
-                Tag::New => "new",
-                Tag::NonEnglish => "non-english",
-                Tag::OffsiteChat => "offsite_chat",
-                Tag::OffsiteForums => "offsite_forums",
-                Tag::OuterSpace => "outer_space",
-                Tag::PortalToTheMultiverse => "p2tm",
-                Tag::Pacifist => "pacifist",
-                Tag::Parody => "parody",
-                Tag::Password => "password",
-                Tag::PastTech => "past_tech",
-                Tag::Patriarchal => "patriarchal",
-                Tag::PostApocalyptic => "post_apocalyptic",
-                Tag::PostModernTech => "post-modern_tech",
-                Tag::PuppetStorage => "puppet_storage",
-                Tag::RegionalGovernment => "regional_government",
-                Tag::Religious => "religious",
-                Tag::Restorer => "restorer",
-                Tag::RolePlayer => "role_player",
-                Tag::SecurityCouncil => "security_council",
-                Tag::Serious => "serious",
-                Tag::Silly => "silly",
-                Tag::Sinker => "sinker",
-                Tag::Small => "small",
-                Tag::Snarky => "snarky",
-                Tag::Social => "social",
-                Tag::Socialist => "socialist",
-                Tag::Sports => "sports",
-                Tag::Steampunk => "steampunk",
-                Tag::Surreal => "surreal",
-                Tag::Theocratic => "theocratic",
-                Tag::Totalitarian => "totalitarian",
-                Tag::TradingCards => "trading_cards",
-                Tag::VideoGame => "video_game",
-                Tag::Warzone => "warzone",
-                Tag::WorldAssembly => "world_assembly",
-            }
-        )
-    }
 }
