@@ -1,10 +1,14 @@
+use crate::models::dispatch::DispatchId;
 use crate::parsers::happenings::Happenings;
+use crate::parsers::nation::IntoNationError;
+use crate::parsers::ParsingError;
 use crate::{
     parsers::{CensusData, CensusRegionRanks, MaybeRelativeTime, MaybeSystemTime},
     shards::region::Tag,
 };
 use chrono::{DateTime, Utc};
 use quick_xml::DeError;
+use std::ops::Deref;
 use thiserror::Error;
 
 #[derive(Debug)]
@@ -88,8 +92,50 @@ pub struct RegionWAVote {
     pub against_vote: u16,
 }
 
-#[derive(Debug)]
-pub struct Message;
+#[derive(Clone, Debug)]
+pub struct Message {
+    pub id: u32,
+    pub timestamp: DateTime<Utc>,
+    pub nation: String,
+    pub status: MessageStatus,
+    pub suppressor: Option<String>,    // nation
+    pub edited: Option<DateTime<Utc>>, // timestamp
+    pub likes: u16,                    // number of likes
+    pub likers: Option<String>,        // list of nations that liked
+    pub embassy: Option<String>,       // embassy region that nation posted from, if applicable
+    pub message: MaybeMessageContents, // the actual contents (thank god)
+}
+
+#[derive(Clone, Debug)]
+pub enum MessageStatus {
+    Visible,
+    Suppressed,
+    Deleted,
+    ModSuppressed,
+}
+
+impl TryFrom<u8> for MessageStatus {
+    type Error = ParsingError;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(MessageStatus::Visible),
+            1 => Ok(MessageStatus::Suppressed),
+            2 => Ok(MessageStatus::Deleted),
+            9 => Ok(MessageStatus::ModSuppressed),
+            _ => Err(ParsingError::BadFieldError(
+                "Message.status",
+                value.to_string(),
+            )),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum MaybeMessageContents {
+    Contents(String),
+    NoContents,
+}
 
 #[derive(Debug)]
 pub struct Poll;
@@ -143,11 +189,11 @@ pub struct Region {
     pub wa_badges: Option<Vec<RegionWABadge>>,
 }
 
-#[derive(Debug, Error)]
+#[derive(Clone, Debug, Error)]
 pub enum IntoRegionError {
     /// A field could not be parsed as the type it should be.
     #[error("malformed field {0} with value {1}")]
-    BadFieldError(String, String),
+    BadFieldError(&'static str, String),
     /// A `u8` could not be parsed as a `bool` because it was not `0` or `1`.
     #[error("boolean cannot be derived from {0}")]
     BadBooleanError(u8),
@@ -160,5 +206,21 @@ pub enum IntoRegionError {
     },
     /// A field was missing from the response.
     #[error("could not find the field {0} in response")]
-    NoFieldError(String),
+    NoFieldError(&'static str),
+
+    #[error("{0:?} cannot be converted into {1}")]
+    WrongGeneric(ParsingError, &'static str),
+}
+
+impl From<ParsingError> for IntoRegionError {
+    fn from(value: ParsingError) -> Self {
+        match value {
+            ParsingError::Nation(ref _n) => IntoRegionError::WrongGeneric(value, "IntoRegionError"),
+            ParsingError::Region(r) => r.deref().clone(),
+            ParsingError::BadFieldError(field, value) => {
+                IntoRegionError::BadFieldError(field, value)
+            }
+            ParsingError::NoFieldError(field) => IntoRegionError::NoFieldError(field),
+        }
+    }
 }

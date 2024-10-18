@@ -300,9 +300,9 @@ impl RawDispatch {
                     "International" => Ok(FactbookCategory::International),
                     "Trivia" => Ok(FactbookCategory::Trivia),
                     "Miscellaneous" => Ok(FactbookCategory::Miscellaneous),
-                    other => Err(IntoNationError::BadFieldError(
-                        String::from("FactbookCategory"),
-                        String::from(other),
+                    _ => Err(IntoNationError::BadFieldError(
+                        "FactbookCategory",
+                        self.subcategory.clone(),
                     )),
                 }?,
             )),
@@ -312,9 +312,9 @@ impl RawDispatch {
                     "News" => Ok(BulletinCategory::News),
                     "Opinion" => Ok(BulletinCategory::Opinion),
                     "Campaign" => Ok(BulletinCategory::Campaign),
-                    other => Err(IntoNationError::BadFieldError(
-                        String::from("BulletinCategory"),
-                        String::from(other),
+                    _ => Err(IntoNationError::BadFieldError(
+                        "BulletinCategory",
+                        self.subcategory.clone(),
                     )),
                 }?,
             )),
@@ -327,22 +327,22 @@ impl RawDispatch {
                 "Science" => Ok(AccountCategory::Science),
                 "Culture" => Ok(AccountCategory::Culture),
                 "Other" => Ok(AccountCategory::Other),
-                other => Err(IntoNationError::BadFieldError(
-                    String::from("AccountCategory"),
-                    String::from(other),
+                _ => Err(IntoNationError::BadFieldError(
+                    "AccountCategory",
+                    self.subcategory.clone(),
                 )),
             }?)),
             "Meta" => Ok(DispatchCategory::Meta(match self.subcategory.as_str() {
                 "Gameplay" => Ok(MetaCategory::Gameplay),
                 "Reference" => Ok(MetaCategory::Reference),
-                other => Err(IntoNationError::BadFieldError(
-                    String::from("MetaCategory"),
-                    String::from(other),
+                _ => Err(IntoNationError::BadFieldError(
+                    "MetaCategory",
+                    self.subcategory.clone(),
                 )),
             }?)),
-            other => Err(IntoNationError::BadFieldError(
-                String::from("DispatchCategory"),
-                String::from(other),
+            _ => Err(IntoNationError::BadFieldError(
+                "DispatchCategory",
+                self.category.clone(),
             )),
         }
     }
@@ -503,7 +503,10 @@ impl From<RawSectors> for Sectors {
     }
 }
 
-fn into_datetime_or_bad_field(t: i64, field: String) -> Result<DateTime<Utc>, IntoNationError> {
+fn into_datetime_or_bad_field(
+    t: i64,
+    field: &'static str,
+) -> Result<DateTime<Utc>, IntoNationError> {
     into_datetime(t).ok_or(IntoNationError::BadFieldError(field, t.to_string()))
 }
 
@@ -564,11 +567,11 @@ impl TryFrom<RawNation> for Nation {
             founded: value.founded.map(MaybeRelativeTime::from),
             first_login: value
                 .firstlogin
-                .map(|t| into_datetime_or_bad_field(t, String::from("Nation.first_login")))
+                .map(|t| into_datetime_or_bad_field(t, "Nation.first_login"))
                 .transpose()?,
             last_login: value
                 .lastlogin
-                .map(|t| into_datetime_or_bad_field(t, String::from("Nation.last_login")))
+                .map(|t| into_datetime_or_bad_field(t, "Nation.last_login"))
                 .transpose()?,
             last_activity: value.lastactivity,
             influence: value.influence,
@@ -592,12 +595,7 @@ impl TryFrom<RawNation> for Nation {
                 .census
                 .map(CensusData::try_from)
                 .transpose()
-                .map_err(|e| match e {
-                    ParsingError::BadFieldError(field, value) => {
-                        IntoNationError::BadFieldError(field, value)
-                    }
-                    _ => unreachable!(),
-                })?,
+                .map_err(IntoNationError::from)?,
             crime: value.crime,
             dispatch_list: value
                 .dispatchlist
@@ -686,12 +684,9 @@ impl TryFrom<RawStandardNation> for StandardNation {
             founded: value.founded.into(),
             first_login: into_datetime_or_bad_field(
                 value.firstlogin,
-                String::from("StandardNation.first_login"),
+                "StandardNation.first_login",
             )?,
-            last_login: into_datetime_or_bad_field(
-                value.lastlogin,
-                String::from("StandardNation.last_login"),
-            )?,
+            last_login: into_datetime_or_bad_field(value.lastlogin, "StandardNation.last_login")?,
             last_activity: value.lastactivity,
             influence: value.influence,
             freedom_scores: value.freedomscores.into(),

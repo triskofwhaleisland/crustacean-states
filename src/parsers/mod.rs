@@ -1,11 +1,13 @@
 //! Contains the modules that parse responses from the NationStates API.
 
 use crate::models::dispatch::DispatchCategory;
+use crate::parsers::happenings::{Event, Happenings};
 use crate::parsers::nation::IntoNationError;
 use crate::parsers::region::IntoRegionError;
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use std::num::{NonZeroI64, NonZeroU32, NonZeroU64};
+use thiserror::Error;
 
 pub mod happenings;
 pub mod nation;
@@ -16,49 +18,54 @@ pub mod region;
 pub(crate) const DEFAULT_LEADER: &str = "Leader";
 pub(crate) const DEFAULT_RELIGION: &str = "a major religion";
 
+#[derive(Clone, Debug, Error)]
 pub enum ParsingError {
-    Nation(IntoNationError),
-    Region(IntoRegionError),
+    #[error("{0:?}")]
+    Nation(Box<IntoNationError>),
+    #[error("{0:?}")]
+    Region(Box<IntoRegionError>),
     // field, value
-    BadFieldError(String, String),
-    NoFieldError(String),
+    #[error("{0:?}")]
+    BadFieldError(&'static str, String),
+    #[error("{0:?}")]
+    NoFieldError(&'static str),
 }
 
-impl ParsingError {
-    /// Tread carefully: if this is not a BadFieldError, you will panic
-    fn bad_field_for_nation(self) -> IntoNationError {
-        match self {
-            ParsingError::BadFieldError(field, value) => {
-                IntoNationError::BadFieldError(field, value)
-            }
-            _ => unreachable!(),
-        }
-    }
-    /// Tread carefully: if this is not a BadFieldError, you will panic
-    fn bad_field_for_region(self) -> IntoRegionError {
-        match self {
-            ParsingError::BadFieldError(field, value) => {
-                IntoRegionError::BadFieldError(field, value)
-            }
-            _ => unreachable!(),
-        }
-    }
-
-    /// Tread carefully: if this is not a BadFieldError, you will panic
-    fn no_field_for_nation(self) -> IntoNationError {
-        match self {
-            ParsingError::NoFieldError(field) => IntoNationError::NoFieldError(field),
-            _ => unreachable!(),
-        }
-    }
-    /// Tread carefully: if this is not a BadFieldError, you will panic
-    fn no_field_for_region(self) -> IntoRegionError {
-        match self {
-            ParsingError::NoFieldError(field) => IntoRegionError::NoFieldError(field),
-            _ => unreachable!(),
-        }
-    }
-}
+// impl ParsingError {
+//     /// Tread carefully: if this is not a BadFieldError, you will panic
+//     fn bad_field_for_nation(self) -> IntoNationError {
+//         match self {
+//             ParsingError::BadFieldError(field, value) => {
+//                 IntoNationError::BadFieldError(field, value)
+//             }
+//             _ => unreachable!(),
+//         }
+//     }
+//     /// Tread carefully: if this is not a BadFieldError, you will panic
+//     fn bad_field_for_region(self) -> IntoRegionError {
+//         match self {
+//             ParsingError::BadFieldError(field, value) => {
+//                 IntoRegionError::BadFieldError(field, value)
+//             }
+//             _ => unreachable!(),
+//         }
+//     }
+//
+//     /// Tread carefully: if this is not a BadFieldError, you will panic
+//     fn no_field_for_nation(self) -> IntoNationError {
+//         match self {
+//             ParsingError::NoFieldError(field) => IntoNationError::NoFieldError(field),
+//             _ => unreachable!(),
+//         }
+//     }
+//     /// Tread carefully: if this is not a BadFieldError, you will panic
+//     fn no_field_for_region(self) -> IntoRegionError {
+//         match self {
+//             ParsingError::NoFieldError(field) => IntoRegionError::NoFieldError(field),
+//             _ => unreachable!(),
+//         }
+//     }
+// }
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
@@ -214,7 +221,7 @@ impl TryFrom<RawCensus> for CensusData {
                     .map(CensusCurrentData::from)
                     .collect(),
             )),
-            None => Err(ParsingError::NoFieldError(String::from("census"))),
+            None => Err(ParsingError::NoFieldError("census")),
         }
     }
 }
@@ -301,6 +308,12 @@ pub(crate) struct RawCensusRanksNation {
 struct RawHappenings {
     #[serde(rename = "EVENT", default)]
     inner: Vec<RawEvent>,
+}
+
+impl From<RawHappenings> for Happenings {
+    fn from(value: RawHappenings) -> Self {
+        Happenings(value.inner.into_iter().map(Event::from).collect())
+    }
 }
 
 /// World Census data about the nation. Either Current or Historical.
@@ -390,10 +403,7 @@ impl TryFrom<RawCensusRanks> for CensusRegionRanks {
                     Ok(CensusCurrentData {
                         id: value.scale,
                         score: Some(str::parse::<f64>(&*nation.score).map_err(|e| {
-                            IntoRegionError::BadFieldError(
-                                String::from("CensusRegionRanks"),
-                                e.to_string(),
-                            )
+                            IntoRegionError::BadFieldError("CensusRegionRanks", e.to_string())
                         }))
                         .transpose()?,
                         world_rank: None,

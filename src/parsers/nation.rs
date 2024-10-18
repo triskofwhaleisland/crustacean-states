@@ -3,13 +3,14 @@
 use crate::{
     parsers::{
         happenings::Event, CensusData, DefaultOrCustom, Dispatch, MaybeRelativeTime,
-        MaybeSystemTime,
+        MaybeSystemTime, ParsingError,
     },
     shards::wa::WACouncil,
 };
 use chrono::{DateTime, Utc};
 use itertools::zip_eq;
 use quick_xml::DeError;
+use std::ops::Deref;
 use std::{
     fmt::{Debug, Display, Formatter},
     num::{NonZeroU16, NonZeroU32},
@@ -99,10 +100,7 @@ impl TryFrom<String> for WAStatus {
             "WA Delegate" => Ok(WAStatus::Delegate),
             "WA Member" => Ok(WAStatus::Member),
             "Non-member" => Ok(WAStatus::NonMember),
-            _ => Err(IntoNationError::BadFieldError(
-                String::from("WAStatus"),
-                value,
-            )),
+            _ => Err(IntoNationError::BadFieldError("WAStatus", value)),
         }
     }
 }
@@ -177,33 +175,34 @@ impl TryFrom<String> for CivilRights {
             "Excessive" => Ok(CivilRights::Excessive),
             "WidelyAbused" => Ok(CivilRights::WidelyAbused),
             "Frightening" => Ok(CivilRights::Frightening),
-            _ => Err(IntoNationError::BadFieldError(
-                String::from("CivilRights"),
-                value,
-            )),
+            _ => Err(IntoNationError::BadFieldError("CivilRights", value)),
         }
     }
 }
 
 impl Display for CivilRights {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", match self {
-            CivilRights::Outlawed => "Outlawed",
-            CivilRights::UnheardOf => "Unheard Of",
-            CivilRights::Rare => "Rare",
-            CivilRights::Few => "Few",
-            CivilRights::Some => "Some",
-            CivilRights::BelowAverage => "Below Average",
-            CivilRights::Average => "Average",
-            CivilRights::Good => "Good",
-            CivilRights::VeryGood => "Very Good",
-            CivilRights::Excellent => "Excellent",
-            CivilRights::Superb => "Superb",
-            CivilRights::WorldBenchmark => "World Benchmark",
-            CivilRights::Excessive => "Excessive",
-            CivilRights::WidelyAbused => "Widely Abused",
-            CivilRights::Frightening => "Frightening",
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                CivilRights::Outlawed => "Outlawed",
+                CivilRights::UnheardOf => "Unheard Of",
+                CivilRights::Rare => "Rare",
+                CivilRights::Few => "Few",
+                CivilRights::Some => "Some",
+                CivilRights::BelowAverage => "Below Average",
+                CivilRights::Average => "Average",
+                CivilRights::Good => "Good",
+                CivilRights::VeryGood => "Very Good",
+                CivilRights::Excellent => "Excellent",
+                CivilRights::Superb => "Superb",
+                CivilRights::WorldBenchmark => "World Benchmark",
+                CivilRights::Excessive => "Excessive",
+                CivilRights::WidelyAbused => "Widely Abused",
+                CivilRights::Frightening => "Frightening",
+            }
+        )
     }
 }
 
@@ -247,33 +246,34 @@ impl TryFrom<String> for Economy {
             "Powerhouse" => Ok(Economy::Powerhouse),
             "All-Consuming" => Ok(Economy::AllConsuming),
             "Frightening" => Ok(Economy::Frightening),
-            _ => Err(IntoNationError::BadFieldError(
-                String::from("Economy"),
-                value,
-            )),
+            _ => Err(IntoNationError::BadFieldError("Economy", value)),
         }
     }
 }
 
 impl Display for Economy {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", match self {
-            Economy::Imploded => "Imploded",
-            Economy::BasketCase => "Basket Case",
-            Economy::Struggling => "Struggling",
-            Economy::Fragile => "Fragile",
-            Economy::Weak => "Weak",
-            Economy::Developing => "Developing",
-            Economy::Fair => "Fair",
-            Economy::Reasonable => "Reasonable",
-            Economy::Good => "Good",
-            Economy::Strong => "Strong",
-            Economy::VeryStrong => "Very Strong",
-            Economy::Thriving => "Thriving",
-            Economy::Powerhouse => "Powerhouse",
-            Economy::AllConsuming => "All-Consuming",
-            Economy::Frightening => "Frightening",
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                Economy::Imploded => "Imploded",
+                Economy::BasketCase => "Basket Case",
+                Economy::Struggling => "Struggling",
+                Economy::Fragile => "Fragile",
+                Economy::Weak => "Weak",
+                Economy::Developing => "Developing",
+                Economy::Fair => "Fair",
+                Economy::Reasonable => "Reasonable",
+                Economy::Good => "Good",
+                Economy::Strong => "Strong",
+                Economy::VeryStrong => "Very Strong",
+                Economy::Thriving => "Thriving",
+                Economy::Powerhouse => "Powerhouse",
+                Economy::AllConsuming => "All-Consuming",
+                Economy::Frightening => "Frightening",
+            }
+        )
     }
 }
 
@@ -317,33 +317,34 @@ impl TryFrom<String> for PoliticalFreedoms {
             "Excessive" => Ok(PoliticalFreedoms::Excessive),
             "WidelyAbused" => Ok(PoliticalFreedoms::WidelyAbused),
             "Corrupted" => Ok(PoliticalFreedoms::Corrupted),
-            _ => Err(IntoNationError::BadFieldError(
-                String::from("PoliticalFreedoms"),
-                value,
-            )),
+            _ => Err(IntoNationError::BadFieldError("PoliticalFreedoms", value)),
         }
     }
 }
 
 impl Display for PoliticalFreedoms {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", match self {
-            PoliticalFreedoms::Outlawed => "Outlawed",
-            PoliticalFreedoms::UnheardOf => "Unheard Of",
-            PoliticalFreedoms::Rare => "Rare",
-            PoliticalFreedoms::Few => "Few",
-            PoliticalFreedoms::Some => "Some",
-            PoliticalFreedoms::BelowAverage => "Below Average",
-            PoliticalFreedoms::Average => "Average",
-            PoliticalFreedoms::Good => "Good",
-            PoliticalFreedoms::VeryGood => "Very Good",
-            PoliticalFreedoms::Excellent => "Excellent",
-            PoliticalFreedoms::Superb => "Superb",
-            PoliticalFreedoms::WorldBenchmark => "World Benchmark",
-            PoliticalFreedoms::Excessive => "Excessive",
-            PoliticalFreedoms::WidelyAbused => "Widely Abused",
-            PoliticalFreedoms::Corrupted => "Corrupted",
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                PoliticalFreedoms::Outlawed => "Outlawed",
+                PoliticalFreedoms::UnheardOf => "Unheard Of",
+                PoliticalFreedoms::Rare => "Rare",
+                PoliticalFreedoms::Few => "Few",
+                PoliticalFreedoms::Some => "Some",
+                PoliticalFreedoms::BelowAverage => "Below Average",
+                PoliticalFreedoms::Average => "Average",
+                PoliticalFreedoms::Good => "Good",
+                PoliticalFreedoms::VeryGood => "Very Good",
+                PoliticalFreedoms::Excellent => "Excellent",
+                PoliticalFreedoms::Superb => "Superb",
+                PoliticalFreedoms::WorldBenchmark => "World Benchmark",
+                PoliticalFreedoms::Excessive => "Excessive",
+                PoliticalFreedoms::WidelyAbused => "Widely Abused",
+                PoliticalFreedoms::Corrupted => "Corrupted",
+            }
+        )
     }
 }
 
@@ -440,7 +441,9 @@ impl TryFrom<String> for GovernmentCategory {
             "Mother Knows Best State" => Ok(GovernmentCategory::FatherKnowsBestState(false)),
             "Compulsory Consumerist State" => Ok(GovernmentCategory::CompulsoryConsumeristState),
             "Democratic Socialists" => Ok(GovernmentCategory::DemocraticSocialists),
-            "Inoffensive Centrist Democracy" => Ok(GovernmentCategory::InoffensiveCentristDemocracy),
+            "Inoffensive Centrist Democracy" => {
+                Ok(GovernmentCategory::InoffensiveCentristDemocracy)
+            }
             "Capitalist Paradise" => Ok(GovernmentCategory::CapitalistParadise),
             "Liberal Democratic Socialists" => Ok(GovernmentCategory::LiberalDemocraticSocialists),
             "New York Times Democracy" => Ok(GovernmentCategory::NewYorkTimesDemocracy),
@@ -454,43 +457,48 @@ impl TryFrom<String> for GovernmentCategory {
             "Left-Wing Utopia" => Ok(GovernmentCategory::LeftWingUtopia),
             "Civil Rights Lovefest" => Ok(GovernmentCategory::CivilRightsLovefest),
             "Anarchy" => Ok(GovernmentCategory::Anarchy),
-            _ => Err(IntoNationError::BadFieldError(String::from("GovernmentCategory"), value))
+            _ => Err(IntoNationError::BadFieldError("GovernmentCategory", value)),
         }
     }
 }
 
 impl Display for GovernmentCategory {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", match self {
-            GovernmentCategory::PsychoticDictatorship => "Psychotic Dictatorship",
-            GovernmentCategory::IronFistConsumerists => "Iron Fist Consumerists",
-            GovernmentCategory::CorporatePoliceState => "Corporate Police State",
-            GovernmentCategory::AuthoritarianDemocracy => "Authoritarian Democracy",
-            GovernmentCategory::MoralisticDemocracy => "Moralistic Democracy",
-            GovernmentCategory::RightWingUtopia => "Right-Wing Utopia",
-            GovernmentCategory::TyrannyByMajority => "Tyranny By Majority",
-            GovernmentCategory::ConservativeDemocracy => "Conservative Democracy",
-            GovernmentCategory::FreeMarketParadise => "Free Market Paradise",
-            GovernmentCategory::CorruptDictatorship => "Corrupt Dictatorship",
-            GovernmentCategory::FatherKnowsBestState(true) => "Father Knows Best State",
-            GovernmentCategory::FatherKnowsBestState(false) => "Mother Knows Best State",
-            GovernmentCategory::CompulsoryConsumeristState => "Compulsory Consumerist State",
-            GovernmentCategory::DemocraticSocialists => "Democratic Socialists",
-            GovernmentCategory::InoffensiveCentristDemocracy => "Inoffensive Centrist Democracy",
-            GovernmentCategory::CapitalistParadise => "Capitalist Paradise",
-            GovernmentCategory::LiberalDemocraticSocialists => "Liberal Democratic Socialists",
-            GovernmentCategory::NewYorkTimesDemocracy => "",
-            GovernmentCategory::CorporateBordello => "",
-            GovernmentCategory::IronFistSocialists => "",
-            GovernmentCategory::LibertarianPoliceState => "",
-            GovernmentCategory::BenevolentDictatorship => "",
-            GovernmentCategory::ScandinavianLiberalParadise => "",
-            GovernmentCategory::LeftLeaningCollegeState => "",
-            GovernmentCategory::Capitalizt => "",
-            GovernmentCategory::LeftWingUtopia => "",
-            GovernmentCategory::CivilRightsLovefest => "",
-            GovernmentCategory::Anarchy => "",
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                GovernmentCategory::PsychoticDictatorship => "Psychotic Dictatorship",
+                GovernmentCategory::IronFistConsumerists => "Iron Fist Consumerists",
+                GovernmentCategory::CorporatePoliceState => "Corporate Police State",
+                GovernmentCategory::AuthoritarianDemocracy => "Authoritarian Democracy",
+                GovernmentCategory::MoralisticDemocracy => "Moralistic Democracy",
+                GovernmentCategory::RightWingUtopia => "Right-Wing Utopia",
+                GovernmentCategory::TyrannyByMajority => "Tyranny By Majority",
+                GovernmentCategory::ConservativeDemocracy => "Conservative Democracy",
+                GovernmentCategory::FreeMarketParadise => "Free Market Paradise",
+                GovernmentCategory::CorruptDictatorship => "Corrupt Dictatorship",
+                GovernmentCategory::FatherKnowsBestState(true) => "Father Knows Best State",
+                GovernmentCategory::FatherKnowsBestState(false) => "Mother Knows Best State",
+                GovernmentCategory::CompulsoryConsumeristState => "Compulsory Consumerist State",
+                GovernmentCategory::DemocraticSocialists => "Democratic Socialists",
+                GovernmentCategory::InoffensiveCentristDemocracy =>
+                    "Inoffensive Centrist Democracy",
+                GovernmentCategory::CapitalistParadise => "Capitalist Paradise",
+                GovernmentCategory::LiberalDemocraticSocialists => "Liberal Democratic Socialists",
+                GovernmentCategory::NewYorkTimesDemocracy => "",
+                GovernmentCategory::CorporateBordello => "",
+                GovernmentCategory::IronFistSocialists => "",
+                GovernmentCategory::LibertarianPoliceState => "",
+                GovernmentCategory::BenevolentDictatorship => "",
+                GovernmentCategory::ScandinavianLiberalParadise => "",
+                GovernmentCategory::LeftLeaningCollegeState => "",
+                GovernmentCategory::Capitalizt => "",
+                GovernmentCategory::LeftWingUtopia => "",
+                GovernmentCategory::CivilRightsLovefest => "",
+                GovernmentCategory::Anarchy => "",
+            }
+        )
     }
 }
 
@@ -1078,17 +1086,17 @@ pub struct Policy {
 
 /// Represents any one of the errors
 /// that can go wrong between deserialization and creating the Nation struct.
-#[derive(Debug, Error)]
+#[derive(Clone, Debug, Error)]
 pub enum IntoNationError {
     /// A field could not be parsed as the type it should be.
     #[error("malformed field {0} with value {1}")]
-    BadFieldError(String, String),
+    BadFieldError(&'static str, String),
     /// A `u8` could not be parsed as a `bool` because it was not `0` or `1`.
     #[error("boolean cannot be derived from {0}")]
     BadBooleanError(u8),
     /// A `String` could not be parsed as a [`WAVote`].
     #[error("malformed WA vote: {bad_vote} in {council:?}")]
-    BadWAVote {
+    BadWAVoteError {
         /// The problematic content.
         bad_vote: String,
         /// The council that the vote was supposedly for.
@@ -1103,10 +1111,26 @@ pub enum IntoNationError {
     },
     /// A field was missing from the response.
     #[error("could not find the field {0} in response")]
-    NoFieldError(String),
+    NoFieldError(&'static str),
 
     #[error("field {0} is the wrong length (should be {1})")]
     WrongLengthError(String, usize),
+
+    #[error("{0:?} cannot be converted into {1}")]
+    WrongGeneric(ParsingError, &'static str),
+}
+
+impl From<ParsingError> for IntoNationError {
+    fn from(value: ParsingError) -> Self {
+        match value {
+            ParsingError::Nation(n) => n.deref().clone(),
+            ParsingError::Region(ref _r) => IntoNationError::WrongGeneric(value, "IntoNationError"),
+            ParsingError::BadFieldError(field, value) => {
+                IntoNationError::BadFieldError(field, value)
+            }
+            ParsingError::NoFieldError(field) => IntoNationError::NoFieldError(field),
+        }
+    }
 }
 
 /// Describes a nation's vote in the World Assembly.
@@ -1135,7 +1159,7 @@ impl TryFrom<String> for WAVote {
             "FOR" => Ok(WAVote::For),
             "AGAINST" => Ok(WAVote::Against),
             "UNDECIDED" => Ok(WAVote::Undecided),
-            other => Err(IntoNationError::BadWAVote {
+            other => Err(IntoNationError::BadWAVoteError {
                 bad_vote: other.to_string(),
                 council: Default::default(),
             }),
@@ -1171,14 +1195,11 @@ impl TryFrom<String> for BannerId {
     fn try_from(value: String) -> Result<Self, Self::Error> {
         let split_index = value.chars().position(|c| c.is_ascii_digit());
         if split_index.is_none() || split_index == Some(0) {
-            return Err(IntoNationError::BadFieldError(
-                String::from("BannerId"),
-                value,
-            ));
+            return Err(IntoNationError::BadFieldError("BannerId", value));
         }
         let (cat, num) = value.split_at(split_index.unwrap());
         let num = u16::from_str(num)
-            .map_err(|_| IntoNationError::BadFieldError(String::from("BannerId"), value.clone()))?;
+            .map_err(|_| IntoNationError::BadFieldError("BannerId", value.clone()))?;
         Ok(BannerId::new(cat, num))
     }
 }

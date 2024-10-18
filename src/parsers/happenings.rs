@@ -15,14 +15,14 @@ pub struct Event {
     /// The Unix timestamp when the event happened.
     pub timestamp: u64,
     /// The exact contents of the event.
-    /// Nations are wrapped in double @s, while regions are wrapped in double %s.
+    /// Nations are wrapped in `@@`, while regions are wrapped in `%%`.
     pub text: String,
     /// The nations mentioned in the event text.
     pub nations: Vec<String>,
     /// The regions mentioned in the event text.
     pub regions: Vec<String>,
     /// The kind of event that this was.
-    /// NOTE: this will always default to "None" until the happenings parsing update.
+    /// NOTE: this will always be `None` until the happenings parsing update.
     pub kind: Option<EventKind>,
 }
 

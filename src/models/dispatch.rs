@@ -4,6 +4,7 @@ use std::fmt::{Display, Formatter};
 
 use strum::AsRefStr;
 
+#[derive(Clone, Debug)]
 pub struct DispatchId(pub u32);
 
 /// The categories of dispatches.

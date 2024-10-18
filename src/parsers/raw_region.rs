@@ -1,9 +1,18 @@
 use crate::models::dispatch::DispatchId;
-use crate::parsers::region::{Embassy, EmbassyKind, Region, RegionWAVote};
-use crate::parsers::{into_datetime, region::{IntoRegionError, Officer, OfficerAuthority}, CensusCurrentData, CensusData, CensusHistoricalData, CensusRegionRanks, MaybeRelativeTime, MaybeSystemTime, ParsingError, RawCensus, RawCensusRanks, RawHappenings};
+use crate::parsers::happenings::Happenings;
+use crate::parsers::nation::IntoNationError;
+use crate::parsers::region::{
+    Embassy, EmbassyKind, MaybeMessageContents, Message, Region, RegionWAVote,
+};
+use crate::parsers::{
+    into_datetime,
+    region::{IntoRegionError, Officer, OfficerAuthority},
+    CensusCurrentData, CensusData, CensusHistoricalData, CensusRegionRanks, MaybeRelativeTime,
+    MaybeSystemTime, ParsingError, RawCensus, RawCensusRanks, RawHappenings,
+};
+use chrono::{DateTime, Utc};
 use itertools::Itertools;
 use serde::Deserialize;
-use crate::parsers::happenings::Happenings;
 
 //noinspection SpellCheckingInspection
 #[derive(Debug, Deserialize)]
@@ -146,10 +155,7 @@ impl TryFrom<RawEmbassy> for Embassy {
                     "invited" => Ok(EmbassyKind::Invited),
                     "rejected" => Ok(EmbassyKind::Rejected),
                     "closing" => Ok(EmbassyKind::Closing),
-                    _ => Err(IntoRegionError::BadFieldError(
-                        String::from("EmbassyKind"),
-                        kind,
-                    )),
+                    _ => Err(IntoRegionError::BadFieldError("EmbassyKind", kind)),
                 })
                 .transpose()?
                 .unwrap_or_default(),
@@ -199,6 +205,52 @@ struct RawMessage {
     likers: Option<String>,     // list of nations that liked
     embassy: Option<String>,    // embassy region that nation posted from, if applicable
     message: String,            // the actual contents (thank god)
+}
+
+impl TryFrom<RawMessage> for Message {
+    type Error = IntoRegionError;
+
+    fn try_from(value: RawMessage) -> Result<Self, Self::Error> {
+        let RawMessage {
+            id,
+            timestamp,
+            nation,
+            status,
+            suppressor,
+            edited,
+            likes,
+            likers,
+            embassy,
+            message,
+        } = value;
+        Ok(Message {
+            id,
+            timestamp: into_datetime(timestamp as i64).ok_or(IntoRegionError::BadFieldError(
+                "Message.timestamp",
+                timestamp.to_string(),
+            ))?,
+            nation,
+            status: status.try_into()?,
+            suppressor,
+            edited: edited
+                .map(|e| {
+                    into_datetime(e as i64).ok_or(IntoRegionError::BadFieldError(
+                        "Message.edited",
+                        e.to_string(),
+                    ))
+                })
+                .transpose()?,
+            likes,
+            likers,
+            embassy,
+            message: match message.as_str() {
+                "Message suppressed by a moderator" | "Message deleted by author" => {
+                    MaybeMessageContents::NoContents
+                }
+                _ => MaybeMessageContents::Contents(message),
+            },
+        })
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -260,9 +312,7 @@ fn parse_dispatches(dispatch_list: String) -> Result<Vec<DispatchId>, IntoRegion
         .map(str::parse::<u32>)
         .map_ok(DispatchId)
         .collect::<Result<Vec<_>, _>>()
-        .map_err(|e| {
-            IntoRegionError::BadFieldError(String::from("Region.dispatches"), e.to_string())
-        })
+        .map_err(|e| IntoRegionError::BadFieldError("Region.dispatches", e.to_string()))
 }
 
 fn try_into_bool(x: u8) -> Result<bool, IntoRegionError> {
@@ -270,6 +320,19 @@ fn try_into_bool(x: u8) -> Result<bool, IntoRegionError> {
         0 => Ok(false),
         1 => Ok(true),
         e => Err(IntoRegionError::BadBooleanError(e)),
+    }
+}
+
+fn try_into_datetime(
+    value: Option<i64>,
+    field: &'static str,
+) -> Result<Option<DateTime<Utc>>, IntoRegionError> {
+    match value {
+        Some(v) => match into_datetime(v) {
+            Some(d) => Ok(Some(d)),
+            None => Err(IntoRegionError::BadFieldError(field, v.to_string())),
+        },
+        None => Ok(None),
     }
 }
 
@@ -312,7 +375,7 @@ impl TryFrom<RawRegion> for Region {
                 .census
                 .map(CensusData::try_from)
                 .transpose()
-                .map_err(ParsingError::bad_field_for_region)?,
+                .map_err(IntoRegionError::from)?,
             census_ranks: value
                 .censusranks
                 .map(CensusRegionRanks::try_from)
@@ -326,12 +389,26 @@ impl TryFrom<RawRegion> for Region {
                 .map(into_datetime)
                 .map(MaybeSystemTime::from),
             ga_vote: value.gavote.map(RegionWAVote::from),
-            happenings: value.happenings.map(),
-            history: value.history,
-            last_update: value.lastupdate,
-            last_major_update: value.lastmajorupdate,
-            last_minor_update: value.lastminorupdate,
-            messages: value.messages,
+            happenings: value.happenings.map(RawHappenings::into),
+            history: value.history.map(RawHappenings::into), // TODO parsing history
+            last_update: try_into_datetime(value.lastupdate, "Region.last_update")?,
+            last_major_update: try_into_datetime(
+                value.lastmajorupdate,
+                "Region.last_major_update",
+            )?,
+            last_minor_update: try_into_datetime(
+                value.lastminorupdate,
+                "Region.last_minor_update",
+            )?,
+            messages: value
+                .messages
+                .map(|m| {
+                    m.inner
+                        .into_iter()
+                        .map(Message::try_from)
+                        .collect::<Result<Vec<_>, _>>()
+                })
+                .transpose()?,
             wa_nations: value.unnations,
             num_wa_nations: value.numunnations,
             poll: value.poll,
