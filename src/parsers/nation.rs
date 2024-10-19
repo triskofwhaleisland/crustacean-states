@@ -34,7 +34,7 @@ impl NationName {
     }
 
     pub fn to_safe_name(&self) -> String {
-        Self::safe_name(&self)
+        Self::safe_name(self)
     }
 
     /// Takes a lowercase, web-safe name and replaces it with a name
@@ -60,7 +60,7 @@ impl NationName {
     }
 
     pub fn to_pretty_name(&self) -> String {
-        Self::pretty_name(&self)
+        Self::pretty_name(self)
     }
 }
 
@@ -535,22 +535,21 @@ pub struct FreedomScores {
     pub economy: u8,
     pub political_freedom: u8,
 }
-
-#[derive(Clone, Debug)]
-pub struct Endorsements(pub Vec<NationName>);
-
-impl<T: AsRef<str>> From<T> for Endorsements {
-    fn from(value: T) -> Self {
-        Endorsements(
-            value
-                .as_ref()
-                .split(',')
-                .map(String::from)
-                .map(NationName)
-                .collect(),
-        )
-    }
-}
+// #[derive(Clone, Debug)]
+// pub struct Endorsements(pub Vec<NationName>);
+// 
+// impl<T: AsRef<str>> From<T> for Endorsements {
+//     fn from(value: T) -> Self {
+//         Endorsements(
+//             value
+//                 .as_ref()
+//                 .split(',')
+//                 .map(String::from)
+//                 .map(NationName)
+//                 .collect(),
+//         )
+//     }
+// }
 
 /// Causes of death in a nation.
 /// Note: at some point, the field `kind` in this struct will be converted to enum variants.
@@ -622,7 +621,7 @@ pub struct Nation {
     ///
     /// Requested by using
     /// [`PublicNationShard::Endorsements`](crate::shards::nation::PublicNationShard::Endorsements).
-    pub endorsements: Option<Endorsements>,
+    pub endorsements: Option<Vec<NationName>>,
     /// The number of issues answered by the nation.
     ///
     /// Requested by using
@@ -988,7 +987,7 @@ pub struct StandardNation {
     /// The WA status of the nation.
     pub wa_status: WAStatus,
     /// A list of nations that endorse the nation.
-    pub endorsements: Endorsements,
+    pub endorsements: Vec<NationName>,
     /// The number of issues answered by the nation.
     pub issues_answered: u32,
     /// The freedom statistics of the nation.

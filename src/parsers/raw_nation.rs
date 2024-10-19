@@ -8,7 +8,7 @@ use crate::{
         happenings::Event,
         into_datetime,
         nation::{
-            BannerId, Cause, Endorsements, FreedomScores, Freedoms, Government, IntoNationError,
+            BannerId, Cause, FreedomScores, Freedoms, Government, IntoNationError,
             Nation, NationName, Policy, Sectors, StandardNation, WAStatus, WAVote,
         },
         CensusData, DefaultOrCustom, Dispatch, MaybeRelativeTime, MaybeSystemTime, RawCensus,
@@ -518,6 +518,14 @@ fn try_into_bool(x: u8) -> Result<bool, IntoNationError> {
     }
 }
 
+pub(super) fn into_nation_list(list: String) -> Vec<NationName> {
+    let delimiter = if list.contains(',') { ',' } else { ':' };
+    list.split(delimiter)
+        .map(String::from)
+        .map(NationName)
+        .collect()
+}
+
 impl Nation {
     /// Converts the XML response from NationStates to a [`Nation`].
     pub fn from_xml(xml: &str) -> Result<Self, IntoNationError> {
@@ -552,7 +560,7 @@ impl TryFrom<RawNation> for Nation {
                 .map(GovernmentCategory::try_from)
                 .transpose()?,
             wa_status,
-            endorsements: value.endorsements.map(Endorsements::from),
+            endorsements: value.endorsements.map(into_nation_list),
             issues_answered: value.issues_answered,
             freedom: value.freedom.map(Freedoms::try_from).transpose()?,
             region: value.region.map(RegionName),
@@ -669,7 +677,7 @@ impl TryFrom<RawStandardNation> for StandardNation {
             motto: value.motto,
             category: value.category.try_into()?,
             wa_status: value.unstatus.try_into()?,
-            endorsements: Endorsements::from(value.endorsements),
+            endorsements: into_nation_list(value.endorsements),
             issues_answered: value.issues_answered,
             freedom: value.freedom.try_into()?,
             region: RegionName(value.region),

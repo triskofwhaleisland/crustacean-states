@@ -6,7 +6,8 @@ use crustacean_states::{
 use dotenvy::dotenv;
 use std::error::Error;
 use tokio::time::Instant;
-
+use crustacean_states::parsers::nation::NationName;
+//noinspection SpellCheckingInspection
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     dotenv()?;
@@ -24,7 +25,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let l = endorsements.len();
     let mut n = 0;
     for endorsed_nation in endorsements {
-        let request = PublicNationRequest::from((&*endorsed_nation, [Endorsements]));
+        let request = PublicNationRequest::from((&*endorsed_nation.0, [Endorsements]));
         eprintln!("{request:?}");
         let response = match client.get(request.clone()).await {
             Ok(r) => Ok(r),
@@ -41,7 +42,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         nation
             .endorsements
             .unwrap()
-            .contains(&target.to_string())
+            .contains(&NationName(String::from(target)))
             .then(|| n += 1);
     }
     println!(

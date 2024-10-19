@@ -1,11 +1,8 @@
 //! For region shard requests.
-use std::{
-    fmt::{Display, Formatter},
-    num::{NonZeroU32, NonZeroU8},
-};
+use std::num::{NonZeroU32, NonZeroU8};
 
 use itertools::Itertools;
-use strum::{AsRefStr, EnumString};
+use strum::{AsRefStr, Display, EnumString};
 use url::Url;
 
 use crate::shards::{CensusRanksShard, CensusShard, NSRequest, Params, BASE_URL};
@@ -360,7 +357,7 @@ impl<'a> NSRequest for StandardRegionRequest<'a> {
 /// Some tags have been given added clarity in their variant name, and in those cases,
 /// their original name is also documented.
 //noinspection SpellCheckingInspection
-#[derive(Clone, Debug, PartialEq, EnumString)]
+#[derive(Clone, Debug, PartialEq, EnumString, Display)]
 #[non_exhaustive]
 #[allow(missing_docs)]
 #[strum(ascii_case_insensitive)]

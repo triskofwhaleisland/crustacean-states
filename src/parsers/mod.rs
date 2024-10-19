@@ -1,9 +1,13 @@
 //! Contains the modules that parse responses from the NationStates API.
 
-use crate::models::dispatch::DispatchCategory;
-use crate::parsers::happenings::{Event, Happenings};
-use crate::parsers::nation::IntoNationError;
-use crate::parsers::region::IntoRegionError;
+use crate::{
+    models::dispatch::DispatchCategory,
+    parsers::{
+        happenings::{Event, Happenings},
+        nation::IntoNationError,
+        region::IntoRegionError,
+    },
+};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use std::num::{NonZeroI64, NonZeroU32, NonZeroU64};
@@ -369,7 +373,7 @@ impl TryFrom<RawCensusRanks> for CensusRegionRanks {
                 .map(|nation| {
                     Ok(CensusCurrentData {
                         id: value.scale,
-                        score: Some(str::parse::<f64>(&*nation.score).map_err(|e| {
+                        score: Some(str::parse::<f64>(&nation.score).map_err(|e| {
                             IntoRegionError::BadFieldError("CensusRegionRanks", e.to_string())
                         }))
                         .transpose()?,

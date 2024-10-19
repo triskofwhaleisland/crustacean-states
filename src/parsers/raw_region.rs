@@ -1,23 +1,25 @@
+use crate::{
+    models::dispatch::DispatchId,
+    parsers::{
+        into_datetime,
+        nation::NationName,
+        region::{
+            Embassy, EmbassyKind, EmbassyRmbPerms, IntoRegionError, Message, Officer,
+            OfficerAuthority, Poll, PollOption, Region, RegionBannerId, RegionName, RegionWAVote,
+        },
+        CensusData, CensusRegionRanks, MaybeRelativeTime, MaybeSystemTime, RawCensus,
+        RawCensusRanks, RawHappenings,
+    },
+    shards::region::Tag,
+};
 use std::str::FromStr;
-use crate::models::dispatch::DispatchId;
-use crate::parsers::happenings::Happenings;
-use crate::parsers::nation::{BannerId, IntoNationError, NationName};
-use crate::parsers::region::{
-    Embassy, EmbassyKind, EmbassyRmbPerms, MaybeMessageContents, Message, Poll, PollOption, Region,
-    RegionBannerId, RegionName, RegionWAVote,
-};
-use crate::parsers::{
-    into_datetime,
-    region::{IntoRegionError, Officer, OfficerAuthority},
-    CensusCurrentData, CensusData, CensusHistoricalData, CensusRegionRanks, MaybeRelativeTime,
-    MaybeSystemTime, NumNations, ParsingError, RawCensus, RawCensusRanks, RawHappenings,
-};
-use crate::shards::region::Tag;
+
+use crate::parsers::region::{RegionWABadge, RegionWABadgeKind};
 use chrono::{DateTime, Utc};
 use itertools::Itertools;
 use serde::Deserialize;
-use std::str::pattern::Pattern;
 use url::Url;
+use crate::parsers::raw_nation::into_nation_list;
 
 //noinspection SpellCheckingInspection
 #[derive(Debug, Deserialize)]
@@ -366,7 +368,10 @@ impl TryFrom<RawRegionTags> for Vec<Tag> {
         value
             .inner
             .into_iter()
-            .map(|t| Tag::from_str(t.as_str()).map_err(|e| IntoRegionError::StrumParseError { source: e }))
+            .map(|t| {
+                Tag::from_str(t.as_str())
+                    .map_err(|e| IntoRegionError::StrumParseError { source: e })
+            })
             .collect::<Result<Vec<_>, _>>()
     }
 }
@@ -384,6 +389,18 @@ struct RawRegionWABadge {
     kind: String,
     #[serde(rename = "$text")]
     resolution: u16,
+}
+
+impl TryFrom<RawRegionWABadge> for RegionWABadge {
+    type Error = IntoRegionError;
+
+    fn try_from(value: RawRegionWABadge) -> Result<Self, Self::Error> {
+        let RawRegionWABadge { kind, resolution } = value;
+        Ok(RegionWABadge {
+            kind: RegionWABadgeKind::from_str(kind.as_str())?,
+            resolution,
+        })
+    }
 }
 
 fn parse_dispatches(dispatch_list: String) -> Result<Vec<DispatchId>, IntoRegionError> {
@@ -415,14 +432,6 @@ fn try_into_datetime(
         },
         None => Ok(None),
     }
-}
-
-fn into_nation_list(list: String) -> Vec<NationName> {
-    let delimiter = if list.contains(',') { ',' } else { ':' };
-    list.split(delimiter)
-        .map(String::from)
-        .map(NationName)
-        .collect()
 }
 
 impl Region {
@@ -468,7 +477,7 @@ impl TryFrom<RawRegion> for Region {
                 })
                 .transpose()?,
             embassies: value.embassies.map(RawEmbassies::try_into).transpose()?,
-            banned: value.banned.map(|l| into_nation_list(l)),
+            banned: value.banned.map(into_nation_list),
             banner_by: value.bannerby.map(NationName),
             census: value
                 .census
@@ -511,12 +520,20 @@ impl TryFrom<RawRegion> for Region {
                         .collect::<Result<Vec<_>, _>>()
                 })
                 .transpose()?,
-            wa_nations: value.unnations.map(|l| into_nation_list(l)),
+            wa_nations: value.unnations.map(into_nation_list),
             num_wa_nations: value.numunnations,
             poll: value.poll.map(Poll::try_from).transpose()?,
             sc_vote: value.scvote.map(RegionWAVote::from),
             tags: value.tags.map(RawRegionTags::try_into).transpose()?,
-            wa_badges: value.wabadges,
+            wa_badges: value
+                .wabadges
+                .map(|b| {
+                    b.inner
+                        .into_iter()
+                        .map(RegionWABadge::try_from)
+                        .collect::<Result<Vec<_>, _>>()
+                })
+                .transpose()?,
         })
     }
 }

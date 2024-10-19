@@ -1,14 +1,15 @@
-use crate::models::dispatch::DispatchId;
-use crate::parsers::happenings::Happenings;
-use crate::parsers::nation::{BannerId, IntoNationError, NationName};
-use crate::parsers::{NumNations, ParsingError};
 use crate::{
-    parsers::{CensusData, CensusRegionRanks, MaybeRelativeTime, MaybeSystemTime},
+    models::dispatch::DispatchId,
+    parsers::{
+        happenings::Happenings, nation::NationName, CensusData, CensusRegionRanks,
+        MaybeRelativeTime, MaybeSystemTime, NumNations, ParsingError,
+    },
     shards::region::Tag,
 };
 use chrono::{DateTime, Utc};
 use quick_xml::DeError;
 use std::ops::Deref;
+use strum::EnumString;
 use thiserror::Error;
 use url::Url;
 
@@ -71,7 +72,7 @@ pub struct Embassy {
     pub kind: EmbassyKind,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq)]
 pub enum EmbassyKind {
     /// The default status of an embassy.
     #[default]
@@ -88,7 +89,7 @@ pub enum EmbassyKind {
     Closing,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum EmbassyRmbPerms {
     NoEmbassyPosting,
     DelegatesAndFounders,
@@ -112,7 +113,7 @@ impl TryFrom<String> for EmbassyRmbPerms {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct RegionWAVote {
     pub for_vote: u16,
     pub against_vote: u16,
@@ -132,7 +133,7 @@ pub struct Message {
     pub message: String,               // the actual contents (thank god)
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum MessageStatus {
     Visible,
     Suppressed,
@@ -171,17 +172,29 @@ pub struct Poll {
 
 #[derive(Clone, Debug)]
 pub struct PollOption {
-    pub(crate) id: u32,
-    pub(crate) text: String,
-    pub(crate) votes: u32,
-    pub(crate) voters: Vec<NationName>,
+    pub id: u32,
+    pub text: String,
+    pub votes: u32,
+    pub voters: Vec<NationName>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct RegionBannerId(pub u32);
 
-#[derive(Debug)]
-pub struct RegionWABadge;
+#[derive(Clone, Debug)]
+pub struct RegionWABadge {
+    pub kind: RegionWABadgeKind,
+    pub resolution: u16,
+}
+
+#[derive(Clone, Debug, PartialEq, EnumString)]
+#[strum(ascii_case_insensitive)]
+pub enum RegionWABadgeKind {
+    Commend,
+    Condemn,
+    Injunct,
+    Liberate,
+}
 
 #[derive(Debug)]
 pub struct Region {
@@ -200,11 +213,10 @@ pub struct Region {
     pub power: Option<String>,              // regional power level TODO make enum
     pub flag: Option<String>,               // URL to region's flag TODO make struct
     pub banner: Option<RegionBannerId>,     // region's banner ID
-    pub banner_url: Option<Url>,            // incomplete URL to banner.
-    // appears to not have https://www.nationstates.net at the beginning
-    pub embassies: Option<Vec<Embassy>>, // list of region's embassies
+    pub banner_url: Option<Url>,            // complete URL to banner
+    pub embassies: Option<Vec<Embassy>>,    // list of region's embassies
     // END default
-    pub banned: Option<Vec<NationName>>, // who is banned? separated by colons, internal name
+    pub banned: Option<Vec<NationName>>, // who is banned?
     pub banner_by: Option<NationName>,   // who made the banner?
     pub census: Option<CensusData>,
     pub census_ranks: Option<CensusRegionRanks>,
@@ -221,9 +233,8 @@ pub struct Region {
     pub last_major_update: Option<DateTime<Utc>>,
     pub last_minor_update: Option<DateTime<Utc>>,
     pub messages: Option<Vec<Message>>,
-    pub wa_nations: Option<Vec<NationName>>, // comma-separated list of nations,
-    // only those in the WA
-    pub num_wa_nations: Option<NumNations>, // number of WA nations
+    pub wa_nations: Option<Vec<NationName>>, // list of nations in the WA
+    pub num_wa_nations: Option<NumNations>,  // number of WA nations
     pub poll: Option<Poll>,
     pub sc_vote: Option<RegionWAVote>,
     pub tags: Option<Vec<Tag>>,
@@ -251,19 +262,21 @@ pub enum IntoRegionError {
     NoFieldError(&'static str),
 
     #[error("{0:?} cannot be converted into {1}")]
-    WrongGeneric(ParsingError, &'static str),
-    
+    WrongSubclass(ParsingError, &'static str),
+
     #[error("Converting string to enum failed")]
     StrumParseError {
         #[from]
         source: strum::ParseError,
-    }
+    },
 }
 
 impl From<ParsingError> for IntoRegionError {
     fn from(value: ParsingError) -> Self {
         match value {
-            ParsingError::Nation(ref _n) => IntoRegionError::WrongGeneric(value, "IntoRegionError"),
+            ParsingError::Nation(ref _n) => {
+                IntoRegionError::WrongSubclass(value, "IntoRegionError")
+            }
             ParsingError::Region(r) => r.deref().clone(),
             ParsingError::BadFieldError(field, value) => {
                 IntoRegionError::BadFieldError(field, value)

@@ -461,17 +461,17 @@ impl<'a> Display for HappeningsViewType<'a> {
 #[non_exhaustive]
 pub enum HappeningsFilterType {
     /// Triggered by answering an issue (dismissing the issue results in no event).
-    /// Follows the form "Following new legislation in NATION, \[joke about new policy]."
+    /// Follows the form `Following new legislation in NATION, \[joke about new policy].`
     Law,
     /// This category includes multiple events,
     /// such as nations being reclassified due to their responses to issues,
     /// altering of national flags and other custom fields, and creating custom banners.
     Change,
     /// Announces the publishing of a dispatch.
-    /// Follows the form "NATION published "Dispatch Title" (Category: Subcategory)."
+    /// Follows the form `NATION published "Dispatch Title" (Category: Subcategory).`
     Dispatch,
     /// A nation posted on a regional message board.
-    /// Follows the form "NATION lodged a message on the REGION regional message board."
+    /// Follows the form `NATION lodged a message on the REGION regional message board.`
     Rmb,
     /// Has to do with embassies between regions:
     /// proposing construction, agreeing to construction,
@@ -479,7 +479,7 @@ pub enum HappeningsFilterType {
     /// cancelling closure, establishment, and cancellation.
     Embassy,
     /// Has to do with the ejection or ejection + ban ("banjection") of a nation from a region.
-    /// Follows the form "NATION was ejected (and banned) from REGION by OTHER_NATION."
+    /// Follows the form `NATION was ejected (and banned) from REGION by OTHER_NATION.`
     Eject,
     /// Has to do with all administrative actions done in a region,
     /// such as banning nations, updating regional tags,
@@ -488,16 +488,16 @@ pub enum HappeningsFilterType {
     /// etc. It is also where WA rule-violators get ejected from the WA.
     Admin,
     /// A nation moving from one region to another.
-    /// Follows the form "NATION relocated from REGION1 to REGION2."
+    /// Follows the form `NATION relocated from REGION1 to REGION2.`
     Move,
     /// A nation is founded.
     /// Note that if a nation is being revived, it is called a "refound".
-    /// Follows the form "NATION was (re)founded in FEEDER/FRONTIER REGION
+    /// Follows the form `NATION was (re)founded in FEEDER/FRONTIER REGION`
     Founding,
     /// A nation ceases to exist if it has not been logged in to for the past 28 days.
     /// If you enable "vacation mode" on your nation, it will cease to exist after 60 days.
     /// All CTEs happen at updates, except for when a nation is deleted by moderators.
-    /// Follows the form "NATION ceased to exist in REGION."
+    /// Follows the form `NATION ceased to exist in REGION.`
     Cte,
     /// A nation casts a vote or withdraws its vote in the World Assembly.
     Vote,
@@ -507,7 +507,7 @@ pub enum HappeningsFilterType {
     Member,
     /// A nation in the World Assembly endorses another nation in the World Assembly.
     /// Be aware that nations can only endorse other nations in the same region.
-    /// Follows the form "NATION1 endorsed NATION2."
+    /// Follows the form `NATION1 endorsed NATION2.`
     Endo,
 }
 
