@@ -203,33 +203,60 @@ pub enum PoliticalFreedoms {
 }
 
 //noinspection SpellCheckingInspection
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, EnumString, Display)]
 pub enum GovernmentCategory {
+    #[strum(to_string = "Psychotic Dictatorship")]
     PsychoticDictatorship,
+    #[strum(to_string = "Iron Fist Consumerists")]
     IronFistConsumerists,
+    #[strum(to_string = "Corporate Police State")]
     CorporatePoliceState,
+    #[strum(to_string = "Authoritarian Democracy")]
     AuthoritarianDemocracy,
+    #[strum(to_string = "Moralistic Democracy")]
     MoralisticDemocracy,
+    #[strum(to_string = "Right-Wing Utopia")]
     RightWingUtopia,
+    #[strum(to_string = "Tyranny By Majority")]
     TyrannyByMajority,
+    #[strum(to_string = "Conservative Democracy")]
     ConservativeDemocracy,
+    #[strum(to_string = "Free Market Paradise")]
     FreeMarketParadise,
+    #[strum(to_string = "Corrupt Dictatorship")]
     CorruptDictatorship,
-    ParentKnowsBestState(bool), // father = true; mother = false
+    #[strum(to_string = "Father Knows Best State")]
+    FatherKnowsBestState,
+    #[strum(to_string = "Mother Knows Best State")]
+    MotherKnowsBestState,
+    #[strum(to_string = "Compulsory Consumerist State")]
     CompulsoryConsumeristState,
+    #[strum(to_string = "Democratic Socialists")]
     DemocraticSocialists,
+    #[strum(to_string = "Inoffensive Centrist Democracy")]
     InoffensiveCentristDemocracy,
+    #[strum(to_string = "Capitalist Paradise")]
     CapitalistParadise,
+    #[strum(to_string = "Liberal Democratic Socialists")]
     LiberalDemocraticSocialists,
+    #[strum(to_string = "New York Times Democracy")]
     NewYorkTimesDemocracy,
+    #[strum(to_string = "Corporate Bordello")]
     CorporateBordello,
+    #[strum(to_string = "Iron Fist Socialists")]
     IronFistSocialists,
+    #[strum(to_string = "Libertarian Police State")]
     LibertarianPoliceState,
+    #[strum(to_string = "Benevolent Dictatorship")]
     BenevolentDictatorship,
+    #[strum(to_string = "Scandinavian Liberal Paradise")]
     ScandinavianLiberalParadise,
+    #[strum(to_string = "Left-Leaning College State")]
     LeftLeaningCollegeState,
     Capitalizt,
+    #[strum(to_string = "Left-Wing Utopia")]
     LeftWingUtopia,
+    #[strum(to_string = "Civil Rights Lovefest")]
     CivilRightsLovefest,
     Anarchy,
 }
@@ -250,7 +277,9 @@ impl GovernmentCategory {
             GovernmentCategory::ConservativeDemocracy => CategoryRanking(-1, 1, 0),
             GovernmentCategory::FreeMarketParadise => CategoryRanking(-1, 1, 1),
             GovernmentCategory::CorruptDictatorship => CategoryRanking(0, -1, -1),
-            GovernmentCategory::ParentKnowsBestState(_) => CategoryRanking(0, 0, -1),
+            GovernmentCategory::FatherKnowsBestState | GovernmentCategory::MotherKnowsBestState => {
+                CategoryRanking(0, 0, -1)
+            }
             GovernmentCategory::CompulsoryConsumeristState => CategoryRanking(0, 1, -1),
             GovernmentCategory::DemocraticSocialists => CategoryRanking(0, -1, 0),
             GovernmentCategory::InoffensiveCentristDemocracy => CategoryRanking(0, 0, 0),
@@ -273,86 +302,6 @@ impl GovernmentCategory {
         let (CategoryRanking(x1, y1, z1), CategoryRanking(x2, y2, z2)) =
             (self.cmp_absolute(), other.cmp_absolute());
         CategoryRanking((x2 - x1).signum(), (y2 - y1).signum(), (z2 - z1).signum())
-    }
-}
-
-impl TryFrom<String> for GovernmentCategory {
-    type Error = IntoNationError;
-
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        match value.as_str() {
-            "Psychotic Dictatorship" => Ok(GovernmentCategory::PsychoticDictatorship),
-            "Iron Fist Consumerists" => Ok(GovernmentCategory::IronFistConsumerists),
-            "Corporate Police State" => Ok(GovernmentCategory::CorporatePoliceState),
-            "Authoritarian Democracy" => Ok(GovernmentCategory::AuthoritarianDemocracy),
-            "Moralistic Democracy" => Ok(GovernmentCategory::MoralisticDemocracy),
-            "Right-Wing Utopia" => Ok(GovernmentCategory::RightWingUtopia),
-            "Tyranny By Majority" => Ok(GovernmentCategory::TyrannyByMajority),
-            "Conservative Democracy" => Ok(GovernmentCategory::ConservativeDemocracy),
-            "Free Market Paradise" => Ok(GovernmentCategory::FreeMarketParadise),
-            "Corrupt Dictatorship" => Ok(GovernmentCategory::CorruptDictatorship),
-            "Father Knows Best State" => Ok(GovernmentCategory::ParentKnowsBestState(true)),
-            "Mother Knows Best State" => Ok(GovernmentCategory::ParentKnowsBestState(false)),
-            "Compulsory Consumerist State" => Ok(GovernmentCategory::CompulsoryConsumeristState),
-            "Democratic Socialists" => Ok(GovernmentCategory::DemocraticSocialists),
-            "Inoffensive Centrist Democracy" => {
-                Ok(GovernmentCategory::InoffensiveCentristDemocracy)
-            }
-            "Capitalist Paradise" => Ok(GovernmentCategory::CapitalistParadise),
-            "Liberal Democratic Socialists" => Ok(GovernmentCategory::LiberalDemocraticSocialists),
-            "New York Times Democracy" => Ok(GovernmentCategory::NewYorkTimesDemocracy),
-            "Corporate Bordello" => Ok(GovernmentCategory::CorporateBordello),
-            "Iron Fist Socialists" => Ok(GovernmentCategory::IronFistSocialists),
-            "Libertarian Police State" => Ok(GovernmentCategory::LibertarianPoliceState),
-            "Benevolent Dictatorship" => Ok(GovernmentCategory::BenevolentDictatorship),
-            "Scandinavian Liberal Paradise" => Ok(GovernmentCategory::ScandinavianLiberalParadise),
-            "Left-Leaning College State" => Ok(GovernmentCategory::LeftLeaningCollegeState),
-            "Capitalizt" => Ok(GovernmentCategory::Capitalizt),
-            "Left-Wing Utopia" => Ok(GovernmentCategory::LeftWingUtopia),
-            "Civil Rights Lovefest" => Ok(GovernmentCategory::CivilRightsLovefest),
-            "Anarchy" => Ok(GovernmentCategory::Anarchy),
-            _ => Err(IntoNationError::BadFieldError("GovernmentCategory", value)),
-        }
-    }
-}
-
-impl Display for GovernmentCategory {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                GovernmentCategory::PsychoticDictatorship => "Psychotic Dictatorship",
-                GovernmentCategory::IronFistConsumerists => "Iron Fist Consumerists",
-                GovernmentCategory::CorporatePoliceState => "Corporate Police State",
-                GovernmentCategory::AuthoritarianDemocracy => "Authoritarian Democracy",
-                GovernmentCategory::MoralisticDemocracy => "Moralistic Democracy",
-                GovernmentCategory::RightWingUtopia => "Right-Wing Utopia",
-                GovernmentCategory::TyrannyByMajority => "Tyranny By Majority",
-                GovernmentCategory::ConservativeDemocracy => "Conservative Democracy",
-                GovernmentCategory::FreeMarketParadise => "Free Market Paradise",
-                GovernmentCategory::CorruptDictatorship => "Corrupt Dictatorship",
-                GovernmentCategory::ParentKnowsBestState(true) => "Father Knows Best State",
-                GovernmentCategory::ParentKnowsBestState(false) => "Mother Knows Best State",
-                GovernmentCategory::CompulsoryConsumeristState => "Compulsory Consumerist State",
-                GovernmentCategory::DemocraticSocialists => "Democratic Socialists",
-                GovernmentCategory::InoffensiveCentristDemocracy =>
-                    "Inoffensive Centrist Democracy",
-                GovernmentCategory::CapitalistParadise => "Capitalist Paradise",
-                GovernmentCategory::LiberalDemocraticSocialists => "Liberal Democratic Socialists",
-                GovernmentCategory::NewYorkTimesDemocracy => "New York Times Democracy",
-                GovernmentCategory::CorporateBordello => "Corporate Bordello",
-                GovernmentCategory::IronFistSocialists => "Iron Fist Socialists",
-                GovernmentCategory::LibertarianPoliceState => "Libertarian Police State",
-                GovernmentCategory::BenevolentDictatorship => "Benevolent Dictatorship",
-                GovernmentCategory::ScandinavianLiberalParadise => "Scandinavian Liberal Paradise",
-                GovernmentCategory::LeftLeaningCollegeState => "Left-Leaning College State",
-                GovernmentCategory::Capitalizt => "Capitalizt",
-                GovernmentCategory::LeftWingUtopia => "Left-Wing Utopia",
-                GovernmentCategory::CivilRightsLovefest => "Civil Rights Lovefest",
-                GovernmentCategory::Anarchy => "Anarchy",
-            }
-        )
     }
 }
 
@@ -380,7 +329,6 @@ impl From<CategoryRanking> for (i8, i8, i8) {
 }
 
 /// Gives a score out of 100 for the three types of national freedom.
-// TODO restrict type from 0 to 100
 #[derive(Clone, Debug)]
 #[allow(missing_docs)]
 pub struct FreedomScores {
