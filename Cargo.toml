@@ -15,6 +15,7 @@ client = ["dep:reqwest", "dep:tokio"]
 chrono = { version = "~0.4", features = ["std", "clock"] }
 http = { version = "^1" }  # depends on reqwest
 itertools = { version = "~0.13" }
+nutype = { version = "0.5.0", features = ["regex", "serde"] }
 quick-xml = { version = "~0.36", features = ["serialize"] }
 regex = { version = "^1.8", default-features = false, features = ["std"] }
 reqwest = { version = "0.12", optional = true }
@@ -27,4 +28,5 @@ url = { version = "^2.2" }
 [dev-dependencies]
 dotenvy = "^0.15"
 quick-xml = { version = "~0.36", features = ["async-tokio", "serialize"] }
+serde_json = "1"
 tokio = { version = "~1", default-features = false, features = ["rt-multi-thread", "sync", "macros"] }

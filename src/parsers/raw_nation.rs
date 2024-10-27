@@ -1,5 +1,3 @@
-use crate::parsers::nation::GovernmentCategory;
-use crate::parsers::region::RegionName;
 use crate::{
     models::dispatch::{
         AccountCategory, BulletinCategory, DispatchCategory, FactbookCategory, MetaCategory,
@@ -8,16 +6,20 @@ use crate::{
         happenings::Event,
         into_datetime,
         nation::{
-            BannerId, Cause, FreedomScores, Freedoms, Government, IntoNationError,
-            Nation, NationName, Policy, Sectors, StandardNation, WAStatus, WAVote,
+            BannerId, Cause, CivilRights, Economy, FreedomScore, FreedomScores, Freedoms,
+            Government, GovernmentCategory, IntoNationError, Nation, NationName, Policy,
+            PoliticalFreedoms, Sectors, StandardNation, WAStatus, WAVote,
         },
+        region::RegionName,
         CensusData, DefaultOrCustom, Dispatch, MaybeRelativeTime, MaybeSystemTime, RawCensus,
         RawHappenings,
     },
 };
 use chrono::{DateTime, Utc};
+use quick_xml::de;
 use serde::Deserialize;
 use std::num::{NonZeroU16, NonZeroU32, NonZeroU64};
+use std::str::FromStr;
 
 //noinspection SpellCheckingInspection
 #[derive(Debug, Deserialize)]
@@ -387,9 +389,11 @@ impl TryFrom<RawFreedoms> for Freedoms {
         } = value;
 
         Ok(Self {
-            civil_rights: civil_rights.try_into()?,
-            economy: economy.try_into()?,
-            political_freedom: political_freedom.try_into()?,
+            civil_rights: CivilRights::from_str(&*civil_rights)
+                .map_err(IntoNationError::from_parse_error)?,
+            economy: Economy::from_str(&*economy).map_err(IntoNationError::from_parse_error)?,
+            political_freedom: PoliticalFreedoms::from_str(&*political_freedom)
+                .map_err(IntoNationError::from_parse_error)?,
         })
     }
 }
@@ -413,9 +417,9 @@ impl From<RawFreedomScores> for FreedomScores {
             political_freedom,
         } = value;
         Self {
-            civil_rights,
-            economy,
-            political_freedom,
+            civil_rights: FreedomScore::new(civil_rights),
+            economy: FreedomScore::new(economy),
+            political_freedom: FreedomScore::new(political_freedom),
         }
     }
 }
@@ -529,7 +533,7 @@ pub(super) fn into_nation_list(list: String) -> Vec<NationName> {
 impl Nation {
     /// Converts the XML response from NationStates to a [`Nation`].
     pub fn from_xml(xml: &str) -> Result<Self, IntoNationError> {
-        Self::try_from(quick_xml::de::from_str::<RawNation>(xml)?)
+        Self::try_from(de::from_str::<RawNation>(xml)?)
     }
 }
 
@@ -662,7 +666,7 @@ impl TryFrom<RawNation> for Nation {
 impl StandardNation {
     /// Converts the XML response from NationStates to a [`Nation`].
     pub fn from_xml(xml: &str) -> Result<Self, IntoNationError> {
-        Self::try_from(quick_xml::de::from_str::<RawStandardNation>(xml)?)
+        Self::try_from(de::from_str::<RawStandardNation>(xml)?)
     }
 }
 

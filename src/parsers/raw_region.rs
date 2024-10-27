@@ -3,9 +3,11 @@ use crate::{
     parsers::{
         into_datetime,
         nation::NationName,
+        raw_nation::into_nation_list,
         region::{
             Embassy, EmbassyKind, EmbassyRmbPerms, IntoRegionError, Message, Officer,
-            OfficerAuthority, Poll, PollOption, Region, RegionBannerId, RegionName, RegionWAVote,
+            OfficerAuthority, Poll, PollOption, Region, RegionBannerId, RegionName, RegionWABadge,
+            RegionWABadgeKind, RegionWAVote,
         },
         CensusData, CensusRegionRanks, MaybeRelativeTime, MaybeSystemTime, RawCensus,
         RawCensusRanks, RawHappenings,
@@ -14,12 +16,10 @@ use crate::{
 };
 use std::str::FromStr;
 
-use crate::parsers::region::{RegionWABadge, RegionWABadgeKind};
 use chrono::{DateTime, Utc};
 use itertools::Itertools;
 use serde::Deserialize;
 use url::Url;
-use crate::parsers::raw_nation::into_nation_list;
 
 //noinspection SpellCheckingInspection
 #[derive(Debug, Deserialize)]
@@ -51,7 +51,7 @@ struct RawRegion {
     censusranks: Option<RawCensusRanks>,
     dbid: Option<u32>,
     dispatches: Option<String>, // list of IDs of pinned dispatches, comma separated
-    embassyrmb: Option<String>, // permissions given for embassies posting on the RMB TODO find all
+    embassyrmb: Option<String>, // permissions given for embassies posting on the RMB
     founded: Option<String>,    // relative time since the region was founded
     foundedtime: Option<i64>,   // UNIX timestamp when the region was founded
     gavote: Option<RawRegionWAVote>,

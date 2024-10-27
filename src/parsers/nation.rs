@@ -1,22 +1,23 @@
 //! The nation parser module.
 
-use crate::parsers::region::RegionName;
 use crate::{
     parsers::{
-        happenings::Event, CensusData, DefaultOrCustom, Dispatch, MaybeRelativeTime,
-        MaybeSystemTime, ParsingError,
+        happenings::Event, region::RegionName, CensusData, DefaultOrCustom, Dispatch,
+        MaybeRelativeTime, MaybeSystemTime, ParsingError,
     },
     shards::wa::WACouncil,
 };
 use chrono::{DateTime, Utc};
-use itertools::zip_eq;
+use nutype::nutype;
 use quick_xml::DeError;
-use std::ops::Deref;
+use serde::{Deserialize, Serialize};
 use std::{
     fmt::{Debug, Display, Formatter},
     num::{NonZeroU16, NonZeroU32},
+    ops::Deref,
     str::FromStr,
 };
+use strum::{Display, EnumString};
 use thiserror::Error;
 
 #[derive(Clone, Debug)]
@@ -72,12 +73,7 @@ impl Display for NationName {
 
 impl PartialEq for NationName {
     fn eq(&self, other: &Self) -> bool {
-        self.0.len() == other.0.len()
-            && zip_eq(self.0.chars(), other.0.chars()).all(|(c1, c2)| {
-                !(c1.eq_ignore_ascii_case(&c2)
-                    || (c1 == '_' && c2 == ' ')
-                    || (c1 == ' ' && c2 == ' '))
-            })
+        self.0.len() == other.0.len() && self.to_safe_name() == other.to_safe_name()
     }
 }
 impl Eq for NationName {}
@@ -129,7 +125,6 @@ pub struct Government {
 
 /// Describes national freedoms as explained on-site.
 #[derive(Clone, Debug)]
-#[allow(missing_docs)]
 pub struct Freedoms {
     pub civil_rights: CivilRights,
     pub economy: Economy,
@@ -137,80 +132,34 @@ pub struct Freedoms {
 }
 
 #[repr(u8)]
-#[derive(Ord, PartialOrd, Eq, PartialEq, Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, EnumString, Display)]
 pub enum CivilRights {
     Outlawed = 1,
+    #[strum(to_string = "Unheard Of")]
     UnheardOf = 2,
     Rare = 3,
     Few = 4,
     Some = 5,
+    #[strum(to_string = "Below Average")]
     BelowAverage = 6,
     Average = 7,
     Good = 8,
     VeryGood = 9,
     Excellent = 10,
     Superb = 11,
+    #[strum(to_string = "World Benchmark")]
     WorldBenchmark = 12,
     Excessive = 13,
+    #[strum(to_string = "Widely Abused")]
     WidelyAbused = 14,
     Frightening = 15,
 }
 
-impl TryFrom<String> for CivilRights {
-    type Error = IntoNationError;
-
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        match value.as_str() {
-            "Outlawed" => Ok(CivilRights::Outlawed),
-            "Unheard Of" => Ok(CivilRights::UnheardOf),
-            "Rare" => Ok(CivilRights::Rare),
-            "Few" => Ok(CivilRights::Few),
-            "Some" => Ok(CivilRights::Some),
-            "Below Average" => Ok(CivilRights::BelowAverage),
-            "Average" => Ok(CivilRights::Average),
-            "Good" => Ok(CivilRights::Good),
-            "Very Good" => Ok(CivilRights::VeryGood),
-            "Excellent" => Ok(CivilRights::Excellent),
-            "Superb" => Ok(CivilRights::Superb),
-            "World Benchmark" => Ok(CivilRights::WorldBenchmark),
-            "Excessive" => Ok(CivilRights::Excessive),
-            "WidelyAbused" => Ok(CivilRights::WidelyAbused),
-            "Frightening" => Ok(CivilRights::Frightening),
-            _ => Err(IntoNationError::BadFieldError("CivilRights", value)),
-        }
-    }
-}
-
-impl Display for CivilRights {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                CivilRights::Outlawed => "Outlawed",
-                CivilRights::UnheardOf => "Unheard Of",
-                CivilRights::Rare => "Rare",
-                CivilRights::Few => "Few",
-                CivilRights::Some => "Some",
-                CivilRights::BelowAverage => "Below Average",
-                CivilRights::Average => "Average",
-                CivilRights::Good => "Good",
-                CivilRights::VeryGood => "Very Good",
-                CivilRights::Excellent => "Excellent",
-                CivilRights::Superb => "Superb",
-                CivilRights::WorldBenchmark => "World Benchmark",
-                CivilRights::Excessive => "Excessive",
-                CivilRights::WidelyAbused => "Widely Abused",
-                CivilRights::Frightening => "Frightening",
-            }
-        )
-    }
-}
-
 #[repr(u8)]
-#[derive(Ord, PartialOrd, Eq, PartialEq, Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, EnumString, Display)]
 pub enum Economy {
     Imploded = 1,
+    #[strum(to_string = "Basket Case")]
     BasketCase = 2,
     Struggling = 3,
     Fragile = 4,
@@ -220,133 +169,37 @@ pub enum Economy {
     Reasonable = 8,
     Good = 9,
     Strong = 10,
+    #[strum(to_string = "Very Strong")]
     VeryStrong = 11,
     Thriving = 12,
     Powerhouse = 13,
+    #[strum(to_string = "All-Consuming")]
     AllConsuming = 14,
     Frightening = 15,
 }
 
-impl TryFrom<String> for Economy {
-    type Error = IntoNationError;
-
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        match value.as_str() {
-            "Imploded" => Ok(Economy::Imploded),
-            "Basket Case" => Ok(Economy::BasketCase),
-            "Struggling" => Ok(Economy::Struggling),
-            "Fragile" => Ok(Economy::Fragile),
-            "Weak" => Ok(Economy::Weak),
-            "Developing" => Ok(Economy::Developing),
-            "Fair" => Ok(Economy::Fair),
-            "Reasonable" => Ok(Economy::Reasonable),
-            "Good" => Ok(Economy::Good),
-            "Strong" => Ok(Economy::Strong),
-            "Very Strong" => Ok(Economy::VeryStrong),
-            "Thriving" => Ok(Economy::Thriving),
-            "Powerhouse" => Ok(Economy::Powerhouse),
-            "All-Consuming" => Ok(Economy::AllConsuming),
-            "Frightening" => Ok(Economy::Frightening),
-            _ => Err(IntoNationError::BadFieldError("Economy", value)),
-        }
-    }
-}
-
-impl Display for Economy {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Economy::Imploded => "Imploded",
-                Economy::BasketCase => "Basket Case",
-                Economy::Struggling => "Struggling",
-                Economy::Fragile => "Fragile",
-                Economy::Weak => "Weak",
-                Economy::Developing => "Developing",
-                Economy::Fair => "Fair",
-                Economy::Reasonable => "Reasonable",
-                Economy::Good => "Good",
-                Economy::Strong => "Strong",
-                Economy::VeryStrong => "Very Strong",
-                Economy::Thriving => "Thriving",
-                Economy::Powerhouse => "Powerhouse",
-                Economy::AllConsuming => "All-Consuming",
-                Economy::Frightening => "Frightening",
-            }
-        )
-    }
-}
-
 #[repr(u8)]
-#[derive(Ord, PartialOrd, Eq, PartialEq, Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, EnumString, Display)]
 pub enum PoliticalFreedoms {
     Outlawed = 1,
+    #[strum(to_string = "Unheard Of")]
     UnheardOf = 2,
     Rare = 3,
     Few = 4,
     Some = 5,
+    #[strum(to_string = "Below Average")]
     BelowAverage = 6,
     Average = 7,
     Good = 8,
     VeryGood = 9,
     Excellent = 10,
     Superb = 11,
+    #[strum(to_string = "World Benchmark")]
     WorldBenchmark = 12,
     Excessive = 13,
+    #[strum(to_string = "Widely Abused")]
     WidelyAbused = 14,
     Corrupted = 15,
-}
-
-impl TryFrom<String> for PoliticalFreedoms {
-    type Error = IntoNationError;
-
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        match value.as_str() {
-            "Outlawed" => Ok(PoliticalFreedoms::Outlawed),
-            "Unheard Of" => Ok(PoliticalFreedoms::UnheardOf),
-            "Rare" => Ok(PoliticalFreedoms::Rare),
-            "Few" => Ok(PoliticalFreedoms::Few),
-            "Some" => Ok(PoliticalFreedoms::Some),
-            "Below Average" => Ok(PoliticalFreedoms::BelowAverage),
-            "Average" => Ok(PoliticalFreedoms::Average),
-            "Good" => Ok(PoliticalFreedoms::Good),
-            "Very Good" => Ok(PoliticalFreedoms::VeryGood),
-            "Excellent" => Ok(PoliticalFreedoms::Excellent),
-            "Superb" => Ok(PoliticalFreedoms::Superb),
-            "World Benchmark" => Ok(PoliticalFreedoms::WorldBenchmark),
-            "Excessive" => Ok(PoliticalFreedoms::Excessive),
-            "WidelyAbused" => Ok(PoliticalFreedoms::WidelyAbused),
-            "Corrupted" => Ok(PoliticalFreedoms::Corrupted),
-            _ => Err(IntoNationError::BadFieldError("PoliticalFreedoms", value)),
-        }
-    }
-}
-
-impl Display for PoliticalFreedoms {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                PoliticalFreedoms::Outlawed => "Outlawed",
-                PoliticalFreedoms::UnheardOf => "Unheard Of",
-                PoliticalFreedoms::Rare => "Rare",
-                PoliticalFreedoms::Few => "Few",
-                PoliticalFreedoms::Some => "Some",
-                PoliticalFreedoms::BelowAverage => "Below Average",
-                PoliticalFreedoms::Average => "Average",
-                PoliticalFreedoms::Good => "Good",
-                PoliticalFreedoms::VeryGood => "Very Good",
-                PoliticalFreedoms::Excellent => "Excellent",
-                PoliticalFreedoms::Superb => "Superb",
-                PoliticalFreedoms::WorldBenchmark => "World Benchmark",
-                PoliticalFreedoms::Excessive => "Excessive",
-                PoliticalFreedoms::WidelyAbused => "Widely Abused",
-                PoliticalFreedoms::Corrupted => "Corrupted",
-            }
-        )
-    }
 }
 
 //noinspection SpellCheckingInspection
@@ -362,7 +215,7 @@ pub enum GovernmentCategory {
     ConservativeDemocracy,
     FreeMarketParadise,
     CorruptDictatorship,
-    FatherKnowsBestState(bool), // father = true; mother = false
+    ParentKnowsBestState(bool), // father = true; mother = false
     CompulsoryConsumeristState,
     DemocraticSocialists,
     InoffensiveCentristDemocracy,
@@ -397,7 +250,7 @@ impl GovernmentCategory {
             GovernmentCategory::ConservativeDemocracy => CategoryRanking(-1, 1, 0),
             GovernmentCategory::FreeMarketParadise => CategoryRanking(-1, 1, 1),
             GovernmentCategory::CorruptDictatorship => CategoryRanking(0, -1, -1),
-            GovernmentCategory::FatherKnowsBestState(_) => CategoryRanking(0, 0, -1),
+            GovernmentCategory::ParentKnowsBestState(_) => CategoryRanking(0, 0, -1),
             GovernmentCategory::CompulsoryConsumeristState => CategoryRanking(0, 1, -1),
             GovernmentCategory::DemocraticSocialists => CategoryRanking(0, -1, 0),
             GovernmentCategory::InoffensiveCentristDemocracy => CategoryRanking(0, 0, 0),
@@ -438,8 +291,8 @@ impl TryFrom<String> for GovernmentCategory {
             "Conservative Democracy" => Ok(GovernmentCategory::ConservativeDemocracy),
             "Free Market Paradise" => Ok(GovernmentCategory::FreeMarketParadise),
             "Corrupt Dictatorship" => Ok(GovernmentCategory::CorruptDictatorship),
-            "Father Knows Best State" => Ok(GovernmentCategory::FatherKnowsBestState(true)),
-            "Mother Knows Best State" => Ok(GovernmentCategory::FatherKnowsBestState(false)),
+            "Father Knows Best State" => Ok(GovernmentCategory::ParentKnowsBestState(true)),
+            "Mother Knows Best State" => Ok(GovernmentCategory::ParentKnowsBestState(false)),
             "Compulsory Consumerist State" => Ok(GovernmentCategory::CompulsoryConsumeristState),
             "Democratic Socialists" => Ok(GovernmentCategory::DemocraticSocialists),
             "Inoffensive Centrist Democracy" => {
@@ -479,8 +332,8 @@ impl Display for GovernmentCategory {
                 GovernmentCategory::ConservativeDemocracy => "Conservative Democracy",
                 GovernmentCategory::FreeMarketParadise => "Free Market Paradise",
                 GovernmentCategory::CorruptDictatorship => "Corrupt Dictatorship",
-                GovernmentCategory::FatherKnowsBestState(true) => "Father Knows Best State",
-                GovernmentCategory::FatherKnowsBestState(false) => "Mother Knows Best State",
+                GovernmentCategory::ParentKnowsBestState(true) => "Father Knows Best State",
+                GovernmentCategory::ParentKnowsBestState(false) => "Mother Knows Best State",
                 GovernmentCategory::CompulsoryConsumeristState => "Compulsory Consumerist State",
                 GovernmentCategory::DemocraticSocialists => "Democratic Socialists",
                 GovernmentCategory::InoffensiveCentristDemocracy =>
@@ -531,25 +384,15 @@ impl From<CategoryRanking> for (i8, i8, i8) {
 #[derive(Clone, Debug)]
 #[allow(missing_docs)]
 pub struct FreedomScores {
-    pub civil_rights: u8,
-    pub economy: u8,
-    pub political_freedom: u8,
+    pub civil_rights: FreedomScore,
+    pub economy: FreedomScore,
+    pub political_freedom: FreedomScore,
 }
-// #[derive(Clone, Debug)]
-// pub struct Endorsements(pub Vec<NationName>);
-// 
-// impl<T: AsRef<str>> From<T> for Endorsements {
-//     fn from(value: T) -> Self {
-//         Endorsements(
-//             value
-//                 .as_ref()
-//                 .split(',')
-//                 .map(String::from)
-//                 .map(NationName)
-//                 .collect(),
-//         )
-//     }
-// }
+
+#[nutype(sanitize(
+    with = |raw| raw.clamp(0, 100)
+), derive(Clone, Debug))]
+pub struct FreedomScore(u8);
 
 /// Causes of death in a nation.
 /// Note: at some point, the field `kind` in this struct will be converted to enum variants.
@@ -1111,6 +954,11 @@ pub enum IntoNationError {
         #[from]
         source: DeError,
     },
+    #[error("parsing failed")]
+    ParseError {
+        #[from]
+        source: strum::ParseError,
+    },
     /// A field was missing from the response.
     #[error("could not find the field {0} in response")]
     NoFieldError(&'static str),
@@ -1119,6 +967,12 @@ pub enum IntoNationError {
     // WrongLengthError(String, usize),
     #[error("{0:?} cannot be converted into {1}")]
     WrongGeneric(ParsingError, &'static str),
+}
+
+impl IntoNationError {
+    pub(crate) fn from_parse_error(e: strum::ParseError) -> Self {
+        IntoNationError::ParseError { source: e }
+    }
 }
 
 impl From<ParsingError> for IntoNationError {
@@ -1159,9 +1013,9 @@ impl TryFrom<String> for WAVote {
         match value.as_str() {
             "FOR" => Ok(WAVote::For),
             "AGAINST" => Ok(WAVote::Against),
-            "UNDECIDED" => Ok(WAVote::Undecided),
-            other => Err(IntoNationError::BadWAVoteError {
-                bad_vote: other.to_string(),
+            "" | "UNDECIDED" => Ok(WAVote::Undecided),
+            _ => Err(IntoNationError::BadWAVoteError {
+                bad_vote: value,
                 council: Default::default(),
             }),
         }
@@ -1207,6 +1061,9 @@ impl TryFrom<String> for BannerId {
 
 #[cfg(test)]
 mod tests {
+    use crate::parsers::nation::Economy;
+    use std::str::FromStr;
+
     #[test]
     fn safe_name_unchanged() {
         assert_eq!(super::NationName::safe_name("wow1"), String::from("wow1"));
@@ -1250,5 +1107,31 @@ mod tests {
             super::NationName::pretty_name("the_greater_low_countries"),
             String::from("The Greater Low Countries")
         )
+    }
+
+    #[test]
+    fn economy_de_test_1() {
+        assert_eq!(
+            Economy::AllConsuming.to_string(),
+            String::from("All-Consuming")
+        )
+    }
+
+    #[test]
+    fn economy_de_test_2() {
+        assert_eq!(
+            Economy::from_str("All-Consuming").unwrap(),
+            Economy::AllConsuming
+        )
+    }
+
+    #[test]
+    fn economy_de_test_3() {
+        assert_eq!(Economy::Good.to_string(), String::from("Good"))
+    }
+
+    #[test]
+    fn economy_de_test_4() {
+        assert_eq!(Economy::from_str("Good").unwrap(), Economy::Good)
     }
 }

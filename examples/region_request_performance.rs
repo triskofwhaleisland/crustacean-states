@@ -1,5 +1,4 @@
-use crustacean_states::parsers::region::Region;
-use crustacean_states::{client::Client, shards::region::RegionRequest};
+use crustacean_states::{client::Client, parsers::region::Region, shards::region::RegionRequest};
 use dotenvy::dotenv;
 use std::error::Error;
 use tokio::time::Instant;
@@ -34,6 +33,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
         response_struct_made - text_gathered
     );
     eprintln!("Total time: {:?}", response_struct_made - start);
+    eprintln!(
+        "Time spent wrapping around the API: {:?}",
+        (response_struct_made - text_gathered) + (request_struct_made - start)
+    );
 
     Ok(())
 }

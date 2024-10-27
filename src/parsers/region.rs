@@ -134,11 +134,12 @@ pub struct Message {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+#[repr(u8)]
 pub enum MessageStatus {
-    Visible,
-    Suppressed,
-    Deleted,
-    ModSuppressed,
+    Visible = 0,
+    Suppressed = 1,
+    Deleted = 2,
+    ModSuppressed = 9,
 }
 
 impl TryFrom<u8> for MessageStatus {

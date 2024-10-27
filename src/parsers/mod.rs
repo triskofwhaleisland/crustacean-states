@@ -10,7 +10,11 @@ use crate::{
 };
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
-use std::num::{NonZeroI64, NonZeroU32, NonZeroU64};
+use std::{
+    fmt::Debug,
+    num::{NonZeroI64, NonZeroU32, NonZeroU64},
+    str::FromStr,
+};
 use thiserror::Error;
 
 pub mod happenings;
@@ -32,9 +36,9 @@ pub enum ParsingError {
     #[error("{0:?}")]
     Region(Box<IntoRegionError>),
     // field, value
-    #[error("{0:?}, {1:?}")]
+    #[error("{0}, {1}")]
     BadFieldError(&'static str, String),
-    #[error("{0:?}")]
+    #[error("{0}")]
     NoFieldError(&'static str),
 }
 
@@ -203,15 +207,15 @@ pub(crate) struct RawCensusData {
     #[serde(rename = "@id")]
     id: u8,
     #[serde(rename = "SCORE")]
-    score: Option<f64>,
+    score: Option<String>,
     #[serde(rename = "RANK")]
-    world_rank: Option<NonZeroU32>,
+    world_rank: Option<String>,
     #[serde(rename = "RRANK")]
-    region_rank: Option<NonZeroU32>,
+    region_rank: Option<String>,
     #[serde(rename = "PRANK")]
-    percent_world_rank: Option<f64>,
+    percent_world_rank: Option<String>,
     #[serde(rename = "PRRANK")]
-    percent_region_rank: Option<f64>,
+    percent_region_rank: Option<String>,
     #[serde(rename = "TIMESTAMP")]
     timestamp: Option<NonZeroU64>,
 }
@@ -229,11 +233,11 @@ impl From<RawCensusData> for CensusCurrentData {
         } = value;
         Self {
             id,
-            score,
-            world_rank,
-            region_rank,
-            percent_world_rank,
-            percent_region_rank,
+            score: score.into(),
+            world_rank: world_rank.into(),
+            region_rank: region_rank.into(),
+            percent_world_rank: percent_world_rank.into(),
+            percent_region_rank: percent_region_rank.into(),
         }
     }
 }
@@ -249,7 +253,7 @@ impl From<RawCensusData> for CensusHistoricalData {
         Self {
             id,
             timestamp,
-            score,
+            score: score.into(),
         }
     }
 }
@@ -302,21 +306,64 @@ pub struct CensusCurrentData {
     /// The ID used for the data point. For example,
     pub id: u8,
     /// The score of the nation on the Census scale.
-    pub score: Option<f64>,
+    pub score: CensusDataPoint<u32>,
     /// The placement the nation holds in the world ranking.
-    pub world_rank: Option<NonZeroU32>,
+    pub world_rank: CensusDataPoint<NonZeroU32>,
     /// The placement the nation holds in its region ranking.
-    pub region_rank: Option<NonZeroU32>,
+    pub region_rank: CensusDataPoint<NonZeroU32>,
     /// Kind of like a percentile, but backwards:
     /// the nation is in the top x% of nations according to this category,
     /// with x being this field.
     /// Note that all percentiles are to the nearest whole except for <1%,
     /// which are to the nearest tenth.
-    pub percent_world_rank: Option<f64>,
+    pub percent_world_rank: CensusDataPoint<f64>,
     /// Like `percent_world_rank`, but only for the nation's region ranking.
-    pub percent_region_rank: Option<f64>,
+    pub percent_region_rank: CensusDataPoint<f64>,
 }
 
+#[derive(Clone, Debug)]
+pub enum CensusDataPoint<T: Clone + Debug> {
+    NotRequested,
+    InvalidRequest,
+    CannotParse(String),
+    Valid(T),
+}
+
+impl<T> From<Option<String>> for CensusDataPoint<T>
+where
+    T: Clone + Debug + FromStr,
+{
+    fn from(value: Option<String>) -> Self {
+        match value {
+            Some(v) => match v.as_str() {
+                "" => CensusDataPoint::InvalidRequest,
+                other => match other.parse() {
+                    Ok(good) => CensusDataPoint::Valid(good),
+                    Err(_) => CensusDataPoint::CannotParse(v),
+                },
+            },
+            None => CensusDataPoint::NotRequested,
+        }
+    }
+}
+
+impl<T: Clone + Debug> TryFrom<CensusDataPoint<T>> for Option<T> {
+    type Error = ParsingError;
+
+    fn try_from(value: CensusDataPoint<T>) -> Result<Self, Self::Error> {
+        match value {
+            CensusDataPoint::NotRequested => Ok(None),
+            CensusDataPoint::Valid(v) => Ok(Some(v)),
+            CensusDataPoint::CannotParse(s) => {
+                Err(ParsingError::BadFieldError("CensusDataPoint", s))
+            }
+            CensusDataPoint::InvalidRequest => Err(ParsingError::BadFieldError(
+                "CensusDataPoint",
+                "request was invalid".to_string(),
+            )),
+        }
+    }
+}
 /// Historical data from the World Census.
 /// Note that only scores and not rankings are available this way.
 #[derive(Clone, Debug)]
@@ -328,7 +375,7 @@ pub struct CensusHistoricalData {
     /// (midnight Eastern Time) or minor (noon Eastern Time) game updates.
     pub timestamp: Option<NonZeroU64>,
     /// The score of the nation on the Census scale.
-    pub score: Option<f64>,
+    pub score: CensusDataPoint<f64>,
 }
 
 /// Metadata about a dispatch.
@@ -373,14 +420,14 @@ impl TryFrom<RawCensusRanks> for CensusRegionRanks {
                 .map(|nation| {
                     Ok(CensusCurrentData {
                         id: value.scale,
-                        score: Some(str::parse::<f64>(&nation.score).map_err(|e| {
-                            IntoRegionError::BadFieldError("CensusRegionRanks", e.to_string())
-                        }))
-                        .transpose()?,
-                        world_rank: None,
-                        region_rank: nation.rank.try_into().ok(),
-                        percent_world_rank: None,
-                        percent_region_rank: None,
+                        score: Some(nation.score).into(),
+                        world_rank: CensusDataPoint::NotRequested,
+                        region_rank: match nation.rank {
+                            0 => CensusDataPoint::InvalidRequest,
+                            n => CensusDataPoint::Valid(n.try_into().unwrap()),
+                        },
+                        percent_world_rank: CensusDataPoint::NotRequested,
+                        percent_region_rank: CensusDataPoint::NotRequested,
                     })
                 })
                 .collect::<Result<Vec<CensusCurrentData>, Self::Error>>()?,
