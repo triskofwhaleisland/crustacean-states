@@ -389,10 +389,10 @@ impl TryFrom<RawFreedoms> for Freedoms {
         } = value;
 
         Ok(Self {
-            civil_rights: CivilRights::from_str(&*civil_rights)
+            civil_rights: CivilRights::from_str(&civil_rights)
                 .map_err(IntoNationError::from_parse_error)?,
-            economy: Economy::from_str(&*economy).map_err(IntoNationError::from_parse_error)?,
-            political_freedom: PoliticalFreedoms::from_str(&*political_freedom)
+            economy: Economy::from_str(&economy).map_err(IntoNationError::from_parse_error)?,
+            political_freedom: PoliticalFreedoms::from_str(&political_freedom)
                 .map_err(IntoNationError::from_parse_error)?,
         })
     }
@@ -561,7 +561,8 @@ impl TryFrom<RawNation> for Nation {
             motto: value.motto,
             category: value
                 .category
-                .map(GovernmentCategory::try_from)
+                .as_deref() // Option<String> -> Option<&str>
+                .map(GovernmentCategory::try_from) // through strum::EnumString
                 .transpose()?,
             wa_status,
             endorsements: value.endorsements.map(into_nation_list),
@@ -679,7 +680,7 @@ impl TryFrom<RawStandardNation> for StandardNation {
             kind: value.kind,
             full_name: value.fullname,
             motto: value.motto,
-            category: value.category.try_into()?,
+            category: value.category.as_str().try_into()?,
             wa_status: value.unstatus.try_into()?,
             endorsements: into_nation_list(value.endorsements),
             issues_answered: value.issues_answered,
