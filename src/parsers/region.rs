@@ -68,7 +68,7 @@ pub struct Officer {
 
 #[derive(Debug)]
 pub struct Embassy {
-    pub region_name: String,
+    pub region_name: RegionName,
     pub kind: EmbassyKind,
 }
 

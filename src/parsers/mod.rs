@@ -1,5 +1,6 @@
 //! Contains the modules that parse responses from the NationStates API.
 
+use crate::parsers::nation::NationName;
 use crate::{
     models::dispatch::DispatchCategory,
     parsers::{
@@ -9,6 +10,7 @@ use crate::{
     },
 };
 use chrono::{DateTime, Utc};
+use rust_decimal::Decimal;
 use serde::Deserialize;
 use std::{
     fmt::Debug,
@@ -316,9 +318,9 @@ pub struct CensusCurrentData {
     /// with x being this field.
     /// Note that all percentiles are to the nearest whole except for <1%,
     /// which are to the nearest tenth.
-    pub percent_world_rank: CensusDataPoint<f64>,
+    pub percent_world_rank: CensusDataPoint<Decimal>,
     /// Like `percent_world_rank`, but only for the nation's region ranking.
-    pub percent_region_rank: CensusDataPoint<f64>,
+    pub percent_region_rank: CensusDataPoint<Decimal>,
 }
 
 #[derive(Clone, Debug)]
@@ -375,7 +377,7 @@ pub struct CensusHistoricalData {
     /// (midnight Eastern Time) or minor (noon Eastern Time) game updates.
     pub timestamp: Option<NonZeroU64>,
     /// The score of the nation on the Census scale.
-    pub score: CensusDataPoint<f64>,
+    pub score: CensusDataPoint<Decimal>,
 }
 
 /// Metadata about a dispatch.
@@ -389,7 +391,7 @@ pub struct Dispatch {
     /// The title of the dispatch. This field can be edited.
     pub title: String,
     /// The nation that wrote the dispatch.
-    pub author: String,
+    pub author: NationName,
     /// The category and subcategory of the dispatch.
     pub category: DispatchCategory,
     /// The timestamp when the dispatch was created.

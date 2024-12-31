@@ -390,7 +390,7 @@ where
     }
 }
 
-impl<'a> NSRequest for PublicNationRequest<'a> {
+impl NSRequest for PublicNationRequest<'_> {
     //noinspection SpellCheckingInspection
     fn as_url(&self) -> Url {
         let query = self
@@ -464,7 +464,7 @@ impl<'a> StandardPublicNationRequest<'a> {
     }
 }
 
-impl<'a> NSRequest for StandardPublicNationRequest<'a> {
+impl NSRequest for StandardPublicNationRequest<'_> {
     fn as_url(&self) -> Url {
         Url::parse_with_params(BASE_URL, [("nation", self.0)]).unwrap()
     }

@@ -16,7 +16,7 @@ use crate::{
     },
 };
 use chrono::{DateTime, Utc};
-use quick_xml::de;
+use rust_decimal::Decimal;
 use serde::Deserialize;
 use std::num::{NonZeroU16, NonZeroU32, NonZeroU64};
 use std::str::FromStr;
@@ -40,7 +40,8 @@ struct RawNation {
     freedom: Option<RawFreedoms>,
     region: Option<String>,
     population: Option<u32>,
-    tax: Option<f64>,
+    #[serde(with = "rust_decimal::serde::str_option")]
+    tax: Option<Decimal>,
     animal: Option<String>,
     currency: Option<String>,
     demonym: Option<String>,
@@ -56,7 +57,8 @@ struct RawNation {
     lastactivity: Option<String>,
     influence: Option<String>,
     freedomscores: Option<RawFreedomScores>,
-    publicsector: Option<f64>,
+    #[serde(with = "rust_decimal::serde::str_option")]
+    publicsector: Option<Decimal>,
     deaths: Option<RawDeaths>,
     leader: Option<String>,
     capital: Option<String>,
@@ -91,8 +93,8 @@ struct RawNation {
     scvote: Option<String>,
     sectors: Option<RawSectors>,
     sensibilities: Option<String>,
-    tgcanrecruit: Option<u8>,
-    tgcancampaign: Option<u8>,
+    tgcanrecruit: Option<bool>,
+    tgcancampaign: Option<bool>,
     wcensus: Option<NonZeroU32>,
 }
 
@@ -112,7 +114,8 @@ struct RawStandardNation {
     freedom: RawFreedoms,
     region: String,
     population: u32,
-    tax: f64,
+    #[serde(with = "rust_decimal::serde::str")]
+    tax: Decimal,
     animal: String,
     currency: String,
     demonym: String,
@@ -128,7 +131,8 @@ struct RawStandardNation {
     lastactivity: String,
     influence: String,
     freedomscores: RawFreedomScores,
-    publicsector: f64,
+    #[serde(with = "rust_decimal::serde::str")]
+    publicsector: Decimal,
     deaths: RawDeaths,
     leader: String,
     capital: String,
@@ -260,7 +264,7 @@ struct RawCause {
     #[serde(rename = "@type")] // attribute: "type"
     kind: String,
     #[serde(rename = "$value")] // extract inner text
-    frequency: f64,
+    frequency: Decimal,
 }
 
 impl From<RawCause> for Cause {
@@ -358,7 +362,7 @@ impl TryFrom<RawDispatch> for Dispatch {
         Ok(Dispatch {
             id: value.id,
             title: value.title,
-            author: value.author,
+            author: NationName(value.author),
             category,
             created: value.created,
             edited: NonZeroU64::try_from(value.edited).ok(), // field is 0 if never edited
@@ -428,22 +432,30 @@ impl From<RawFreedomScores> for FreedomScores {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 struct RawGovernment {
-    administration: f64,
-    defence: f64,
-    education: f64,
-    environment: f64,
-    healthcare: f64,
-    commerce: f64,
-    #[serde(rename = "INTERNATIONALAID")]
-    international_aid: f64,
-    #[serde(rename = "LAWANDORDER")]
-    law_and_order: f64,
-    #[serde(rename = "PUBLICTRANSPORT")]
-    public_transport: f64,
-    #[serde(rename = "SOCIALEQUALITY")]
-    social_equality: f64,
-    spirituality: f64,
-    welfare: f64,
+    #[serde(with = "rust_decimal::serde::str")]
+    administration: Decimal,
+    #[serde(with = "rust_decimal::serde::str")]
+    defence: Decimal,
+    #[serde(with = "rust_decimal::serde::str")]
+    education: Decimal,
+    #[serde(with = "rust_decimal::serde::str")]
+    environment: Decimal,
+    #[serde(with = "rust_decimal::serde::str")]
+    healthcare: Decimal,
+    #[serde(with = "rust_decimal::serde::str")]
+    commerce: Decimal,
+    #[serde(rename = "INTERNATIONALAID", with = "rust_decimal::serde::str")]
+    international_aid: Decimal,
+    #[serde(rename = "LAWANDORDER", with = "rust_decimal::serde::str")]
+    law_and_order: Decimal,
+    #[serde(rename = "PUBLICTRANSPORT", with = "rust_decimal::serde::str")]
+    public_transport: Decimal,
+    #[serde(rename = "SOCIALEQUALITY", with = "rust_decimal::serde::str")]
+    social_equality: Decimal,
+    #[serde(with = "rust_decimal::serde::str")]
+    spirituality: Decimal,
+    #[serde(with = "rust_decimal::serde::str")]
+    welfare: Decimal,
 }
 
 impl From<RawGovernment> for Government {
@@ -483,11 +495,14 @@ impl From<RawGovernment> for Government {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 struct RawSectors {
-    #[serde(rename = "BLACKMARKET")]
-    black_market: f64,
-    government: f64,
-    industry: f64,
-    public: f64,
+    #[serde(rename = "BLACKMARKET", with = "rust_decimal::serde::str")]
+    black_market: Decimal,
+    #[serde(with = "rust_decimal::serde::str")]
+    government: Decimal,
+    #[serde(with = "rust_decimal::serde::str")]
+    industry: Decimal,
+    #[serde(with = "rust_decimal::serde::str")]
+    public: Decimal,
 }
 
 impl From<RawSectors> for Sectors {
@@ -524,16 +539,21 @@ fn try_into_bool(x: u8) -> Result<bool, IntoNationError> {
 
 pub(super) fn into_nation_list(list: String) -> Vec<NationName> {
     let delimiter = if list.contains(',') { ',' } else { ':' };
-    list.split(delimiter)
-        .map(String::from)
-        .map(NationName)
-        .collect()
+    if list.is_empty() {
+        vec![]
+    } else {
+        list.split(delimiter)
+            .filter(|x| !x.is_empty())
+            .map(String::from)
+            .map(NationName)
+            .collect()
+    }
 }
 
 impl Nation {
     /// Converts the XML response from NationStates to a [`Nation`].
     pub fn from_xml(xml: &str) -> Result<Self, IntoNationError> {
-        Self::try_from(de::from_str::<RawNation>(xml)?)
+        Self::try_from(quick_xml::de::from_str::<RawNation>(xml)?)
     }
 }
 
@@ -657,8 +677,8 @@ impl TryFrom<RawNation> for Nation {
             //     let v = s.split(", ").collect::<Vec<_>>();
             //     [v[0].to_string(), v[1].to_string()]
             // })
-            tg_can_recruit: value.tgcanrecruit.map(try_into_bool).transpose()?,
-            tg_can_campaign: value.tgcancampaign.map(try_into_bool).transpose()?,
+            tg_can_recruit: value.tgcanrecruit,
+            tg_can_campaign: value.tgcancampaign,
             world_census: value.wcensus,
         })
     }
@@ -667,7 +687,7 @@ impl TryFrom<RawNation> for Nation {
 impl StandardNation {
     /// Converts the XML response from NationStates to a [`Nation`].
     pub fn from_xml(xml: &str) -> Result<Self, IntoNationError> {
-        Self::try_from(de::from_str::<RawStandardNation>(xml)?)
+        Self::try_from(quick_xml::de::from_str::<RawStandardNation>(xml)?)
     }
 }
 

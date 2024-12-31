@@ -16,17 +16,17 @@ chrono = { version = "~0.4", features = ["std", "clock"] }
 http = { version = "^1" }  # depends on reqwest
 itertools = { version = "~0.13" }
 nutype = { version = "0.5.0", features = ["regex", "serde"] }
-quick-xml = { version = "~0.36", features = ["serialize"] }
+quick-xml = { version = "~0.37", features = ["serialize"] }
 regex = { version = "^1.8", default-features = false, features = ["std"] }
 reqwest = { version = "0.12", optional = true }
+rust_decimal = { version = "1", features = ["serde", "serde-with-str"] }
 serde = { version = "~1", features = ["derive"] }
 strum = { version = "~0.26", features = ["derive"] }
-thiserror = { version = "~1" }
+thiserror = { version = "~2" }
 tokio = { version = "~1", default-features = false, features = ["rt", "sync"], optional = true }
 url = { version = "^2.2" }
 
 [dev-dependencies]
 dotenvy = "^0.15"
-quick-xml = { version = "~0.36", features = ["async-tokio", "serialize"] }
-serde_json = "1"
+quick-xml = { version = "~0.37", features = ["async-tokio", "serialize"] }
 tokio = { version = "~1", default-features = false, features = ["rt-multi-thread", "sync", "macros"] }

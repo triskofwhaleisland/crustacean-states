@@ -10,7 +10,7 @@ use crate::{
 use chrono::{DateTime, Utc};
 use nutype::nutype;
 use quick_xml::DeError;
-use serde::{Deserialize, Serialize};
+use rust_decimal::Decimal;
 use std::{
     fmt::{Debug, Display, Formatter},
     num::{NonZeroU16, NonZeroU32},
@@ -109,18 +109,18 @@ impl TryFrom<String> for WAStatus {
 #[derive(Debug, Clone)]
 #[allow(missing_docs)]
 pub struct Government {
-    pub administration: f64,
-    pub defence: f64,
-    pub education: f64,
-    pub environment: f64,
-    pub healthcare: f64,
-    pub commerce: f64,
-    pub international_aid: f64,
-    pub law_and_order: f64,
-    pub public_transport: f64,
-    pub social_equality: f64,
-    pub spirituality: f64,
-    pub welfare: f64,
+    pub administration: Decimal,
+    pub defence: Decimal,
+    pub education: Decimal,
+    pub environment: Decimal,
+    pub healthcare: Decimal,
+    pub commerce: Decimal,
+    pub international_aid: Decimal,
+    pub law_and_order: Decimal,
+    pub public_transport: Decimal,
+    pub social_equality: Decimal,
+    pub spirituality: Decimal,
+    pub welfare: Decimal,
 }
 
 /// Describes national freedoms as explained on-site.
@@ -350,17 +350,17 @@ pub struct Cause {
     // TODO make enum
     pub kind: String,
     /// How common this cause of death is, to the nearest tenth of a percent.
-    pub frequency: f64,
+    pub frequency: Decimal,
 }
 
 /// A breakdown of the nation's relative economic power in each economic sector.
 #[derive(Debug, Clone)]
 #[allow(missing_docs)] // TODO learn economics so I can explain this :P
 pub struct Sectors {
-    pub black_market: f64,
-    pub government: f64,
-    pub industry: f64,
-    pub public: f64,
+    pub black_market: Decimal,
+    pub government: Decimal,
+    pub industry: Decimal,
+    pub public: Decimal,
 }
 
 /// A nation, with every piece of information you could ask for!
@@ -436,7 +436,7 @@ pub struct Nation {
     /// The effective tax rate of the nation.
     ///
     /// Requested by using [`PublicNationShard::Tax`](crate::shards::nation::PublicNationShard::Tax).
-    pub tax: Option<f64>,
+    pub tax: Option<Decimal>,
     /// The national animal.
     ///
     /// Requested by using
@@ -525,7 +525,7 @@ pub struct Nation {
     ///
     /// Requested by using
     /// [`PublicNationShard::PublicSector`](crate::shards::nation::PublicNationShard::PublicSector).
-    pub public_sector: Option<f64>,
+    pub public_sector: Option<Decimal>,
     /// The national statistics on deaths.
     ///
     /// Requested by using
@@ -788,7 +788,7 @@ pub struct StandardNation {
     /// The population of the nation in millions of people.
     pub population: u32,
     /// The effective tax rate of the nation.
-    pub tax: f64,
+    pub tax: Decimal,
     /// The national animal.
     pub animal: String,
     /// The national currency.
@@ -831,7 +831,7 @@ pub struct StandardNation {
     /// described using a quantitative scale.
     pub freedom_scores: FreedomScores,
     /// The percentage of the economy controlled or funded by the government and the public.
-    pub public_sector: f64,
+    pub public_sector: Decimal,
     /// The national statistics on deaths.
     pub deaths: Vec<Cause>,
     /// The national leader.

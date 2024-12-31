@@ -45,13 +45,13 @@ pub enum WAShard<'a> {
     PreviousResolution(u16),
 }
 
-impl<'a> From<WAGlobalShard> for WAShard<'a> {
+impl From<WAGlobalShard> for WAShard<'_> {
     fn from(value: WAGlobalShard) -> Self {
         Self::GlobalInfo(value)
     }
 }
 
-impl<'a> From<WACouncilShard> for WAShard<'a> {
+impl From<WACouncilShard> for WAShard<'_> {
     fn from(value: WACouncilShard) -> Self {
         Self::CouncilInfo(value)
     }
@@ -63,13 +63,13 @@ impl<'a> From<&'a [ResolutionShard]> for WAShard<'a> {
     }
 }
 
-impl<'a> From<u16> for WAShard<'a> {
+impl From<u16> for WAShard<'_> {
     fn from(value: u16) -> Self {
         WAShard::PreviousResolution(value)
     }
 }
 
-impl<'a> Display for WAShard<'a> {
+impl Display for WAShard<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -206,7 +206,7 @@ impl ResolutionArchiveRequest {
     }
 }
 
-impl<'a> NSRequest for WARequest<'a> {
+impl NSRequest for WARequest<'_> {
     fn as_url(&self) -> Url {
         Url::parse_with_params(
             BASE_URL,

@@ -3,7 +3,14 @@
 use regex::{Regex, RegexSet};
 use std::sync::LazyLock;
 
-use crate::{parsers::RawEvent, regex};
+use crate::{
+    parsers::{
+        nation::NationName,
+        region::RegionName,
+        RawEvent
+    },
+    regex
+};
 
 #[derive(Clone, Debug)]
 pub struct Happenings(pub Vec<Event>);
@@ -18,9 +25,9 @@ pub struct Event {
     /// Nations are wrapped in `@@`, while regions are wrapped in `%%`.
     pub text: String,
     /// The nations mentioned in the event text.
-    pub nations: Vec<String>,
+    pub nations: Vec<NationName>,
     /// The regions mentioned in the event text.
-    pub regions: Vec<String>,
+    pub regions: Vec<RegionName>,
     /// The kind of event that this was.
     /// NOTE: this will always be `None` until the happenings parsing update.
     pub kind: Option<EventKind>,
@@ -59,7 +66,10 @@ impl From<RawEvent> for Event {
             .then(|| {
                 NATION_RE
                     .find_iter(&value.text)
-                    .map(|m| m.as_str().to_string())
+                    .map(|m| m.as_str())
+                    .map(|m| m.trim_start_matches("@").trim_end_matches("@"))
+                    .map(String::from)
+                    .map(NationName)
                     .collect()
             })
             .unwrap_or_default();
@@ -69,7 +79,10 @@ impl From<RawEvent> for Event {
             .then(|| {
                 REGION_RE
                     .find_iter(&value.text)
-                    .map(|m| m.as_str().to_string())
+                    .map(|m| m.as_str())
+                    .map(|m| m.trim_start_matches("%").trim_end_matches("%"))
+                    .map(String::from)
+                    .map(RegionName)
                     .collect()
             })
             .unwrap_or_default();

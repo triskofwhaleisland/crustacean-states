@@ -157,7 +157,7 @@ impl TryFrom<RawEmbassy> for Embassy {
     type Error = IntoRegionError;
     fn try_from(value: RawEmbassy) -> Result<Self, Self::Error> {
         Ok(Self {
-            region_name: value.region,
+            region_name: RegionName(value.region),
             kind: value
                 .kind
                 .map(|kind| match kind.as_str() {
@@ -256,6 +256,18 @@ impl TryFrom<RawMessage> for Message {
             embassy,
             message,
         })
+    }
+}
+
+impl TryFrom<RawMessages> for Vec<Message> {
+    type Error = IntoRegionError;
+
+    fn try_from(value: RawMessages) -> Result<Self, Self::Error> {
+        value
+            .inner
+            .into_iter()
+            .map(Message::try_from)
+            .collect::<Result<Vec<_>, _>>()
     }
 }
 
@@ -511,15 +523,7 @@ impl TryFrom<RawRegion> for Region {
                 value.lastminorupdate,
                 "Region.last_minor_update",
             )?,
-            messages: value
-                .messages
-                .map(|m| {
-                    m.inner
-                        .into_iter()
-                        .map(Message::try_from)
-                        .collect::<Result<Vec<_>, _>>()
-                })
-                .transpose()?,
+            messages: value.messages.map(RawMessages::try_into).transpose()?,
             wa_nations: value.unnations.map(into_nation_list),
             num_wa_nations: value.numunnations,
             poll: value.poll.map(Poll::try_from).transpose()?,

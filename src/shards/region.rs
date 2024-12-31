@@ -273,7 +273,7 @@ where
     }
 }
 
-impl<'a> NSRequest for RegionRequest<'a> {
+impl NSRequest for RegionRequest<'_> {
     //noinspection SpellCheckingInspection
     fn as_url(&self) -> Url {
         let query = self
@@ -341,7 +341,7 @@ impl<'a> StandardRegionRequest<'a> {
     }
 }
 
-impl<'a> NSRequest for StandardRegionRequest<'a> {
+impl NSRequest for StandardRegionRequest<'_> {
     fn as_url(&self) -> Url {
         Url::parse_with_params(BASE_URL, [("region", self.0)]).unwrap()
     }

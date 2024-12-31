@@ -211,7 +211,7 @@ where
     }
 }
 
-impl<'a> NSRequest for WorldRequest<'a> {
+impl NSRequest for WorldRequest<'_> {
     //noinspection SpellCheckingInspection
     fn as_url(&self) -> Url {
         let query = self
@@ -437,7 +437,7 @@ pub enum HappeningsViewType<'a> {
     ManyRegions(Vec<&'a str>),
 }
 
-impl<'a> Display for HappeningsViewType<'a> {
+impl Display for HappeningsViewType<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
