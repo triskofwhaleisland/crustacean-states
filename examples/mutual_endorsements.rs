@@ -13,7 +13,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let user_agent = std::env::var("USER_AGENT")?;
     let client = Client::new(user_agent);
     eprintln!("Made client!");
-    let target = "Lesser Velutaria";
+    let mut target = String::new();
+
+    std::io::stdin().read_line(&mut target)?;
+
+    let target = target.trim();
+
     let request = PublicNationRequest::from((target, [Endorsements]));
     eprintln!("{request:?}");
     let response = client.get(request).await?;

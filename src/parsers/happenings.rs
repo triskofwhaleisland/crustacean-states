@@ -4,12 +4,8 @@ use regex::{Regex, RegexSet};
 use std::sync::LazyLock;
 
 use crate::{
-    parsers::{
-        nation::NationName,
-        region::RegionName,
-        RawEvent
-    },
-    regex
+    parsers::{nation::NationName, region::RegionName, RawEvent},
+    regex,
 };
 
 #[derive(Clone, Debug)]
@@ -66,8 +62,7 @@ impl From<RawEvent> for Event {
             .then(|| {
                 NATION_RE
                     .find_iter(&value.text)
-                    .map(|m| m.as_str())
-                    .map(|m| m.trim_start_matches("@").trim_end_matches("@"))
+                    .map(|m| m.as_str().trim_start_matches("@").trim_end_matches("@"))
                     .map(String::from)
                     .map(NationName)
                     .collect()

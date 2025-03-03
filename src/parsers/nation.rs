@@ -20,6 +20,8 @@ use std::{
 use strum::{Display, EnumString};
 use thiserror::Error;
 
+pub(crate) type OptionalResult<T, E> = Option<Result<T, E>>;
+
 #[derive(Clone, Debug)]
 pub struct NationName(pub String);
 
@@ -90,14 +92,14 @@ pub enum WAStatus {
 }
 
 impl TryFrom<String> for WAStatus {
-    type Error = IntoNationError;
+    type Error = NationParsingError;
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
         match value.as_str() {
             "WA Delegate" => Ok(WAStatus::Delegate),
             "WA Member" => Ok(WAStatus::Member),
             "Non-member" => Ok(WAStatus::NonMember),
-            _ => Err(IntoNationError::BadFieldError("WAStatus", value)),
+            _ => Err(NationParsingError::BadFieldError("WAStatus", value)),
         }
     }
 }
@@ -403,11 +405,11 @@ pub struct Nation {
     ///
     /// Requested by using
     /// [`PublicNationShard::Category`](crate::shards::nation::PublicNationShard::Category).
-    pub category: Option<GovernmentCategory>,
+    pub category: OptionalResult<GovernmentCategory, NationParsingError>,
     /// The WA status of the nation.
     ///
     /// Requested by using [`PublicNationShard::WA`](crate::shards::nation::PublicNationShard::WA).
-    pub wa_status: Option<WAStatus>,
+    pub wa_status: OptionalResult<WAStatus, NationParsingError>,
     /// A list of nations that endorse the nation.
     ///
     /// Requested by using
@@ -422,7 +424,7 @@ pub struct Nation {
     ///
     /// Requested by using
     /// [`PublicNationShard::Freedom`](crate::shards::nation::PublicNationShard::Freedom).
-    pub freedom: Option<Freedoms>,
+    pub freedom: OptionalResult<Freedoms, NationParsingError>,
     /// The region that the nation resides in.
     ///
     /// Requested by using
@@ -497,12 +499,12 @@ pub struct Nation {
     ///
     /// Requested by using
     /// [`PublicNationShard::FirstLogin`](crate::shards::nation::PublicNationShard::FirstLogin).
-    pub first_login: Option<DateTime<Utc>>,
+    pub first_login: OptionalResult<DateTime<Utc>, NationParsingError>,
     /// The Unix timestamp of when the nation most recently logged in.
     ///
     /// Requested by using
     /// [`PublicNationShard::LastLogin`](crate::shards::nation::PublicNationShard::LastLogin).
-    pub last_login: Option<DateTime<Utc>>,
+    pub last_login: OptionalResult<DateTime<Utc>, NationParsingError>,
     /// When the nation was last active as a relative timestamp.
     ///
     /// Requested by using
@@ -594,7 +596,7 @@ pub struct Nation {
     ///
     /// Requested by using
     /// [`PublicNationShard::Banner`](crate::shards::nation::PublicNationShard::Banner).
-    pub banner: Option<BannerId>,
+    pub banner: OptionalResult<BannerId, NationParsingError>,
     /// A list of Rift banners that should be displayed:
     /// the nation's primary banner (if any) is always listed first,
     /// with the remainder in random order.
@@ -603,7 +605,7 @@ pub struct Nation {
     ///
     /// Requested by using
     /// [`PublicNationShard::Banners`](crate::shards::nation::PublicNationShard::Banners).
-    pub banners: Option<Vec<BannerId>>,
+    pub banners: OptionalResult<Vec<BannerId>, NationParsingError>,
     /// Information on the nation's score and ranking on the World Census.
     /// If current data was requested (the default),
     /// the resulting data will be found in the [`CensusData::Current`] variant,
@@ -612,7 +614,7 @@ pub struct Nation {
     ///
     /// Requested and configured
     /// using [`PublicNationShard::Census`](crate::shards::nation::PublicNationShard::Census).
-    pub census: Option<CensusData>,
+    pub census: OptionalResult<CensusData, NationParsingError>,
     /// Describes crime in the nation on its nation page.
     ///
     /// Requested by using
@@ -622,7 +624,7 @@ pub struct Nation {
     ///
     /// Requested by using
     /// [`PublicNationShard::DispatchList`](crate::shards::nation::PublicNationShard::DispatchList).
-    pub dispatch_list: Option<Vec<Dispatch>>,
+    pub dispatch_list: OptionalResult<Vec<Dispatch>, NationParsingError>,
     /// The list of all factbooks published by this nation.
     /// Note that because factbooks are a subset of dispatches,
     /// this field will contain a list of dispatches,
@@ -630,7 +632,7 @@ pub struct Nation {
     ///
     /// Requested by using
     /// [`PublicNationShard::FactbookList`](crate::shards::nation::PublicNationShard::FactbookList).
-    pub factbook_list: Option<Vec<Dispatch>>,
+    pub factbook_list: OptionalResult<Vec<Dispatch>, NationParsingError>,
     /// The Unix timestamp of when the nation was founded.
     /// Note: NationStates did not track this at the beginning.
     /// For this reason, some nations are considered "founded in antiquity",
@@ -652,7 +654,7 @@ pub struct Nation {
     /// Recommended to request with [`PublicNationShard::WA`].
     ///
     /// [`PublicNationShard::WA`]: crate::shards::nation::PublicNationShard::WA
-    pub ga_vote: Option<WAVote>,
+    pub ga_vote: OptionalResult<WAVote, NationParsingError>,
     /// The GDP of the nation in its national currency.
     ///
     /// Requested by using [`PublicNationShard::Gdp`](crate::shards::nation::PublicNationShard::Gdp).
@@ -696,7 +698,7 @@ pub struct Nation {
     ///
     /// Requested by using
     /// [`PublicNationShard::Policies`](crate::shards::nation::PublicNationShard::Policies).
-    pub policies: Option<Vec<Policy>>,
+    pub policies: OptionalResult<Vec<Policy>, NationParsingError>,
     /// The average income of the poorest 10% in the nation.
     ///
     /// Requested by using
@@ -724,7 +726,7 @@ pub struct Nation {
     /// Recommended to request with [`PublicNationShard::WA`].
     ///
     /// [`PublicNationShard::WA`]: crate::shards::nation::PublicNationShard::WA
-    pub sc_vote: Option<WAVote>,
+    pub sc_vote: OptionalResult<WAVote, NationParsingError>,
     /// Describes the nation's economy as percentages controlled or funded by various sectors.
     ///
     /// Requested by using
@@ -880,7 +882,7 @@ pub struct Policy {
 /// that can go wrong between deserialization and creating the Nation struct.
 #[derive(Clone, Debug, Error)]
 #[non_exhaustive]
-pub enum IntoNationError {
+pub enum NationParsingError {
     /// A field could not be parsed as the type it should be.
     #[error("malformed field {0} with value {1}")]
     BadFieldError(&'static str, String),
@@ -917,21 +919,23 @@ pub enum IntoNationError {
     WrongGeneric(ParsingError, &'static str),
 }
 
-impl IntoNationError {
+impl NationParsingError {
     pub(crate) fn from_parse_error(e: strum::ParseError) -> Self {
-        IntoNationError::ParseError { source: e }
+        NationParsingError::ParseError { source: e }
     }
 }
 
-impl From<ParsingError> for IntoNationError {
+impl From<ParsingError> for NationParsingError {
     fn from(value: ParsingError) -> Self {
         match value {
             ParsingError::Nation(n) => n.deref().clone(),
-            ParsingError::Region(ref _r) => IntoNationError::WrongGeneric(value, "IntoNationError"),
-            ParsingError::BadFieldError(field, value) => {
-                IntoNationError::BadFieldError(field, value)
+            ParsingError::Region(ref _r) => {
+                NationParsingError::WrongGeneric(value, "IntoNationError")
             }
-            ParsingError::NoFieldError(field) => IntoNationError::NoFieldError(field),
+            ParsingError::BadFieldError(field, value) => {
+                NationParsingError::BadFieldError(field, value)
+            }
+            ParsingError::NoFieldError(field) => NationParsingError::NoFieldError(field),
         }
     }
 }
@@ -955,14 +959,14 @@ pub enum WAVote {
 }
 
 impl TryFrom<String> for WAVote {
-    type Error = IntoNationError;
+    type Error = NationParsingError;
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
         match value.as_str() {
             "FOR" => Ok(WAVote::For),
             "AGAINST" => Ok(WAVote::Against),
             "" | "UNDECIDED" => Ok(WAVote::Undecided),
-            _ => Err(IntoNationError::BadWAVoteError {
+            _ => Err(NationParsingError::BadWAVoteError {
                 bad_vote: value,
                 council: Default::default(),
             }),
@@ -993,16 +997,16 @@ impl BannerId {
 }
 
 impl TryFrom<String> for BannerId {
-    type Error = IntoNationError;
+    type Error = NationParsingError;
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
         let split_index = value.chars().position(|c| c.is_ascii_digit());
         if split_index.is_none() || split_index == Some(0) {
-            return Err(IntoNationError::BadFieldError("BannerId", value));
+            return Err(NationParsingError::BadFieldError("BannerId", value));
         }
         let (cat, num) = value.split_at(split_index.unwrap());
         let num = u16::from_str(num)
-            .map_err(|_| IntoNationError::BadFieldError("BannerId", value.clone()))?;
+            .map_err(|_| NationParsingError::BadFieldError("BannerId", value.clone()))?;
         Ok(BannerId::new(cat, num))
     }
 }

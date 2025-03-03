@@ -5,7 +5,7 @@ use crate::{
     models::dispatch::DispatchCategory,
     parsers::{
         happenings::{Event, Happenings},
-        nation::IntoNationError,
+        nation::NationParsingError,
         region::IntoRegionError,
     },
 };
@@ -34,7 +34,7 @@ pub type NumNations = u32;
 #[non_exhaustive]
 pub enum ParsingError {
     #[error("{0:?}")]
-    Nation(Box<IntoNationError>),
+    Nation(Box<NationParsingError>),
     #[error("{0:?}")]
     Region(Box<IntoRegionError>),
     // field, value

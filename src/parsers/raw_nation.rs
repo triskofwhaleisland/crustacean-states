@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+use std::hash::Hash;
 use crate::{
     models::dispatch::{
         AccountCategory, BulletinCategory, DispatchCategory, FactbookCategory, MetaCategory,
@@ -7,19 +9,20 @@ use crate::{
         into_datetime,
         nation::{
             BannerId, Cause, CivilRights, Economy, FreedomScore, FreedomScores, Freedoms,
-            Government, GovernmentCategory, IntoNationError, Nation, NationName, Policy,
+            Government, Nation, NationName, NationParsingError, Policy,
             PoliticalFreedoms, Sectors, StandardNation, WAStatus, WAVote,
         },
-        region::RegionName,
-        CensusData, DefaultOrCustom, Dispatch, MaybeRelativeTime, MaybeSystemTime, RawCensus,
+        region::RegionName
+        , DefaultOrCustom, Dispatch, MaybeRelativeTime, MaybeSystemTime, RawCensus,
         RawHappenings,
     },
 };
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
-use serde::Deserialize;
+use serde::{Deserialize};
 use std::num::{NonZeroU16, NonZeroU32, NonZeroU64};
 use std::str::FromStr;
+use enum_kinds::EnumKind;
 
 //noinspection SpellCheckingInspection
 #[derive(Debug, Deserialize)]
@@ -161,7 +164,7 @@ struct RawBanners {
 }
 
 impl TryFrom<RawBanners> for Vec<BannerId> {
-    type Error = IntoNationError;
+    type Error = NationParsingError;
     fn try_from(value: RawBanners) -> Result<Self, Self::Error> {
         value
             .inner
@@ -178,7 +181,7 @@ struct RawDispatchList {
 }
 
 impl TryFrom<RawDispatchList> for Vec<Dispatch> {
-    type Error = IntoNationError;
+    type Error = NationParsingError;
 
     fn try_from(value: RawDispatchList) -> Result<Self, Self::Error> {
         value
@@ -196,7 +199,7 @@ struct RawFactbookList {
 }
 
 impl TryFrom<RawFactbookList> for Vec<Dispatch> {
-    type Error = IntoNationError;
+    type Error = NationParsingError;
 
     fn try_from(value: RawFactbookList) -> Result<Self, Self::Error> {
         value
@@ -226,7 +229,7 @@ struct RawPolicies {
 }
 
 impl TryFrom<RawPolicies> for Vec<Policy> {
-    type Error = IntoNationError;
+    type Error = NationParsingError;
 
     fn try_from(value: RawPolicies) -> Result<Self, Self::Error> {
         value
@@ -247,7 +250,7 @@ struct RawPolicy {
 }
 
 impl TryFrom<RawPolicy> for Policy {
-    type Error = IntoNationError;
+    type Error = NationParsingError;
 
     fn try_from(value: RawPolicy) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -290,7 +293,7 @@ struct RawDispatch {
 }
 
 impl RawDispatch {
-    fn dispatch_category(&self) -> Result<DispatchCategory, IntoNationError> {
+    fn dispatch_category(&self) -> Result<DispatchCategory, NationParsingError> {
         match self.category.as_str() {
             "Factbook" => Ok(DispatchCategory::Factbook(
                 match self.subcategory.as_str() {
@@ -306,7 +309,7 @@ impl RawDispatch {
                     "International" => Ok(FactbookCategory::International),
                     "Trivia" => Ok(FactbookCategory::Trivia),
                     "Miscellaneous" => Ok(FactbookCategory::Miscellaneous),
-                    _ => Err(IntoNationError::BadFieldError(
+                    _ => Err(NationParsingError::BadFieldError(
                         "FactbookCategory",
                         self.subcategory.clone(),
                     )),
@@ -318,7 +321,7 @@ impl RawDispatch {
                     "News" => Ok(BulletinCategory::News),
                     "Opinion" => Ok(BulletinCategory::Opinion),
                     "Campaign" => Ok(BulletinCategory::Campaign),
-                    _ => Err(IntoNationError::BadFieldError(
+                    _ => Err(NationParsingError::BadFieldError(
                         "BulletinCategory",
                         self.subcategory.clone(),
                     )),
@@ -333,7 +336,7 @@ impl RawDispatch {
                 "Science" => Ok(AccountCategory::Science),
                 "Culture" => Ok(AccountCategory::Culture),
                 "Other" => Ok(AccountCategory::Other),
-                _ => Err(IntoNationError::BadFieldError(
+                _ => Err(NationParsingError::BadFieldError(
                     "AccountCategory",
                     self.subcategory.clone(),
                 )),
@@ -341,12 +344,12 @@ impl RawDispatch {
             "Meta" => Ok(DispatchCategory::Meta(match self.subcategory.as_str() {
                 "Gameplay" => Ok(MetaCategory::Gameplay),
                 "Reference" => Ok(MetaCategory::Reference),
-                _ => Err(IntoNationError::BadFieldError(
+                _ => Err(NationParsingError::BadFieldError(
                     "MetaCategory",
                     self.subcategory.clone(),
                 )),
             }?)),
-            _ => Err(IntoNationError::BadFieldError(
+            _ => Err(NationParsingError::BadFieldError(
                 "DispatchCategory",
                 self.category.clone(),
             )),
@@ -355,7 +358,7 @@ impl RawDispatch {
 }
 
 impl TryFrom<RawDispatch> for Dispatch {
-    type Error = IntoNationError;
+    type Error = NationParsingError;
 
     fn try_from(value: RawDispatch) -> Result<Self, Self::Error> {
         let category = value.dispatch_category()?;
@@ -384,7 +387,7 @@ struct RawFreedoms {
 }
 
 impl TryFrom<RawFreedoms> for Freedoms {
-    type Error = IntoNationError;
+    type Error = NationParsingError;
     fn try_from(value: RawFreedoms) -> Result<Self, Self::Error> {
         let RawFreedoms {
             civil_rights,
@@ -394,10 +397,10 @@ impl TryFrom<RawFreedoms> for Freedoms {
 
         Ok(Self {
             civil_rights: CivilRights::from_str(&civil_rights)
-                .map_err(IntoNationError::from_parse_error)?,
-            economy: Economy::from_str(&economy).map_err(IntoNationError::from_parse_error)?,
+                .map_err(NationParsingError::from_parse_error)?,
+            economy: Economy::from_str(&economy).map_err(NationParsingError::from_parse_error)?,
             political_freedom: PoliticalFreedoms::from_str(&political_freedom)
-                .map_err(IntoNationError::from_parse_error)?,
+                .map_err(NationParsingError::from_parse_error)?,
         })
     }
 }
@@ -525,15 +528,15 @@ impl From<RawSectors> for Sectors {
 fn into_datetime_or_bad_field(
     t: i64,
     field: &'static str,
-) -> Result<DateTime<Utc>, IntoNationError> {
-    into_datetime(t).ok_or(IntoNationError::BadFieldError(field, t.to_string()))
+) -> Result<DateTime<Utc>, NationParsingError> {
+    into_datetime(t).ok_or(NationParsingError::BadFieldError(field, t.to_string()))
 }
 
-fn try_into_bool(x: u8) -> Result<bool, IntoNationError> {
+fn try_into_bool(x: u8) -> Result<bool, NationParsingError> {
     match x {
         0 => Ok(false),
         1 => Ok(true),
-        e => Err(IntoNationError::BadBooleanError(e)),
+        e => Err(NationParsingError::BadBooleanError(e)),
     }
 }
 
@@ -552,13 +555,13 @@ pub(super) fn into_nation_list(list: String) -> Vec<NationName> {
 
 impl Nation {
     /// Converts the XML response from NationStates to a [`Nation`].
-    pub fn from_xml(xml: &str) -> Result<Self, IntoNationError> {
+    pub fn from_xml(xml: &str) -> Result<Self, NationParsingError> {
         Self::try_from(quick_xml::de::from_str::<RawNation>(xml)?)
     }
 }
 
 impl TryFrom<RawNation> for Nation {
-    type Error = IntoNationError;
+    type Error = NationParsingError;
 
     fn try_from(value: RawNation) -> Result<Self, Self::Error> {
         // let name = match (value.name, value.id) {
@@ -571,7 +574,7 @@ impl TryFrom<RawNation> for Nation {
             .happenings
             .map(|h| h.inner.into_iter().map(Event::from).collect());
 
-        let wa_status = value.unstatus.map(WAStatus::try_from).transpose()?;
+        let wa_status = value.unstatus.map(WAStatus::try_from);
 
         Ok(Self {
             raw_name: NationName(value.id.unwrap_or_else(|| value.name.clone().unwrap())),
@@ -582,12 +585,12 @@ impl TryFrom<RawNation> for Nation {
             category: value
                 .category
                 .as_deref() // Option<String> -> Option<&str>
-                .map(GovernmentCategory::try_from) // through strum::EnumString
-                .transpose()?,
-            wa_status,
+                // through strum::EnumString
+                .map(|c| c.try_into().map_err(NationParsingError::from_parse_error)),
+            wa_status: wa_status.clone(),
             endorsements: value.endorsements.map(into_nation_list),
             issues_answered: value.issues_answered,
-            freedom: value.freedom.map(Freedoms::try_from).transpose()?,
+            freedom: value.freedom.map(Freedoms::try_from),
             region: value.region.map(RegionName),
             population: value.population,
             tax: value.tax,
@@ -603,12 +606,10 @@ impl TryFrom<RawNation> for Nation {
             founded: value.founded.map(MaybeRelativeTime::from),
             first_login: value
                 .firstlogin
-                .map(|t| into_datetime_or_bad_field(t, "Nation.first_login"))
-                .transpose()?,
+                .map(|t| into_datetime_or_bad_field(t, "Nation.first_login")),
             last_login: value
                 .lastlogin
-                .map(|t| into_datetime_or_bad_field(t, "Nation.last_login"))
-                .transpose()?,
+                .map(|t| into_datetime_or_bad_field(t, "Nation.last_login")),
             last_activity: value.lastactivity,
             influence: value.influence,
             freedom_scores: value.freedomscores.map(FreedomScores::from),
@@ -625,29 +626,21 @@ impl TryFrom<RawNation> for Nation {
             admirable: value.admirable,
             admirables: value.admirables.map(|a| a.inner),
             animal_trait: value.animaltrait,
-            banner: value.banner.map(BannerId::try_from).transpose()?,
-            banners: value.banners.map(Vec::<BannerId>::try_from).transpose()?,
+            banner: value.banner.map(BannerId::try_from),
+            banners: value.banners.map(Vec::<BannerId>::try_from),
             census: value
                 .census
-                .map(CensusData::try_from)
-                .transpose()
-                .map_err(IntoNationError::from)?,
+                .map(|c| c.try_into().map_err(NationParsingError::from)),
             crime: value.crime,
-            dispatch_list: value
-                .dispatchlist
-                .map(RawDispatchList::try_into)
-                .transpose()?,
-            factbook_list: value
-                .factbooklist
-                .map(RawFactbookList::try_into)
-                .transpose()?,
+            dispatch_list: value.dispatchlist.map(RawDispatchList::try_into),
+            factbook_list: value.factbooklist.map(RawFactbookList::try_into),
             founded_time: value
                 .foundedtime
                 .map(into_datetime)
                 .map(MaybeSystemTime::from),
             ga_vote: match wa_status {
-                Some(WAStatus::NonMember) => None,
-                _ => value.gavote.map(WAVote::try_from).transpose()?,
+                Some(Ok(WAStatus::NonMember)) => None,
+                _ => value.gavote.map(WAVote::try_from),
             },
             gdp: value.gdp,
             govt_desc: value.govtdesc,
@@ -663,13 +656,13 @@ impl TryFrom<RawNation> for Nation {
             //     [first.to_string(), second.to_string(), third.to_string()]
             // })
             notables: value.notables.map(|n| n.inner),
-            policies: value.policies.map(Vec::<Policy>::try_from).transpose()?,
+            policies: value.policies.map(Vec::<Policy>::try_from),
             poorest: value.poorest,
             regional_census: value.rcensus,
             richest: value.richest,
             sc_vote: match wa_status {
-                Some(WAStatus::NonMember) => None,
-                _ => value.scvote.map(WAVote::try_from).transpose()?,
+                Some(Ok(WAStatus::NonMember)) => None,
+                _ => value.scvote.map(WAVote::try_from),
             },
             sectors: value.sectors.map(Sectors::from),
             sensibilities: value.sensibilities,
@@ -686,13 +679,13 @@ impl TryFrom<RawNation> for Nation {
 
 impl StandardNation {
     /// Converts the XML response from NationStates to a [`Nation`].
-    pub fn from_xml(xml: &str) -> Result<Self, IntoNationError> {
+    pub fn from_xml(xml: &str) -> Result<Self, NationParsingError> {
         Self::try_from(quick_xml::de::from_str::<RawStandardNation>(xml)?)
     }
 }
 
 impl TryFrom<RawStandardNation> for StandardNation {
-    type Error = IntoNationError;
+    type Error = NationParsingError;
 
     fn try_from(value: RawStandardNation) -> Result<Self, Self::Error> {
         Ok(StandardNation {
