@@ -24,6 +24,7 @@ pub mod nation;
 mod raw_nation;
 mod raw_region;
 pub mod region;
+mod reader;
 
 pub(crate) const DEFAULT_LEADER: &str = "Leader";
 pub(crate) const DEFAULT_RELIGION: &str = "a major religion";
